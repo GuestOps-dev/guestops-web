@@ -78,3 +78,55 @@ export default async function ConversationPage({
     </main>
   );
 }
+
+"use client";
+
+<form
+  style={{ marginTop: 20 }}
+  action={`/api/messages/send`}
+  method="POST"
+  onSubmit={async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const textarea = form.elements.namedItem("message") as HTMLTextAreaElement;
+    const message = textarea.value;
+
+    await fetch("/api/messages/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversationId: conversationId,
+        message,
+      }),
+    });
+
+    textarea.value = "";
+    window.location.reload();
+  }}
+>
+  <textarea
+    name="message"
+    placeholder="Type a reply..."
+    rows={3}
+    style={{
+      width: "100%",
+      padding: 10,
+      borderRadius: 8,
+      border: "1px solid #ccc",
+    }}
+  />
+  <button
+    type="submit"
+    style={{
+      marginTop: 8,
+      padding: "8px 16px",
+      borderRadius: 8,
+      background: "#111",
+      color: "white",
+      border: "none",
+    }}
+  >
+    Send SMS
+  </button>
+</form>
+
