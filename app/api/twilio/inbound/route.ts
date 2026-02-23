@@ -97,7 +97,28 @@ export async function POST(req: Request) {
       console.error("Supabase insert failed:", error);
     }
 
-    return twimlResponse("✅ Got it — message received.", 200);
+const replyText = "✅ Got it — message received.";
+
+// Log outbound reply
+const { error: outboundError } = await sb.from("inbound_messages").insert({
+  property_id: propertyId,
+  direction: "outbound",
+  channel: "sms",
+  provider: "twilio",
+  from_number: to,      // outbound: from us (Twilio number)
+  to_number: from,      // outbound: to the guest
+  body: replyText,
+  twilio_account_sid: accountSid,
+  raw_payload: {
+    in_reply_to: messageSid,
+  },
+});
+
+if (outboundError) {
+  console.error("Supabase outbound insert failed:", outboundError);
+}
+
+return twimlResponse(replyText, 200);
   } catch (err) {
     console.error("Twilio webhook rejected:", err);
     return twimlResponse(undefined, 403);
