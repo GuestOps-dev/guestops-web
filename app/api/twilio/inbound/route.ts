@@ -1,5 +1,5 @@
 import twilio from "twilio";
-import { getSupabaseServerClient } from "../../../../src/lib/supabaseServer";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 

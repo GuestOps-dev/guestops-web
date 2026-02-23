@@ -1,22 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabaseServer";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import twilio from "twilio";
 
 export const runtime = "nodejs";
 
-const client = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID!,
+  process.env.TWILIO_AUTH_TOKEN!
+);
 
 export async function POST(req: NextRequest) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseServerClient();
   const idempotencyKey = req.headers.get("x-idempotency-key") || null;
 
   const { conversation_id, body } = await req.json();
 
   if (!conversation_id || !body) {
-    return NextResponse.json({ error: "Missing conversation_id or body" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing conversation_id or body" },
+      { status: 400 }
+    );
   }
 
-  // 0) Load conversation to derive from/to safely
+  // Load conversation to derive from/to safely
   const { data: convo, error: convoErr } = await supabase
     .from("conversations")
     .select("id, guest_number, service_number, from_e164, to_e164")
@@ -31,7 +37,10 @@ export async function POST(req: NextRequest) {
   const fromE164 = convo.service_number ?? convo.to_e164;   // your Twilio #
 
   if (!toE164 || !fromE164) {
-    return NextResponse.json({ error: "Conversation missing routing numbers" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Conversation missing routing numbers" },
+      { status: 400 }
+    );
   }
 
   // 1) Insert outbound record (idempotent)
@@ -48,7 +57,6 @@ export async function POST(req: NextRequest) {
     .select("id")
     .single();
 
-  // If idempotency uniqueness is violated, fetch existing and return it
   if (insertRes.error) {
     if (idempotencyKey) {
       const existing = await supabase
@@ -93,8 +101,6 @@ export async function POST(req: NextRequest) {
         updated_at: now,
         last_message_at: now,
         last_outbound_at: now,
-
-        // keep both sets in sync (optional)
         from_e164: toE164,
         to_e164: fromE164,
       })
