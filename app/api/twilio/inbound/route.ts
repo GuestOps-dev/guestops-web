@@ -1,16 +1,21 @@
 import twilio from "twilio";
-import { supabaseServer } from "../../../../src/lib/supabaseServer";
+import { getSupabaseServerClient } from "../../../../src/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
 function buildAbsoluteUrl(req: Request) {
   const url = new URL(req.url);
 
-  // On Vercel, req.url is typically already absolute. Keep this robust anyway.
   if (url.protocol && url.host) return url.toString();
 
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "";
-  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  const host =
+    req.headers.get("x-forwarded-host") ??
+    req.headers.get("host") ??
+    "";
+  const proto =
+    req.headers.get("x-forwarded-proto") ??
+    "https";
+
   return `${proto}://${host}${url.pathname}${url.search}`;
 }
 
@@ -25,14 +30,23 @@ function validateTwilioSignatureOrThrow(args: {
   if (!signature) throw new Error("Missing X-Twilio-Signature header");
 
   const absoluteUrl = buildAbsoluteUrl(req);
-  const ok = twilio.validateRequest(authToken, signature, absoluteUrl, formParams);
 
-  if (!ok) throw new Error(`Invalid Twilio signature for URL: ${absoluteUrl}`);
+  const ok = twilio.validateRequest(
+    authToken,
+    signature,
+    absoluteUrl,
+    formParams
+  );
+
+  if (!ok) {
+    throw new Error(`Invalid Twilio signature for URL: ${absoluteUrl}`);
+  }
 }
 
 function twimlResponse(message?: string, status = 200) {
   const twiml = new twilio.twiml.MessagingResponse();
   if (message) twiml.message(message);
+
   return new Response(twiml.toString(), {
     status,
     headers: { "Content-Type": "text/xml" },
@@ -47,7 +61,6 @@ export async function POST(req: Request) {
     const bodyText = await req.text();
     const params = new URLSearchParams(bodyText);
 
-    // Convert to record (keep first occurrence if duplicates exist)
     const formParams: Record<string, string> = {};
     for (const [k, v] of params.entries()) {
       if (formParams[k] === undefined) formParams[k] = v;
@@ -65,11 +78,9 @@ export async function POST(req: Request) {
     const messageSid = formParams.MessageSid ?? "";
     const accountSid = formParams.AccountSid ?? "";
 
-    // ✅ Get a Supabase client whether supabaseServer is a function or an instance
-    const sb =
-      typeof supabaseServer === "function" ? (supabaseServer as any)() : (supabaseServer as any);
+    const sb = getSupabaseServerClient();
 
-    // ✅ Store message in Supabase
+    // ✅ Store inbound message
     const { error } = await sb.from("inbound_messages").insert({
       property_id: propertyId,
       channel: "sms",
@@ -84,7 +95,6 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("Supabase insert failed:", error);
-      // Still respond OK to keep SMS UX smooth
     }
 
     return twimlResponse("✅ Got it — message received.", 200);
