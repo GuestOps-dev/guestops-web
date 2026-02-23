@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import twilio from "twilio";
-import { getSupabaseAdmin } from "@/lib/supabaseServer"; // your service-role client
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-export const runtime = "nodejs"; // Twilio SDK + crypto assumptions
+export const runtime = "nodejs";
 
-function getRawBody(req: NextRequest) {
-  // NextRequest supports text() which returns the raw body as sent
-  return req.text();
-}
-
-/**
- * Twilio signature validation for App Router:
- * - Must validate against the exact URL Twilio hit
- * - Must validate params (application/x-www-form-urlencoded)
- */
 async function validateTwilioSignature(req: NextRequest, rawBody: string) {
   const hdrs = await headers();
   const signature = hdrs.get("x-twilio-signature");
@@ -22,7 +12,6 @@ async function validateTwilioSignature(req: NextRequest, rawBody: string) {
 
   const url = req.url;
 
-  // Twilio sends x-www-form-urlencoded key/values
   const params = new URLSearchParams(rawBody);
   const bodyObj: Record<string, string> = {};
   for (const [k, v] of params.entries()) bodyObj[k] = v;
@@ -32,7 +21,7 @@ async function validateTwilioSignature(req: NextRequest, rawBody: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const rawBody = await getRawBody(req);
+  const rawBody = await req.text();
 
   const valid = await validateTwilioSignature(req, rawBody);
   if (!valid) {
@@ -41,17 +30,17 @@ export async function POST(req: NextRequest) {
 
   const params = new URLSearchParams(rawBody);
 
-  const messageSid = params.get("MessageSid") || params.get("SmsSid"); // Twilio varies
-  const messageStatus = params.get("MessageStatus"); // queued|sent|delivered|undelivered|failed
+  const messageSid = params.get("MessageSid") || params.get("SmsSid");
+  const messageStatus = params.get("MessageStatus");
   const errorCode = params.get("ErrorCode");
   const errorMessage = params.get("ErrorMessage");
 
   const payload: Record<string, string> = {};
   for (const [k, v] of params.entries()) payload[k] = v;
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseServerClient();
 
-  // Always store the raw callback payload for audit/debug
+  // Always store raw callback payload
   await supabase.from("message_events").insert({
     event_type: "status_callback",
     twilio_message_sid: messageSid,
@@ -59,19 +48,16 @@ export async function POST(req: NextRequest) {
   });
 
   if (!messageSid || !messageStatus) {
-    return NextResponse.json({ ok: true }); // nothing else to do
+    return NextResponse.json({ ok: true });
   }
 
-  // Update outbound_messages if we have it
   const update: Record<string, any> = { status: messageStatus };
   if (messageStatus === "failed" || messageStatus === "undelivered") {
-    update.error = [errorCode, errorMessage].filter(Boolean).join(" - ") || "Delivery failed";
+    update.error =
+      [errorCode, errorMessage].filter(Boolean).join(" - ") || "Delivery failed";
   }
 
-  await supabase
-    .from("outbound_messages")
-    .update(update)
-    .eq("twilio_message_sid", messageSid);
+  await supabase.from("outbound_messages").update(update).eq("twilio_message_sid", messageSid);
 
   return NextResponse.json({ ok: true });
 }
