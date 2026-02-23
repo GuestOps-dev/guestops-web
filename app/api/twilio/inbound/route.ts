@@ -5,6 +5,33 @@ export const runtime = "nodejs";
 
 // ... keep your helper functions ...
 
+function buildAbsoluteUrl(req: Request) {
+  const url = new URL(req.url);
+
+  // req.url is typically absolute on Vercel; keep robust anyway.
+  if (url.protocol && url.host) return url.toString();
+
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "";
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  return `${proto}://${host}${url.pathname}${url.search}`;
+}
+
+function validateTwilioSignatureOrThrow(args: {
+  req: Request;
+  authToken: string;
+  formParams: Record<string, string>;
+}) {
+  const { req, authToken, formParams } = args;
+
+  const signature = req.headers.get("x-twilio-signature") ?? "";
+  if (!signature) throw new Error("Missing X-Twilio-Signature header");
+
+  const absoluteUrl = buildAbsoluteUrl(req);
+  const ok = twilio.validateRequest(authToken, signature, absoluteUrl, formParams);
+
+  if (!ok) throw new Error(`Invalid Twilio signature for URL: ${absoluteUrl}`);
+}
+
 export async function POST(req: Request) {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   if (!authToken) return new Response("Server misconfigured.", { status: 500 });
