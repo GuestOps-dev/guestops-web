@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 export default async function ConversationPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const conversationId = params?.id;
+  const { id: conversationId } = await params;
 
   if (!conversationId) {
     return (
@@ -64,12 +64,10 @@ export default async function ConversationPage({
                 borderRadius: 12,
                 marginBottom: 8,
                 maxWidth: "70%",
-                alignSelf:
-                  m.direction === "outbound" ? "flex-end" : "flex-start",
               }}
             >
               <div style={{ fontSize: 12, opacity: 0.7 }}>
-                {m.direction.toUpperCase()} •{" "}
+                {m.direction?.toUpperCase()} •{" "}
                 {new Date(m.created_at).toLocaleString()}
               </div>
               <div>{m.body}</div>
