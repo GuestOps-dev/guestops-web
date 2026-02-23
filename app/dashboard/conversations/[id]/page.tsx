@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getSupabaseServerClient } from "../../../../src/lib/supabaseServer";
+import SendMessageBox from "./SendMessageBox";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,13 +23,7 @@ export default async function ConversationPage({
 
   const sb = getSupabaseServerClient();
 
-  const { data: convo, error: convoErr } = await sb
-    .from("conversations")
-    .select("*")
-    .eq("id", conversationId)
-    .single();
-
-  const { data: messages, error: msgErr } = await sb
+  const { data: messages, error } = await sb
     .from("inbound_messages")
     .select("*")
     .eq("conversation_id", conversationId)
@@ -40,15 +35,9 @@ export default async function ConversationPage({
 
       <h1 style={{ marginTop: 16 }}>Conversation</h1>
 
-      {convoErr && (
+      {error && (
         <p style={{ color: "crimson" }}>
-          Conversation error: {convoErr.message}
-        </p>
-      )}
-
-      {msgErr && (
-        <p style={{ color: "crimson" }}>
-          Messages error: {msgErr.message}
+          Error loading messages: {error.message}
         </p>
       )}
 
@@ -75,58 +64,8 @@ export default async function ConversationPage({
           ))}
         </div>
       )}
+
+      <SendMessageBox conversationId={conversationId} />
     </main>
   );
 }
-
-"use client";
-
-<form
-  style={{ marginTop: 20 }}
-  action={`/api/messages/send`}
-  method="POST"
-  onSubmit={async (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const textarea = form.elements.namedItem("message") as HTMLTextAreaElement;
-    const message = textarea.value;
-
-    await fetch("/api/messages/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId: conversationId,
-        message,
-      }),
-    });
-
-    textarea.value = "";
-    window.location.reload();
-  }}
->
-  <textarea
-    name="message"
-    placeholder="Type a reply..."
-    rows={3}
-    style={{
-      width: "100%",
-      padding: 10,
-      borderRadius: 8,
-      border: "1px solid #ccc",
-    }}
-  />
-  <button
-    type="submit"
-    style={{
-      marginTop: 8,
-      padding: "8px 16px",
-      borderRadius: 8,
-      background: "#111",
-      color: "white",
-      border: "none",
-    }}
-  >
-    Send SMS
-  </button>
-</form>
-
