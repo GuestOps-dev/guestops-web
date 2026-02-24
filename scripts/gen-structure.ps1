@@ -13,7 +13,7 @@ function Add-Tree([string]$root, [string[]]$includeGlobs) {
 
   $rootResolved = (Resolve-Path $root).Path
   $out += "### " + $root
-  $out += "```"
+  $out += "---"
 
   $items = @()
   foreach ($g in $includeGlobs) {
@@ -24,7 +24,7 @@ function Add-Tree([string]$root, [string[]]$includeGlobs) {
 
   if (-not $items -or $items.Count -eq 0) {
     $out += "no matching files"
-    $out += "```"
+    $out += "---"
     $out += ""
     return $out
   }
@@ -38,7 +38,7 @@ function Add-Tree([string]$root, [string[]]$includeGlobs) {
     }
   }
 
-  $out += "```"
+  $out += "---"
   $out += ""
   return $out
 }
