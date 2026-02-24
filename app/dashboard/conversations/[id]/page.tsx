@@ -16,9 +16,9 @@ type ThreadMessage = {
 export default async function ConversationPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const conversationId = params.id;
+  const { id: conversationId } = await params;
 
   if (!conversationId) {
     return (
@@ -38,7 +38,7 @@ export default async function ConversationPage({
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
 
-  // Outbound messages (new source of truth)
+  // Outbound messages
   const outboundRes = await sb
     .from("outbound_messages")
     .select("id, created_at, body, status, error, twilio_message_sid")
@@ -67,7 +67,6 @@ export default async function ConversationPage({
       },
     })) ?? [];
 
-  // Merge + sort
   const messages = [...inbound, ...outbound].sort(
     (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   );
