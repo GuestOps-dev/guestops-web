@@ -1,112 +1,62 @@
-import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-type AuthedContext = {
-  supabase: SupabaseClient;
-  user: User;
-  accessToken: string;
+export type ApiAuthContext = {
+  token: string;
+  supabase: ReturnType<typeof createClient>;
+  userId: string;
+  role?: string | null;
 };
 
-function getEnv(name: string): string | null {
+function getEnv(name: string): string {
   const v = process.env[name];
-  if (!v) return null;
-  const trimmed = v.trim();
-  return trimmed ? trimmed : null;
+  if (!v) throw new Error(`Missing env: ${name}`);
+  return v;
 }
 
-function getSupabaseUrl(): string {
-  const url = getEnv("NEXT_PUBLIC_SUPABASE_URL") || getEnv("SUPABASE_URL");
-  if (!url) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL)");
-  return url;
-}
-
-function getAnonKey(): string {
-  const key =
-    getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY") ||
-    getEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
-  if (!key) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)"
-    );
-  }
-  return key;
-}
-
-function extractBearerToken(req: NextRequest): string | null {
+export async function requireApiAuth(req: NextRequest): Promise<ApiAuthContext> {
   const header = req.headers.get("authorization") || "";
-  const match = header.match(/^Bearer\s+(.+)$/i);
-  return match?.[1]?.trim() || null;
-}
+  const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
 
-/**
- * Creates a Supabase client scoped to the request's user JWT.
- *
- * This intentionally uses the anon/publishable key + Authorization header,
- * never the service role key.
- */
-export async function requireSupabaseUser(
-  req: NextRequest
-): Promise<AuthedContext> {
-  const token = extractBearerToken(req);
   if (!token) {
-    const err = new Error("Missing Authorization: Bearer <token>");
-    (err as any).status = 401;
-    throw err;
+    throw new Error("Unauthorized");
   }
 
-  const supabase = createClient(getSupabaseUrl(), getAnonKey(), {
+  const supabaseUrl = getEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const supabaseAnonKey = getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+
+  // IMPORTANT:
+  // We bind the JWT to all PostgREST calls via global headers.
+  // This ensures RLS runs as the authenticated user (no cookies required).
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
     },
     global: {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
   });
 
-  const { data, error } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) {
-    const err = new Error("Invalid or expired session");
-    (err as any).status = 401;
-    throw err;
+    throw new Error("Unauthorized");
   }
 
-  return { supabase, user: data.user, accessToken: token };
+  // Optional: pull role for server-side decisions (RLS remains authoritative)
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
+  return {
+    token,
+    supabase,
+    userId: data.user.id,
+    role: (profile as any)?.role ?? null,
+  };
 }
-
-export function requirePropertyId(input: unknown): string {
-  if (typeof input !== "string" || !input.trim()) {
-    const err = new Error("Missing property_id");
-    (err as any).status = 400;
-    throw err;
-  }
-  return input.trim();
-}
-
-/**
- * Server-side authorization check using canonical SQL:
- *   can_access_property(property_id)
- */
-export async function assertCanAccessProperty(
-  supabase: SupabaseClient,
-  propertyId: string
-): Promise<void> {
-  const { data, error } = await supabase.rpc("can_access_property", {
-    property_id: propertyId,
-  });
-
-  if (error) {
-    // Avoid leaking DB details; treat as forbidden.
-    const err = new Error("Forbidden");
-    (err as any).status = 403;
-    throw err;
-  }
-
-  if (data !== true) {
-    const err = new Error("Forbidden");
-    (err as any).status = 403;
-    throw err;
-  }
-}
-
