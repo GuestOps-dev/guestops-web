@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
-export default function LoginPage() {
+function LoginInner() {
   const router = useRouter();
   const search = useSearchParams();
 
@@ -13,17 +13,17 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-async function onSubmit(e: React.FormEvent) {
-  e.preventDefault();
-  setBusy(true);
-  setError(null);
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
 
-  const sb = getSupabaseBrowserClient();
+    const sb = getSupabaseBrowserClient();
 
-  const { error } = await sb.auth.signInWithPassword({
-    email: email.trim(),
-    password,
-  });
+    const { error } = await sb.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
 
     setBusy(false);
 
@@ -103,5 +103,13 @@ async function onSubmit(e: React.FormEvent) {
         </button>
       </form>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<main style={{ padding: 16 }}>Loading…</main>}>
+      <LoginInner />
+    </Suspense>
   );
 }
