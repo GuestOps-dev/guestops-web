@@ -1,41 +1,44 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-const USER = process.env.DASHBOARD_USER;
-const PASS = process.env.DASHBOARD_PASS;
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
 
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-
-  // Protect only dashboard routes
-  if (!pathname.startsWith("/dashboard")) {
-    return NextResponse.next();
-  }
-
-  const auth = req.headers.get("authorization");
-
-  if (!auth) {
-    return new NextResponse("Auth required", {
-      status: 401,
-      headers: {
-        "WWW-Authenticate": 'Basic realm="Secure Area"',
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          res.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          res.cookies.set({ name, value: "", ...options });
+        },
       },
-    });
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const path = req.nextUrl.pathname;
+
+  const isLogin = path === "/login";
+  const isProtected = path.startsWith("/dashboard") || path.startsWith("/api");
+
+  if (!user && isProtected && !isLogin) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("redirectTo", req.nextUrl.pathname);
+    return NextResponse.redirect(url);
   }
 
-  const base64 = auth.split(" ")[1];
-  const [user, pass] = atob(base64).split(":");
-
-  if (user === USER && pass === PASS) {
-    return NextResponse.next();
-  }
-
-  return new NextResponse("Unauthorized", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Secure Area"',
-    },
-  });
+  return res;
 }
 
 export const config = {
