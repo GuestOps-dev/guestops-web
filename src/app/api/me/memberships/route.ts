@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiAuth } from "@/src/lib/api/requireApiAuth";
+import { requireApiAuth } from "../../../../lib/api/requireApiAuth";
 
 /**
  * GET /api/me/memberships
@@ -16,7 +16,6 @@ export async function GET(req: Request) {
   }
 
   const { data, error: rpcError } = await supabase.rpc("my_property_memberships");
-
   if (rpcError) {
     return NextResponse.json({ error: rpcError.message }, { status: 500 });
   }
