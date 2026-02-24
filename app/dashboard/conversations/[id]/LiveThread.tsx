@@ -40,14 +40,25 @@ export default function LiveThread({
 }: Props) {
   const [inbound, setInbound] = useState<InboundRow[]>(initialInbound);
   const [outbound, setOutbound] = useState<OutboundRow[]>(initialOutbound);
+  const [realtimeReady, setRealtimeReady] = useState(true);
 
   // Subscribe to realtime changes
   useEffect(() => {
     const sb = getSupabaseBrowserClient();
 
+    if (!sb) {
+      setRealtimeReady(false);
+      console.error(
+        "Realtime disabled: missing/empty NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
+      );
+      return;
+    }
+
+    setRealtimeReady(true);
+
     const channel = sb
       .channel(`thread:${conversationId}`)
-      // Inbound inserts
+      // inbound inserts
       .on(
         "postgres_changes",
         {
@@ -60,17 +71,19 @@ export default function LiveThread({
           const row = payload.new as any;
           setInbound((prev) => {
             if (prev.some((m) => m.id === row.id)) return prev;
-            return [
+            const next = [
               ...prev,
               { id: row.id, created_at: row.created_at, body: row.body },
-            ].sort(
+            ];
+            next.sort(
               (a, b) =>
                 new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
             );
+            return next;
           });
         }
       )
-      // Outbound inserts
+      // outbound inserts
       .on(
         "postgres_changes",
         {
@@ -83,7 +96,7 @@ export default function LiveThread({
           const row = payload.new as any;
           setOutbound((prev) => {
             if (prev.some((m) => m.id === row.id)) return prev;
-            return [
+            const next = [
               ...prev,
               {
                 id: row.id,
@@ -92,14 +105,16 @@ export default function LiveThread({
                 status: row.status,
                 error: row.error,
               },
-            ].sort(
+            ];
+            next.sort(
               (a, b) =>
                 new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
             );
+            return next;
           });
         }
       )
-      // Outbound updates (status flips)
+      // outbound updates (status flips)
       .on(
         "postgres_changes",
         {
@@ -110,28 +125,31 @@ export default function LiveThread({
         },
         (payload) => {
           const row = payload.new as any;
-          setOutbound((prev) =>
-            prev
-              .map((m) =>
-                m.id === row.id
-                  ? {
-                      ...m,
-                      status: row.status,
-                      error: row.error,
-                      // created_at/body generally stable, but keep safe:
-                      created_at: row.created_at ?? m.created_at,
-                      body: row.body ?? m.body,
-                    }
-                  : m
-              )
-              .sort(
-                (a, b) =>
-                  new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-              )
-          );
+          setOutbound((prev) => {
+            const next = prev.map((m) =>
+              m.id === row.id
+                ? {
+                    ...m,
+                    status: row.status,
+                    error: row.error,
+                    created_at: row.created_at ?? m.created_at,
+                    body: row.body ?? m.body,
+                  }
+                : m
+            );
+            next.sort(
+              (a, b) =>
+                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+            return next;
+          });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.error("Supabase realtime channel error:", conversationId);
+        }
+      });
 
     return () => {
       sb.removeChannel(channel);
@@ -209,6 +227,23 @@ export default function LiveThread({
 
   return (
     <>
+      {!realtimeReady && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 12,
+            background: "#fee",
+            border: "1px solid #f99",
+            color: "#7f1d1d",
+            fontSize: 13,
+          }}
+        >
+          Realtime disabled: missing/empty NEXT_PUBLIC_SUPABASE_URL or
+          NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel env vars.
+        </div>
+      )}
+
       {legacyCount > 0 && (
         <div
           style={{
