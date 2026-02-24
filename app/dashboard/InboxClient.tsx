@@ -21,7 +21,7 @@ type ConversationRow = {
   last_message_at: string | null;
   last_inbound_at: string | null;
   last_outbound_at: string | null;
-  last_read_at?: string | null;
+  last_read_at: string | null;
 };
 
 type Props = {
@@ -30,11 +30,12 @@ type Props = {
 
 type StatusFilter = "open" | "closed" | "all";
 
-function isUnread(c: any) {
+function isUnread(c: ConversationRow) {
   if (!c.last_inbound_at) return false;
   if (!c.last_read_at) return true;
-  return new Date(c.last_inbound_at).getTime() >
-         new Date(c.last_read_at).getTime();
+  return (
+    new Date(c.last_inbound_at).getTime() > new Date(c.last_read_at).getTime()
+  );
 }
 
 function sortByUpdatedDesc(a: ConversationRow, b: ConversationRow) {
@@ -50,41 +51,70 @@ export default function InboxClient({ initial }: Props) {
   const [status, setStatus] = useState<StatusFilter>("open");
   const [propertyId, setPropertyId] = useState<string>("all");
 
-  const sb = useMemo(() => getSupabaseBrowserClient(), []);
+  const [properties, setProperties] = useState<Array<{ id: string; name: string }>>([]);
 
+  const sb = useMemo(() => getSupabaseBrowserClient(), []);
   const unreadCount = useMemo(() => rows.filter(isUnread).length, [rows]);
 
-  // Re-fetch when filters change (keeps inbox clean)
+  // Load properties list (for dropdown)
   useEffect(() => {
-    if (!sb) return;
+    let cancelled = false;
 
+    async function loadProperties() {
+      const { data, error } = await sb
+        .from("properties")
+        .select("id, name")
+        .eq("active", true)
+        .order("name", { ascending: true });
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("Failed to load properties:", error);
+        return;
+      }
+
+      setProperties((data as any) ?? []);
+    }
+
+    loadProperties();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sb]);
+
+  // Re-fetch when filters change
+  useEffect(() => {
     let cancelled = false;
 
     async function refetch() {
       setLoading(true);
 
-let q = sb.from("conversations").select(`
-  id,
-  property_id,
-  guest_number,
-  service_number,
-  channel,
-  provider,
-  status,
-  priority,
-  assigned_to,
-  updated_at,
-  last_message_at,
-  last_inbound_at,
-  last_outbound_at,
-  last_read_at,
-  properties:property_id ( id, name )
-`);
+      let q = sb.from("conversations").select(`
+        id,
+        property_id,
+        guest_number,
+        service_number,
+        channel,
+        provider,
+        status,
+        priority,
+        assigned_to,
+        updated_at,
+        last_message_at,
+        last_inbound_at,
+        last_outbound_at,
+        last_read_at,
+        properties:property_id ( id, name )
+      `);
 
       if (status !== "all") q = q.eq("status", status);
       if (propertyId !== "all") q = q.eq("property_id", propertyId);
 
-      const { data, error } = await q.order("updated_at", { ascending: false }).limit(200);
+      const { data, error } = await q
+        .order("updated_at", { ascending: false })
+        .limit(200);
 
       if (cancelled) return;
 
@@ -104,10 +134,8 @@ let q = sb.from("conversations").select(`
     };
   }, [sb, status, propertyId]);
 
-  // Realtime subscription to conversations changes
+  // Realtime subscription to conversations changes (reorder live)
   useEffect(() => {
-    if (!sb) return;
-
     const channel = sb
       .channel("inbox:conversations")
       .on(
@@ -117,7 +145,7 @@ let q = sb.from("conversations").select(`
           const updated = payload.new as any as ConversationRow;
           if (!updated?.id) return;
 
-          // keep local filters consistent
+          // Apply current filters
           if (status !== "all" && updated.status !== status) return;
           if (propertyId !== "all" && updated.property_id !== propertyId) return;
 
@@ -128,9 +156,7 @@ let q = sb.from("conversations").select(`
           });
         }
       )
-      .subscribe((s) => {
-        console.log("Inbox realtime status:", s);
-      });
+      .subscribe();
 
     return () => {
       sb.removeChannel(channel);
@@ -139,28 +165,52 @@ let q = sb.from("conversations").select(`
 
   return (
     <>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          marginBottom: 12,
+        }}
+      >
         <div style={{ fontSize: 14, opacity: 0.75 }}>
-          {loading ? "Refreshing…" : `${rows.length} threads • ${unreadCount} unread`}
+          {loading
+            ? "Refreshing…"
+            : `${rows.length} threads • ${unreadCount} unread`}
         </div>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as StatusFilter)}
-            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd" }}
+            style={{
+              padding: "8px 10px",
+              borderRadius: 10,
+              border: "1px solid #ddd",
+            }}
           >
             <option value="open">Open</option>
             <option value="closed">Closed</option>
             <option value="all">All</option>
           </select>
 
-          <input
-            value={propertyId === "all" ? "" : propertyId}
-            onChange={(e) => setPropertyId(e.target.value ? e.target.value : "all")}
-            placeholder="Filter property_id (optional)"
-            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd", width: 280 }}
-          />
+          <select
+            value={propertyId}
+            onChange={(e) => setPropertyId(e.target.value)}
+            style={{
+              padding: "8px 10px",
+              borderRadius: 10,
+              border: "1px solid #ddd",
+              minWidth: 240,
+            }}
+          >
+            <option value="all">All properties</option>
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -185,10 +235,18 @@ let q = sb.from("conversations").select(`
               >
                 <div style={{ fontSize: 12, opacity: 0.7 }}>
                   {c.status ?? "-"} •{" "}
-                  {c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}
+                  {c.last_message_at
+                    ? new Date(c.last_message_at).toLocaleString()
+                    : "-"}
                 </div>
 
-                <div style={{ marginTop: 6, fontSize: 16, fontWeight: unread ? 700 : 600 }}>
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 16,
+                    fontWeight: unread ? 700 : 600,
+                  }}
+                >
                   {unread ? "● " : ""}
                   Guest: <span style={{ fontWeight: 500 }}>{c.guest_number}</span>
                 </div>
@@ -198,7 +256,8 @@ let q = sb.from("conversations").select(`
                 </div>
 
                 <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-                  Property: <code>{c.properties?.name ?? c.property_id}</code>
+                  Property:{" "}
+                  <code>{c.properties?.name ?? c.property_id}</code>
                 </div>
               </Link>
             );
@@ -208,7 +267,13 @@ let q = sb.from("conversations").select(`
 
       {/* Desktop table */}
       <div className="desktopOnly" style={{ display: "block" }}>
-        <div style={{ border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
+        <div
+          style={{
+            border: "1px solid #eee",
+            borderRadius: 12,
+            overflow: "hidden",
+          }}
+        >
           <div
             style={{
               display: "grid",
@@ -245,7 +310,8 @@ let q = sb.from("conversations").select(`
                 }}
               >
                 <div style={{ fontWeight: unread ? 700 : 500 }}>
-                  <code>{c.guest_number}</code> {unread ? <span style={{ marginLeft: 8 }}>●</span> : null}
+                  <code>{c.guest_number}</code>{" "}
+                  {unread ? <span style={{ marginLeft: 8 }}>●</span> : null}
                 </div>
                 <div>
                   <code>{c.service_number ?? "-"}</code>
@@ -253,7 +319,11 @@ let q = sb.from("conversations").select(`
                 <div style={{ fontSize: 12, opacity: 0.85 }}>
                   <code>{c.properties?.name ?? c.property_id}</code>
                 </div>
-                <div>{c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}</div>
+                <div>
+                  {c.last_message_at
+                    ? new Date(c.last_message_at).toLocaleString()
+                    : "-"}
+                </div>
                 <div>{c.status ?? "-"}</div>
                 <div>
                   <Link href={`/dashboard/conversations/${c.id}`}>View</Link>
