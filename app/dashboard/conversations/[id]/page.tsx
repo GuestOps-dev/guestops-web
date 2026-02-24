@@ -7,12 +7,8 @@ import MarkRead from "./MarkRead";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export default async function ConversationPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const conversationId = params.id;
+export default async function ConversationPage(props: any) {
+  const conversationId = props?.params?.id;
 
   if (!conversationId) {
     return (
