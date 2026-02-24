@@ -1,29 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
 import twilio from "twilio";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
-async function validateTwilioSignature(req: NextRequest, rawBody: string) {
-  const hdrs = await headers();
-  const signature = hdrs.get("x-twilio-signature");
+function getAbsoluteUrl(req: NextRequest) {
+  const url = new URL(req.url);
+
+  const proto = req.headers.get("x-forwarded-proto");
+  const host =
+    req.headers.get("x-forwarded-host") || req.headers.get("host");
+
+  if (proto) url.protocol = `${proto}:`;
+  if (host) url.host = host;
+
+  return url.toString();
+}
+
+function validateTwilioSignature(req: NextRequest, rawBody: string) {
+  const signature = req.headers.get("x-twilio-signature");
   if (!signature) return false;
 
-  const url = req.url;
+  const absoluteUrl = getAbsoluteUrl(req);
 
   const params = new URLSearchParams(rawBody);
   const bodyObj: Record<string, string> = {};
   for (const [k, v] of params.entries()) bodyObj[k] = v;
 
   const authToken = process.env.TWILIO_AUTH_TOKEN!;
-  return twilio.validateRequest(authToken, signature, url, bodyObj);
+  return twilio.validateRequest(authToken, signature, absoluteUrl, bodyObj);
 }
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
 
-  const valid = await validateTwilioSignature(req, rawBody);
+  const valid = validateTwilioSignature(req, rawBody);
   if (!valid) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
   }
@@ -31,33 +42,64 @@ export async function POST(req: NextRequest) {
   const params = new URLSearchParams(rawBody);
 
   const messageSid = params.get("MessageSid") || params.get("SmsSid");
-  const messageStatus = params.get("MessageStatus");
+  const messageStatus = params.get("MessageStatus") || params.get("SmsStatus");
   const errorCode = params.get("ErrorCode");
   const errorMessage = params.get("ErrorMessage");
 
-  const payload: Record<string, string> = {};
-  for (const [k, v] of params.entries()) payload[k] = v;
+  const payload = Object.fromEntries(params.entries());
 
   const supabase = getSupabaseServerClient();
 
-  // Always store raw callback payload
+  // If we can't identify the message, just log and exit.
+  if (!messageSid) {
+    await supabase.from("message_events").insert({
+      event_type: "status_callback",
+      twilio_message_sid: null,
+      outbound_message_id: null,
+      payload,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  // Find outbound message by SID so we can link message_events.outbound_message_id
+  const { data: outbound, error: findErr } = await supabase
+    .from("outbound_messages")
+    .select("id")
+    .eq("twilio_message_sid", messageSid)
+    .maybeSingle();
+
+  if (findErr) {
+    console.error("Outbound lookup error:", findErr);
+  }
+
+  // Log callback payload (linked when possible)
   await supabase.from("message_events").insert({
     event_type: "status_callback",
     twilio_message_sid: messageSid,
+    outbound_message_id: outbound?.id ?? null,
     payload,
   });
 
-  if (!messageSid || !messageStatus) {
+  // Update outbound status if we have enough info
+  if (!messageStatus) {
     return NextResponse.json({ ok: true });
   }
 
   const update: Record<string, any> = { status: messageStatus };
+
   if (messageStatus === "failed" || messageStatus === "undelivered") {
     update.error =
-      [errorCode, errorMessage].filter(Boolean).join(" - ") || "Delivery failed";
+      [errorCode, errorMessage].filter(Boolean).join(" - ") ||
+      "Delivery failed/undelivered";
+  } else {
+    // Clear prior error if later updates indicate success
+    update.error = null;
   }
 
-  await supabase.from("outbound_messages").update(update).eq("twilio_message_sid", messageSid);
+  await supabase
+    .from("outbound_messages")
+    .update(update)
+    .eq("twilio_message_sid", messageSid);
 
   return NextResponse.json({ ok: true });
 }
