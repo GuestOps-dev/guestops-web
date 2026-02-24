@@ -39,7 +39,6 @@ export default function OutboundBubble({
   const [expanded, setExpanded] = useState(false);
 
   const retryable = canRetry(status);
-
   const olderCount = olderAttempts.length;
 
   const olderSorted = useMemo(() => {
@@ -53,6 +52,7 @@ export default function OutboundBubble({
     setLocalErr(null);
 
     try {
+      // Prevent double-tap duplicates for the same outbound attempt
       const idempotencyKey = `retry:${outboundId}`;
 
       const res = await fetch("/api/messages/send", {
@@ -72,6 +72,7 @@ export default function OutboundBubble({
         throw new Error(text || `Retry failed (${res.status})`);
       }
 
+      // Refresh to show the new outbound row and any subsequent status updates
       window.location.reload();
     } catch (e: any) {
       setLocalErr(e?.message || "Retry failed");
@@ -141,7 +142,13 @@ export default function OutboundBubble({
       )}
 
       {expanded && olderSorted.length > 0 && (
-        <div style={{ marginTop: 10, borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 10 }}>
+        <div
+          style={{
+            marginTop: 10,
+            borderTop: "1px solid rgba(0,0,0,0.08)",
+            paddingTop: 10,
+          }}
+        >
           <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
             Earlier attempts
           </div>
@@ -161,7 +168,11 @@ export default function OutboundBubble({
                   {new Date(a.created_at).toLocaleString()}
                   {a.status ? ` • ${a.status}` : ""}
                 </div>
-                <div style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>{a.body}</div>
+
+                <div style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>
+                  {a.body}
+                </div>
+
                 {a.error && (
                   <div style={{ fontSize: 12, color: "crimson", marginTop: 6 }}>
                     Error: {a.error}
