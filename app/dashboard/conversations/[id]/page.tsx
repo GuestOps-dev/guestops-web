@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import MarkRead from "./MarkRead";
 import LiveThread from "./LiveThread";
 import SendMessageBox from "./SendMessageBox";
-import { getSupabaseServerClient } from "@/src/lib/supabaseServer";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export default async function ConversationPage({
   params,
@@ -17,28 +17,24 @@ export default async function ConversationPage({
 
   const supabase = await getSupabaseServerClient();
 
-  // Ensure user is logged in (middleware should already enforce, but keep server-safe)
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
 
-  // Load conversation to derive property_id (RLS enforced)
-  const { data: convo, error } = await supabase
+  const { data: convo, error } = await (supabase as any)
     .from("conversations")
     .select("id, property_id")
     .eq("id", conversationId)
     .maybeSingle();
 
   if (error) {
-    // If you want, you can render a nicer error page — but keep it deterministic
     console.error("Conversation page load error:", error);
     redirect("/dashboard");
   }
 
   if (!convo) {
-    // Not found or not authorized by RLS
     redirect("/dashboard");
   }
 
@@ -46,7 +42,6 @@ export default async function ConversationPage({
 
   return (
     <main style={{ padding: 16, maxWidth: 900, margin: "0 auto" }}>
-      {/* Marks the conversation read via bearer-auth API */}
       <MarkRead conversationId={conversationId} propertyId={propertyId} />
 
       <Link href="/dashboard">← Back</Link>
