@@ -1,54 +1,43 @@
+import { redirect } from "next/navigation";
 import InboxClient from "./InboxClient";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export default async function DashboardPage() {
-  const sb = getSupabaseServerClient();
+  const sb = await getSupabaseServerClient();
 
-  const { data: conversations, error } = await sb
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  const { data: conversations, error } = await (sb as any)
     .from("conversations")
-.select(`
-  id,
-  property_id,
-  guest_number,
-  service_number,
-  channel,
-  provider,
-  last_message_at,
-  updated_at,
-  status,
-  priority,
-  assigned_to,
-  last_inbound_at,
-  last_outbound_at,
-  last_read_at,
-  properties:property_id ( id, name )
-`)
+    .select(
+      `
+      id,
+      property_id,
+      guest_number,
+      service_number,
+      channel,
+      provider,
+      status,
+      priority,
+      assigned_to,
+      updated_at,
+      last_message_at,
+      last_inbound_at,
+      last_outbound_at,
+      last_read_at,
+      properties:property_id ( id, name )
+    `
+    )
     .order("updated_at", { ascending: false })
-    .limit(100);
+    .limit(200);
 
-  return (
-    <main style={{ padding: 16, maxWidth: 1100, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 28, marginBottom: 12 }}>
-        GuestOpsHQ — Conversations
-      </h1>
+  if (error) {
+    console.error("Dashboard conversations load error:", error);
+  }
 
-      {error && (
-        <div
-          style={{
-            padding: 12,
-            background: "#fee",
-            border: "1px solid #f99",
-            borderRadius: 8,
-          }}
-        >
-          <strong>Supabase error:</strong> {error.message}
-        </div>
-      )}
-
-      {!error && <InboxClient initial={(conversations as any) ?? []} />}
-    </main>
-  );
+  return <InboxClient initial={(conversations as any) ?? []} />;
 }
