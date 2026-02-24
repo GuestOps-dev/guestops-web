@@ -1,36 +1,10 @@
 import Link from "next/link";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import SendMessageBox from "./SendMessageBox";
-import OutboundBubble from "./OutboundBubble";
+import LiveThread from "./LiveThread";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-type ThreadMessage = {
-  id: string;
-  created_at: string;
-  direction: "inbound" | "outbound";
-  body: string;
-  meta?: any;
-};
-
-type OutboundRow = {
-  id: string;
-  created_at: string;
-  body: string;
-  status?: string | null;
-  error?: string | null;
-  twilio_message_sid?: string | null;
-};
-
-function normalizeBody(body: string) {
-  return (body || "").trim().replace(/\s+/g, " ");
-}
-
-function isLegacyConfigError(err?: string | null) {
-  const e = (err || "").toLowerCase();
-  return e.includes("statuscallback") && e.includes("undefined/api/twilio/status");
-}
 
 export default async function ConversationPage({
   params,
@@ -52,94 +26,18 @@ export default async function ConversationPage({
 
   const inboundRes = await sb
     .from("inbound_messages")
-    .select("id, created_at, direction, body, twilio_message_sid")
+    .select("id, created_at, body")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
 
   const outboundRes = await sb
     .from("outbound_messages")
-    .select("id, created_at, body, status, error, twilio_message_sid")
+    .select("id, created_at, body, status, error")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
 
-  const inbound: ThreadMessage[] =
-    inboundRes.data?.map((m: any) => ({
-      id: m.id,
-      created_at: m.created_at,
-      direction: "inbound",
-      body: m.body,
-      meta: { twilio_message_sid: m.twilio_message_sid },
-    })) ?? [];
-
-  const outboundRows: OutboundRow[] =
-    outboundRes.data?.map((m: any) => ({
-      id: m.id,
-      created_at: m.created_at,
-      body: m.body,
-      status: m.status,
-      error: m.error,
-      twilio_message_sid: m.twilio_message_sid,
-    })) ?? [];
-
-  // Hide legacy config failures (when StatusCallback URL was misconfigured)
-  const legacyConfigErrors = outboundRows.filter((r) => isLegacyConfigError(r.error));
-  const filteredOutboundRows = outboundRows.filter((r) => !isLegacyConfigError(r.error));
-
-  /**
-   * Collapse old attempts:
-   * Group outbound attempts by normalized body text.
-   * Show the latest attempt in-line; hide older attempts behind a toggle.
-   */
-  const groupedOutbound = new Map<
-    string,
-    { latest: OutboundRow; older: OutboundRow[] }
-  >();
-
-  for (const row of filteredOutboundRows) {
-    const key = normalizeBody(row.body);
-    const existing = groupedOutbound.get(key);
-
-    if (!existing) {
-      groupedOutbound.set(key, { latest: row, older: [] });
-      continue;
-    }
-
-    const currentLatestTime = new Date(existing.latest.created_at).getTime();
-    const rowTime = new Date(row.created_at).getTime();
-
-    if (rowTime >= currentLatestTime) {
-      existing.older.push(existing.latest);
-      existing.latest = row;
-    } else {
-      existing.older.push(row);
-    }
-
-    // Keep older sorted newest->oldest for nicer display
-    existing.older.sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-  }
-
-  // Convert grouped outbound into ThreadMessage “latest only” items for merging with inbound
-  const outboundLatestOnly: ThreadMessage[] = Array.from(
-    groupedOutbound.values()
-  ).map((g) => ({
-    id: g.latest.id,
-    created_at: g.latest.created_at,
-    direction: "outbound",
-    body: g.latest.body,
-    meta: {
-      status: g.latest.status,
-      error: g.latest.error,
-      twilio_message_sid: g.latest.twilio_message_sid,
-      older_attempts: g.older,
-    },
-  }));
-
-  const messages = [...inbound, ...outboundLatestOnly].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  );
+  const inbound = inboundRes.data ?? [];
+  const outbound = outboundRes.data ?? [];
 
   const anyError = inboundRes.error || outboundRes.error;
 
@@ -155,61 +53,11 @@ export default async function ConversationPage({
         </p>
       )}
 
-      {legacyConfigErrors.length > 0 && (
-        <div
-          style={{
-            marginTop: 12,
-            padding: 12,
-            borderRadius: 12,
-            background: "#fff7ed",
-            border: "1px solid #fed7aa",
-            color: "#7c2d12",
-            fontSize: 13,
-          }}
-        >
-          System note: {legacyConfigErrors.length} earlier outbound attempt(s) failed
-          due to a configuration issue that has since been fixed.
-        </div>
-      )}
-
-      <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-        {messages.map((m) => {
-          if (m.direction === "outbound") {
-            return (
-              <OutboundBubble
-                key={`out-${m.id}`}
-                conversationId={conversationId}
-                outboundId={m.id}
-                createdAt={m.created_at}
-                body={m.body}
-                status={m.meta?.status}
-                error={m.meta?.error}
-                olderAttempts={m.meta?.older_attempts || []}
-              />
-            );
-          }
-
-          // Inbound bubble
-          return (
-            <div
-              key={`in-${m.id}`}
-              style={{
-                background: "#f2f2f2",
-                padding: 10,
-                borderRadius: 12,
-                marginBottom: 8,
-                maxWidth: "92%",
-                marginLeft: 0,
-              }}
-            >
-              <div style={{ fontSize: 12, opacity: 0.7 }}>
-                INBOUND • {new Date(m.created_at).toLocaleString()}
-              </div>
-              <div style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>{m.body}</div>
-            </div>
-          );
-        })}
-      </div>
+      <LiveThread
+        conversationId={conversationId}
+        initialInbound={inbound as any}
+        initialOutbound={outbound as any}
+      />
 
       <div style={{ position: "sticky", bottom: 0, background: "white", paddingTop: 12 }}>
         <SendMessageBox conversationId={conversationId} />
