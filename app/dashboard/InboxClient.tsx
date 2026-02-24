@@ -7,6 +7,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 type ConversationRow = {
   id: string;
   property_id: string;
+  properties?: { id: string; name: string } | null;
+
   guest_number: string;
   service_number: string | null;
   channel: string;
@@ -14,10 +16,12 @@ type ConversationRow = {
   status: string;
   priority: string;
   assigned_to: string | null;
+
   updated_at: string;
   last_message_at: string | null;
   last_inbound_at: string | null;
   last_outbound_at: string | null;
+  last_read_at?: string | null;
 };
 
 type Props = {
@@ -59,9 +63,12 @@ export default function InboxClient({ initial }: Props) {
     async function refetch() {
       setLoading(true);
 
-      let q = sb.from("conversations").select(
-        "id, property_id, guest_number, service_number, channel, provider, status, priority, assigned_to, updated_at, last_message_at, last_inbound_at, last_outbound_at"
-      );
+let q = sb.from("conversations").select(`
+  id, property_id, guest_number, service_number, channel, provider,
+  status, priority, assigned_to, updated_at, last_message_at,
+  last_inbound_at, last_outbound_at, last_read_at,
+  properties:property_id ( id, name )
+`);
 
       if (status !== "all") q = q.eq("status", status);
       if (propertyId !== "all") q = q.eq("property_id", propertyId);
@@ -180,7 +187,7 @@ export default function InboxClient({ initial }: Props) {
                 </div>
 
                 <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-                  Property: <code>{c.property_id}</code>
+                  Property: <code>{c.properties?.name ?? c.property_id}</code>
                 </div>
               </Link>
             );
@@ -233,7 +240,7 @@ export default function InboxClient({ initial }: Props) {
                   <code>{c.service_number ?? "-"}</code>
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.85 }}>
-                  <code>{c.property_id}</code>
+                  <code>{c.properties?.name ?? c.property_id}</code>
                 </div>
                 <div>{c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}</div>
                 <div>{c.status ?? "-"}</div>
