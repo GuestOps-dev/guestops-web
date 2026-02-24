@@ -73,7 +73,7 @@ export default function OutboundBubble({
       }
 
       // Refresh to show the new outbound row and any subsequent status updates
-      window.location.reload();
+      setExpanded(false);
     } catch (e: any) {
       setLocalErr(e?.message || "Retry failed");
     } finally {
