@@ -145,11 +145,12 @@ export default function LiveThread({
           });
         }
       )
-      .subscribe((status) => {
-        if (status === "CHANNEL_ERROR") {
-          console.error("Supabase realtime channel error:", conversationId);
-        }
-      });
+.subscribe((status) => {
+  console.log("Realtime status:", status, "conversation:", conversationId);
+  if (status === "CHANNEL_ERROR") {
+    console.error("Supabase realtime channel error:", conversationId);
+  }
+});
 
     return () => {
       sb.removeChannel(channel);

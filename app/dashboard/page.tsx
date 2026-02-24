@@ -1,5 +1,23 @@
 import InboxClient from "./InboxClient";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import MarkRead from "./MarkRead";
+
+export default async function ConversationPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const conversationId = params.id;
+
+  return (
+    <>
+      <MarkRead conversationId={conversationId} />
+
+      {/* your existing thread UI below */}
+      <Thread conversationId={conversationId} />
+    </>
+  );
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

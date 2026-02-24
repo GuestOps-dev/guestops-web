@@ -22,8 +22,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ✅ Always use request origin (works in Vercel without env vars)
-  const origin = req.nextUrl.origin; // e.g. https://guestopshq.com
+  const origin = req.nextUrl.origin;
 
   // Load conversation to derive from/to safely
   const { data: convo, error: convoErr } = await supabase
@@ -33,10 +32,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (convoErr || !convo) {
-    return NextResponse.json(
-      { error: "Conversation not found" },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
   }
 
   const toE164 = convo.guest_number ?? convo.from_e164; // guest
@@ -49,7 +45,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 1) Insert outbound record (idempotent)
+  // 1) Insert outbound record (idempotent) - initial status queued
   const insertRes = await supabase
     .from("outbound_messages")
     .insert({
@@ -72,11 +68,8 @@ export async function POST(req: NextRequest) {
         .eq("idempotency_key", idempotencyKey)
         .single();
 
-      if (existing.data) {
-        return NextResponse.json({ ok: true, outbound: existing.data });
-      }
+      if (existing.data) return NextResponse.json({ ok: true, outbound: existing.data });
     }
-
     return NextResponse.json({ error: insertRes.error.message }, { status: 500 });
   }
 
@@ -88,21 +81,22 @@ export async function POST(req: NextRequest) {
       to: toE164,
       from: fromE164,
       body,
+      // delivery truth comes via callback; this is required for accurate state
       statusCallback: `${origin}/api/twilio/status`,
     });
 
-    // 3) Update outbound record
+    // 3) Update outbound record: accepted by Twilio, store SID (keep status queued)
     const updated = await supabase
       .from("outbound_messages")
       .update({
-        status: "sent",
+        status: "queued",
         twilio_message_sid: msg.sid,
       })
       .eq("id", outboundId)
       .select("*")
       .single();
 
-    // 4) Update conversation timestamps (+ keep e164 columns synced)
+    // 4) Update conversation timestamps
     const now = new Date().toISOString();
     await supabase
       .from("conversations")

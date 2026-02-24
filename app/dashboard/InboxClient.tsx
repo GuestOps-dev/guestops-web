@@ -26,12 +26,11 @@ type Props = {
 
 type StatusFilter = "open" | "closed" | "all";
 
-function isUnread(c: ConversationRow) {
+function isUnread(c: any) {
   if (!c.last_inbound_at) return false;
-  if (!c.last_outbound_at) return true;
-  return (
-    new Date(c.last_inbound_at).getTime() > new Date(c.last_outbound_at).getTime()
-  );
+  if (!c.last_read_at) return true;
+  return new Date(c.last_inbound_at).getTime() >
+         new Date(c.last_read_at).getTime();
 }
 
 function sortByUpdatedDesc(a: ConversationRow, b: ConversationRow) {
