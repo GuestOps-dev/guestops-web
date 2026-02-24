@@ -1,6 +1,8 @@
 begin;
 
--- 1) Helper: get org_id for a property WITHOUT invoking RLS recursion
+-- Fix infinite recursion between properties RLS and property_users RLS by avoiding
+-- property_users policies querying properties directly.
+
 create or replace function public.property_org_id(_property_id uuid)
 returns uuid
 language sql
@@ -15,7 +17,6 @@ as $$
   limit 1
 $$;
 
--- 2) Recreate property_users policies WITHOUT querying properties table
 alter table public.property_users enable row level security;
 
 drop policy if exists property_users_select on public.property_users;
