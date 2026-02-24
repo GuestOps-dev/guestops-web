@@ -2,19 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { usePropertyWorkspace } from "./PropertyWorkspaceProvider";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type ConversationRow = {
   id: string;
   property_id: string;
-  properties?: { id: string; name: string } | null;
 
   guest_number: string;
   service_number: string | null;
+
   channel: string;
   provider: string;
-  status: string;
-  priority: string;
+
+  status: string | null;
+  priority: string | null;
   assigned_to: string | null;
 
   updated_at: string;
@@ -24,15 +26,7 @@ type ConversationRow = {
   last_read_at: string | null;
 };
 
-type Props = {
-  initial: ConversationRow[];
-  propertyOptions: Array<{ id: string; name: string }>;
-  allowedPropertyIds: string[];
-};
-
 type StatusFilter = "open" | "closed" | "all";
-
-const SELECTED_PROPERTY_KEY = "guestops:selectedPropertyId";
 
 function isUnread(c: ConversationRow) {
   if (!c.last_inbound_at) return false;
@@ -44,14 +38,18 @@ function sortByUpdatedDesc(a: ConversationRow, b: ConversationRow) {
   return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
 }
 
-export default function InboxClient({ initial, propertyOptions, allowedPropertyIds }: Props) {
-  const [rows, setRows] = useState<ConversationRow[]>(() =>
-    [...(initial || [])].sort(sortByUpdatedDesc)
-  );
+export default function InboxClient() {
+  const {
+    selectedPropertyId,
+    setSelectedPropertyId,
+    allowedPropertyIds,
+    propertyOptions,
+  } = usePropertyWorkspace();
 
+  const [rows, setRows] = useState<ConversationRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<StatusFilter>("open");
-  const [propertyId, setPropertyId] = useState<string>("all");
+  const [error, setError] = useState<string | null>(null);
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
   const unreadCount = useMemo(() => rows.filter(isUnread).length, [rows]);
@@ -62,87 +60,67 @@ export default function InboxClient({ initial, propertyOptions, allowedPropertyI
     return map;
   }, [propertyOptions]);
 
-  function displayPropertyName(c: ConversationRow) {
-    return c.properties?.name ?? propertyNameById.get(c.property_id) ?? c.property_id;
-  }
-
   async function getAccessToken(): Promise<string> {
     const { data, error } = await sb.auth.getSession();
     if (error || !data.session?.access_token) throw new Error("No Supabase session");
     return data.session.access_token;
   }
 
-  // Load and validate saved property selection
-  useEffect(() => {
-    const saved = safeGetLocalStorage(SELECTED_PROPERTY_KEY);
+  async function refetch() {
+    setLoading(true);
+    setError(null);
 
-    const normalized =
-      saved && saved !== "all" && allowedPropertyIds.includes(saved) ? saved : "all";
-
-    setPropertyId(normalized);
-
-    // If invalid, overwrite so it doesn't "stick" and hide everything
-    if (saved !== normalized) {
-      safeSetLocalStorage(SELECTED_PROPERTY_KEY, normalized);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allowedPropertyIds.join(",")]);
-
-  // Persist selection
-  useEffect(() => {
-    safeSetLocalStorage(SELECTED_PROPERTY_KEY, propertyId);
-  }, [propertyId]);
-
-  // Fetch conversations via secure API
-  useEffect(() => {
-    let cancelled = false;
-
-    async function refetch() {
-      setLoading(true);
-
-      try {
-        const token = await getAccessToken();
-
-        const params = new URLSearchParams();
-        if (status !== "all") params.set("status", status);
-
-        // Only apply property filter if it is allowed
-        if (propertyId !== "all") {
-          if (!allowedPropertyIds.includes(propertyId)) {
-            // fail closed
-            setPropertyId("all");
-          } else {
-            params.set("propertyId", propertyId);
-          }
-        }
-
-        const res = await fetch(`/api/conversations?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) throw new Error("Failed to load conversations");
-        const data = await res.json();
-
-        const nextRows: ConversationRow[] = (data || []).sort(sortByUpdatedDesc);
-
-        // Defensive: only show rows in allowed properties
-        const filtered = allowedPropertyIds.length
-          ? nextRows.filter((c) => allowedPropertyIds.includes(c.property_id))
-          : nextRows;
-
-        if (!cancelled) setRows(filtered);
-      } catch (err) {
-        console.error("Inbox refetch error:", err);
+    try {
+      // If user has no memberships, just show empty state
+      if (!allowedPropertyIds.length) {
+        setRows([]);
+        return;
       }
 
+      const token = await getAccessToken();
+
+      const params = new URLSearchParams();
+      if (status !== "all") params.set("status", status);
+
+      if (selectedPropertyId !== "all") {
+        params.set("propertyId", selectedPropertyId);
+      }
+
+      const res = await fetch(`/api/conversations?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Failed to load conversations: ${res.status} ${text}`);
+      }
+
+      const data = (await res.json()) as ConversationRow[];
+
+      // Defensive: only show conversations from allowed properties
+      const filtered = (data ?? []).filter((c) =>
+        allowedPropertyIds.includes(c.property_id)
+      );
+
+      setRows([...filtered].sort(sortByUpdatedDesc));
+    } catch (e: any) {
+      console.error("Inbox refetch error:", e);
+      setError(e?.message ?? "Failed to load conversations");
+      setRows([]);
+    } finally {
       setLoading(false);
     }
+  }
 
-    refetch();
-    return () => {
-      cancelled = true;
-    };
-  }, [sb, status, propertyId, allowedPropertyIds]);
+  // Fetch on filter change
+  useEffect(() => {
+    void refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, selectedPropertyId, allowedPropertyIds.join(",")]);
+
+  function displayPropertyName(propertyId: string) {
+    return propertyNameById.get(propertyId) ?? propertyId;
+  }
 
   return (
     <>
@@ -163,8 +141,8 @@ export default function InboxClient({ initial, propertyOptions, allowedPropertyI
           </select>
 
           <select
-            value={propertyId}
-            onChange={(e) => setPropertyId(e.target.value)}
+            value={selectedPropertyId}
+            onChange={(e) => setSelectedPropertyId(e.target.value)}
             style={{
               padding: "8px 10px",
               borderRadius: 10,
@@ -182,120 +160,90 @@ export default function InboxClient({ initial, propertyOptions, allowedPropertyI
         </div>
       </div>
 
-      {/* Mobile cards */}
-      <div className="mobileOnly" style={{ display: "none" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {rows.map((c) => {
-            const unread = isUnread(c);
-            return (
-              <Link
-                key={c.id}
-                href={`/dashboard/conversations/${c.id}`}
-                style={{
-                  textDecoration: "none",
-                  color: "inherit",
-                  border: unread ? "1px solid #111" : "1px solid #eee",
-                  borderRadius: 14,
-                  padding: 14,
-                  background: unread ? "#fafafa" : "white",
-                  boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
-                }}
-              >
-                <div style={{ fontSize: 12, opacity: 0.7 }}>
-                  {c.status ?? "-"} •{" "}
-                  {c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}
-                </div>
-
-                <div style={{ marginTop: 6, fontSize: 16, fontWeight: unread ? 700 : 600 }}>
-                  {unread ? "● " : ""}
-                  Guest: <span style={{ fontWeight: 500 }}>{c.guest_number}</span>
-                </div>
-
-                <div style={{ marginTop: 4, fontSize: 14 }}>
-                  Twilio: <code>{c.service_number ?? "-"}</code>
-                </div>
-
-                <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-                  Property: <code>{displayPropertyName(c)}</code>
-                </div>
-              </Link>
-            );
-          })}
+      {error ? (
+        <div
+          style={{
+            border: "1px solid #f5c2c7",
+            background: "#f8d7da",
+            color: "#842029",
+            padding: 12,
+            borderRadius: 10,
+            marginBottom: 12,
+            fontSize: 13,
+          }}
+        >
+          {error}
         </div>
-      </div>
+      ) : null}
 
-      {/* Desktop table */}
-      <div className="desktopOnly" style={{ display: "block" }}>
-        <div style={{ border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "2.2fr 2fr 2fr 1.2fr 1fr 1fr",
-              gap: 12,
-              padding: 12,
-              background: "#fafafa",
-              fontWeight: 600,
-            }}
-          >
-            <div>Guest</div>
-            <div>Twilio #</div>
-            <div>Property</div>
-            <div>Last Message</div>
-            <div>Status</div>
-            <div>Open</div>
-          </div>
+      {!loading && !error && rows.length === 0 ? (
+        <div
+          style={{
+            border: "1px solid #eee",
+            borderRadius: 12,
+            padding: 16,
+            background: "#fafafa",
+            color: "#555",
+            fontSize: 13,
+          }}
+        >
+          No conversations visible for your assigned properties.
+        </div>
+      ) : null}
 
-          {rows.map((c) => {
-            const unread = isUnread(c);
+      <div style={{ border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "2.2fr 2fr 2fr 1.2fr 1fr 1fr",
+            gap: 12,
+            padding: 12,
+            background: "#fafafa",
+            fontWeight: 600,
+          }}
+        >
+          <div>Guest</div>
+          <div>Twilio #</div>
+          <div>Property</div>
+          <div>Last Message</div>
+          <div>Status</div>
+          <div>Open</div>
+        </div>
 
-            return (
-              <div
-                key={c.id}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2.2fr 2fr 2fr 1.2fr 1fr 1fr",
-                  gap: 12,
-                  padding: 12,
-                  borderTop: "1px solid #eee",
-                  background: unread ? "#fffdf3" : "white",
-                }}
-              >
-                <div style={{ fontWeight: unread ? 700 : 500 }}>
-                  {unread ? "● " : ""}
-                  {c.guest_number}
-                </div>
-                <div>
-                  <code>{c.service_number ?? "-"}</code>
-                </div>
-                <div>
-                  <code>{displayPropertyName(c)}</code>
-                </div>
-                <div>{c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}</div>
-                <div>{c.status ?? "-"}</div>
-                <div>
-                  <Link href={`/dashboard/conversations/${c.id}`}>Open</Link>
-                </div>
+        {rows.map((c) => {
+          const unread = isUnread(c);
+
+          return (
+            <div
+              key={c.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "2.2fr 2fr 2fr 1.2fr 1fr 1fr",
+                gap: 12,
+                padding: 12,
+                borderTop: "1px solid #eee",
+                background: unread ? "#fffdf3" : "white",
+              }}
+            >
+              <div style={{ fontWeight: unread ? 700 : 500 }}>
+                {unread ? "● " : ""}
+                {c.guest_number}
               </div>
-            );
-          })}
-        </div>
+              <div>
+                <code>{c.service_number ?? "-"}</code>
+              </div>
+              <div>
+                <code>{displayPropertyName(c.property_id)}</code>
+              </div>
+              <div>{c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}</div>
+              <div>{c.status ?? "-"}</div>
+              <div>
+                <Link href={`/dashboard/conversations/${c.id}`}>Open</Link>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </>
   );
-}
-
-function safeGetLocalStorage(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function safeSetLocalStorage(key: string, value: string) {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // ignore
-  }
 }
