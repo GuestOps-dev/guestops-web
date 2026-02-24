@@ -14,6 +14,19 @@ type ThreadMessage = {
   meta?: any;
 };
 
+type OutboundRow = {
+  id: string;
+  created_at: string;
+  body: string;
+  status?: string | null;
+  error?: string | null;
+  twilio_message_sid?: string | null;
+};
+
+function normalizeBody(body: string) {
+  return (body || "").trim().replace(/\s+/g, " ");
+}
+
 export default async function ConversationPage({
   params,
 }: {
@@ -53,20 +66,70 @@ export default async function ConversationPage({
       meta: { twilio_message_sid: m.twilio_message_sid },
     })) ?? [];
 
-  const outbound: ThreadMessage[] =
+  const outboundRows: OutboundRow[] =
     outboundRes.data?.map((m: any) => ({
       id: m.id,
       created_at: m.created_at,
-      direction: "outbound",
       body: m.body,
-      meta: {
-        status: m.status,
-        error: m.error,
-        twilio_message_sid: m.twilio_message_sid,
-      },
+      status: m.status,
+      error: m.error,
+      twilio_message_sid: m.twilio_message_sid,
     })) ?? [];
 
-  const messages = [...inbound, ...outbound].sort(
+  /**
+   * Collapse old attempts:
+   * Group outbound attempts by normalized body text.
+   * Show the latest attempt in-line; hide older attempts behind a toggle.
+   */
+  const groupedOutbound = new Map<
+    string,
+    { latest: OutboundRow; older: OutboundRow[] }
+  >();
+
+  for (const row of outboundRows) {
+    const key = normalizeBody(row.body);
+    const existing = groupedOutbound.get(key);
+
+    if (!existing) {
+      groupedOutbound.set(key, { latest: row, older: [] });
+      continue;
+    }
+
+    const currentLatestTime = new Date(existing.latest.created_at).getTime();
+    const rowTime = new Date(row.created_at).getTime();
+
+    if (rowTime >= currentLatestTime) {
+      existing.older.push(existing.latest);
+      existing.latest = row;
+    } else {
+      existing.older.push(row);
+    }
+
+    // Keep older sorted newest->oldest for nicer display
+    existing.older.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }
+
+  // Convert grouped outbound into ThreadMessage “latest only” items for merging with inbound
+  const outboundLatestOnly: ThreadMessage[] = Array.from(
+    groupedOutbound.values()
+  ).map((g) => ({
+    id: g.latest.id,
+    created_at: g.latest.created_at,
+    direction: "outbound",
+    body: g.latest.body,
+    meta: {
+      status: g.latest.status,
+      error: g.latest.error,
+      twilio_message_sid: g.latest.twilio_message_sid,
+      // pass along the older attempts so the client bubble can toggle
+      older_attempts: g.older,
+    },
+  }));
+
+  const messages = [...inbound, ...outboundLatestOnly].sort(
     (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   );
 
@@ -96,11 +159,11 @@ export default async function ConversationPage({
                 body={m.body}
                 status={m.meta?.status}
                 error={m.meta?.error}
+                olderAttempts={m.meta?.older_attempts || []}
               />
             );
           }
 
-          // Inbound bubble
           return (
             <div
               key={`in-${m.id}`}
