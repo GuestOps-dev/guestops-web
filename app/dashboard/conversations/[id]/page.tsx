@@ -1,73 +1,62 @@
 import Link from "next/link";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import SendMessageBox from "./SendMessageBox";
-import LiveThread from "./LiveThread";
+import { redirect } from "next/navigation";
 import MarkRead from "./MarkRead";
+import LiveThread from "./LiveThread";
+import SendMessageBox from "./SendMessageBox";
+import { getSupabaseServerClient } from "@/src/lib/supabaseServer";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export default async function ConversationPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const conversationId = (id || "").trim();
 
-export default async function ConversationPage(props: any) {
-  const resolvedParams = await Promise.resolve(props?.params);
-  const conversationId = resolvedParams?.id;
+  if (!conversationId) redirect("/dashboard");
 
-  if (!conversationId) {
-    return (
-      <main style={{ padding: 16 }}>
-        <h1>Conversation</h1>
-        <p style={{ color: "crimson" }}>Missing conversation ID.</p>
-      </main>
-    );
+  const supabase = await getSupabaseServerClient();
+
+  // Ensure user is logged in (middleware should already enforce, but keep server-safe)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  // Load conversation to derive property_id (RLS enforced)
+  const { data: convo, error } = await supabase
+    .from("conversations")
+    .select("id, property_id")
+    .eq("id", conversationId)
+    .maybeSingle();
+
+  if (error) {
+    // If you want, you can render a nicer error page — but keep it deterministic
+    console.error("Conversation page load error:", error);
+    redirect("/dashboard");
   }
 
-  const sb = getSupabaseServerClient();
+  if (!convo) {
+    // Not found or not authorized by RLS
+    redirect("/dashboard");
+  }
 
-  const inboundRes = await sb
-    .from("inbound_messages")
-    .select("id, created_at, body")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
-
-  const outboundRes = await sb
-    .from("outbound_messages")
-    .select("id, created_at, body, status, error")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
-
-  const inbound = inboundRes.data ?? [];
-  const outbound = outboundRes.data ?? [];
-  const anyError = inboundRes.error || outboundRes.error;
+  const propertyId = (convo as any).property_id as string;
 
   return (
     <main style={{ padding: 16, maxWidth: 900, margin: "0 auto" }}>
-      {/* ✅ This marks the conversation read via your API route */}
-      <MarkRead conversationId={conversationId} />
+      {/* Marks the conversation read via bearer-auth API */}
+      <MarkRead conversationId={conversationId} propertyId={propertyId} />
 
       <Link href="/dashboard">← Back</Link>
 
-      <h1 style={{ marginTop: 12 }}>Conversation</h1>
+      <div style={{ marginTop: 12 }}>
+        <LiveThread conversationId={conversationId} />
+      </div>
 
-      {anyError && (
-        <p style={{ color: "crimson" }}>
-          Error loading messages: {anyError.message}
-        </p>
-      )}
-
-      <LiveThread
-        conversationId={conversationId}
-        initialInbound={inbound as any}
-        initialOutbound={outbound as any}
-      />
-
-      <div
-        style={{
-          position: "sticky",
-          bottom: 0,
-          background: "white",
-          paddingTop: 12,
-        }}
-      >
-        <SendMessageBox conversationId={conversationId} />
+      <div style={{ marginTop: 12 }}>
+        <SendMessageBox conversationId={conversationId} propertyId={propertyId} />
       </div>
     </main>
   );
