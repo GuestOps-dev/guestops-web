@@ -22,6 +22,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // ✅ Always use request origin (works in Vercel without env vars)
+  const origin = req.nextUrl.origin; // e.g. https://guestopshq.com
+
   // Load conversation to derive from/to safely
   const { data: convo, error: convoErr } = await supabase
     .from("conversations")
@@ -30,11 +33,14 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (convoErr || !convo) {
-    return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Conversation not found" },
+      { status: 404 }
+    );
   }
 
-  const toE164 = convo.guest_number ?? convo.from_e164;     // guest
-  const fromE164 = convo.service_number ?? convo.to_e164;   // your Twilio #
+  const toE164 = convo.guest_number ?? convo.from_e164; // guest
+  const fromE164 = convo.service_number ?? convo.to_e164; // your Twilio #
 
   if (!toE164 || !fromE164) {
     return NextResponse.json(
@@ -66,8 +72,11 @@ export async function POST(req: NextRequest) {
         .eq("idempotency_key", idempotencyKey)
         .single();
 
-      if (existing.data) return NextResponse.json({ ok: true, outbound: existing.data });
+      if (existing.data) {
+        return NextResponse.json({ ok: true, outbound: existing.data });
+      }
     }
+
     return NextResponse.json({ error: insertRes.error.message }, { status: 500 });
   }
 
@@ -79,7 +88,7 @@ export async function POST(req: NextRequest) {
       to: toE164,
       from: fromE164,
       body,
-      statusCallback: `${process.env.PUBLIC_BASE_URL}/api/twilio/status`,
+      statusCallback: `${origin}/api/twilio/status`,
     });
 
     // 3) Update outbound record
