@@ -4,71 +4,47 @@ import { getSupabaseServiceClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
-function getEnv(name: string) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env: ${name}`);
-  return v;
-}
-
 function normalizePhone(raw: string | null): string | null {
   if (!raw) return null;
   const s = raw.trim();
-  if (!s) return null;
-  // Twilio WhatsApp format: "whatsapp:+15551234567"
-  return s.startsWith("whatsapp:") ? s : s;
+  return s ? s : null;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const authToken = getEnv("TWILIO_AUTH_TOKEN");
-
-    // Twilio signature validation
+    const authToken = process.env.TWILIO_AUTH_TOKEN!;
     const signature = req.headers.get("x-twilio-signature") || "";
+
     const url = req.nextUrl.toString();
     const form = await req.formData();
     const params: Record<string, string> = {};
-    form.forEach((value, key) => {
-      params[key] = String(value);
-    });
+    form.forEach((value, key) => (params[key] = String(value)));
 
-    const isValid = twilio.validateRequest(authToken, signature, url, params);
-    if (!isValid) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
+    const valid = twilio.validateRequest(authToken, signature, url, params);
+    if (!valid) return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
 
     const from = normalizePhone(params.From || null);
     const to = normalizePhone(params.To || null);
     const body = (params.Body || "").trim();
     const messageSid = params.MessageSid || null;
 
-    if (!from || !to || !body) {
-      return NextResponse.json({ ok: true });
-    }
+    if (!from || !to || !body) return NextResponse.json({ ok: true });
 
-    const sb = getSupabaseServiceClient();
-    const sbAny: any = sb;
+    const sb: any = getSupabaseServiceClient();
 
-    // 1) Route property_id by To number
-    const { data: phoneRow, error: phoneErr } = await sbAny
+    // Route property_id by To number
+    const { data: phoneRow } = await sb
       .from("phone_numbers")
       .select("property_id")
       .eq("e164", to)
       .eq("is_active", true)
       .maybeSingle();
 
-    if (phoneErr) {
-      console.error("phone_numbers lookup error:", phoneErr);
-      return NextResponse.json({ ok: true });
-    }
-
     const propertyId = phoneRow?.property_id;
-    if (!propertyId) {
-      console.warn("No property mapping for To:", to);
-      return NextResponse.json({ ok: true });
-    }
+    if (!propertyId) return NextResponse.json({ ok: true });
 
-    // 2) Find/create guest
-    const { data: guest, error: guestErr } = await sbAny
+    // Find/create guest
+    const { data: guest, error: guestErr } = await sb
       .from("guests")
       .upsert({ phone_e164: from }, { onConflict: "phone_e164" })
       .select("id")
@@ -79,8 +55,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // 3) Find/create placeholder booking (MVP behavior)
-    const { data: booking, error: bookingErr } = await sbAny
+    // Placeholder booking
+    const { data: booking, error: bookingErr } = await sb
       .from("bookings")
       .upsert(
         {
@@ -99,12 +75,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // 4) Find/create conversation thread per booking + channel
-    const channel = to.startsWith("whatsapp:") || from.startsWith("whatsapp:")
-      ? "whatsapp"
-      : "sms";
+    const channel =
+      to.startsWith("whatsapp:") || from.startsWith("whatsapp:") ? "whatsapp" : "sms";
 
-    const { data: convo, error: convoErr } = await sbAny
+    // Find/create conversation
+    const { data: convo, error: convoErr } = await sb
       .from("conversations")
       .upsert(
         {
@@ -126,28 +101,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // 5) Insert message
     const now = new Date().toISOString();
-    const { error: msgErr } = await sbAny.from("messages").insert({
+
+    // ✅ Insert inbound into inbound_messages (matches LiveThread)
+    const { error: inErr } = await sb.from("inbound_messages").insert({
       conversation_id: convo.id,
-      direction: "inbound",
-      channel,
-      from_e164: from,
-      to_e164: to,
       body,
       provider: "twilio",
       provider_message_id: messageSid,
-      status: "received",
       created_at: now,
     });
 
-    if (msgErr) {
-      console.error("message insert error:", msgErr);
+    if (inErr) {
+      console.error("inbound_messages insert error:", inErr);
       return NextResponse.json({ ok: true });
     }
 
-    // 6) Update conversation timestamps
-    const { error: convoUpdateErr } = await sbAny
+    // Update conversation timestamps
+    const { error: convoUpdateErr } = await sb
       .from("conversations")
       .update({
         updated_at: now,
@@ -158,9 +129,7 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", convo.id);
 
-    if (convoUpdateErr) {
-      console.error("conversation update error:", convoUpdateErr);
-    }
+    if (convoUpdateErr) console.error("conversation update error:", convoUpdateErr);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

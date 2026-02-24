@@ -28,10 +28,11 @@ export async function middleware(req: NextRequest) {
 
   const path = req.nextUrl.pathname;
 
+  // Only guard dashboard routes. APIs use Bearer auth.
+  const isDashboard = path.startsWith("/dashboard");
   const isLogin = path === "/login";
-  const isProtected = path.startsWith("/dashboard") || path.startsWith("/api");
 
-  if (!user && isProtected && !isLogin) {
+  if (!user && isDashboard && !isLogin) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirectTo", req.nextUrl.pathname);

@@ -5,15 +5,13 @@ import LiveThread from "./LiveThread";
 import SendMessageBox from "./SendMessageBox";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-type AnyMsgRow = {
+type InboundRow = { id: string; created_at: string; body: string };
+type OutboundRow = {
   id: string;
-  conversation_id: string;
-  direction: "inbound" | "outbound";
-  body: string | null;
   created_at: string;
-  from_e164: string | null;
-  to_e164: string | null;
-  provider_message_id: string | null;
+  body: string;
+  status?: string | null;
+  error?: string | null;
 };
 
 export default async function ConversationPage({
@@ -23,18 +21,18 @@ export default async function ConversationPage({
 }) {
   const { id } = await params;
   const conversationId = (id || "").trim();
-
   if (!conversationId) redirect("/dashboard");
 
-  const supabase = await getSupabaseServerClient();
+  const sb = await getSupabaseServerClient();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await sb.auth.getUser();
 
   if (!user) redirect("/login");
 
-  const { data: convo, error: convoErr } = await (supabase as any)
+  // RLS enforced conversation lookup
+  const { data: convo, error: convoErr } = await (sb as any)
     .from("conversations")
     .select("id, property_id")
     .eq("id", conversationId)
@@ -48,35 +46,39 @@ export default async function ConversationPage({
 
   const propertyId = (convo as any).property_id as string;
 
-  const { data: msgs, error: msgErr } = await (supabase as any)
-    .from("messages")
-    .select(
-      "id, conversation_id, direction, body, created_at, from_e164, to_e164, provider_message_id"
-    )
+  // Initial inbound from inbound_messages (what LiveThread subscribes to)
+  const { data: inboundData, error: inErr } = await (sb as any)
+    .from("inbound_messages")
+    .select("id, created_at, body")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true })
     .limit(500);
 
-  if (msgErr) {
-    console.error("Message load error:", msgErr);
-  }
+  if (inErr) console.error("Inbound load error:", inErr);
 
-  const all: AnyMsgRow[] = (msgs as any) ?? [];
+  const initialInbound: InboundRow[] = ((inboundData as any) ?? []).map((m: any) => ({
+    id: m.id,
+    created_at: m.created_at,
+    body: (m.body ?? "").toString(),
+  }));
 
-  // Normalize to satisfy LiveThread's Prop types (body must be string)
-  const initialInbound = all
-    .filter((m) => m.direction === "inbound")
-    .map((m) => ({
-      ...m,
-      body: m.body ?? "",
-    }));
+  // Initial outbound from outbound_messages (what LiveThread subscribes to)
+  const { data: outboundData, error: outErr } = await (sb as any)
+    .from("outbound_messages")
+    .select("id, created_at, body, status, error")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true })
+    .limit(500);
 
-  const initialOutbound = all
-    .filter((m) => m.direction === "outbound")
-    .map((m) => ({
-      ...m,
-      body: m.body ?? "",
-    }));
+  if (outErr) console.error("Outbound load error:", outErr);
+
+  const initialOutbound: OutboundRow[] = ((outboundData as any) ?? []).map((m: any) => ({
+    id: m.id,
+    created_at: m.created_at,
+    body: (m.body ?? "").toString(),
+    status: m.status ?? null,
+    error: m.error ?? null,
+  }));
 
   return (
     <main style={{ padding: 16, maxWidth: 900, margin: "0 auto" }}>
@@ -87,8 +89,8 @@ export default async function ConversationPage({
       <div style={{ marginTop: 12 }}>
         <LiveThread
           conversationId={conversationId}
-          initialInbound={initialInbound as any}
-          initialOutbound={initialOutbound as any}
+          initialInbound={initialInbound}
+          initialOutbound={initialOutbound}
         />
       </div>
 
