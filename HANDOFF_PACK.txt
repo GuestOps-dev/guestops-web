@@ -1,0 +1,25 @@
+﻿
+FullName                                                            
+--------                                                            
+C:\Users\scott\guestops-web\app\api\conversations\route.t           
+C:\Users\scott\guestops-web\app\api\conversations\route.ts          
+C:\Users\scott\guestops-web\app\api\conversations\[id]\read\route.ts
+C:\Users\scott\guestops-web\app\api\messages\send\route.ts          
+C:\Users\scott\guestops-web\app\api\properties\route.ts             
+C:\Users\scott\guestops-web\app\api\twilio\inbound\route.ts         
+C:\Users\scott\guestops-web\app\api\twilio\status\route.ts          
+C:\Users\scott\guestops-web\src\app\api\me\memberships\route.ts     
+
+
+
+Path                                                      LineNumber Line                                              
+----                                                      ---------- ----                                              
+C:\Users\scott\guestops-web\app\dashboard\InboxClient.tsx        119         const res = await fetch(`/api/conversat...
+C:\Users\scott\guestops-web\app\dashboard\page.tsx                36     "my_property_memberships"                     
+C:\Users\scott\guestops-web\src\lib\supabaseApiAuth.ts            29 export async function requireApiAuth(req: NextR...
+C:\Users\scott\guestops-web\src\lib\supabaseApiAuth.ts            71   const { supabase, userId, role, token } = awa...
+C:\Users\scott\guestops-web\src\lib\supabaseServer.ts             10 export async function getSupabaseRlsServerClien...
+C:\Users\scott\guestops-web\src\lib\supabaseServer.ts             55   return getSupabaseRlsServerClient();            
+C:\Users\scott\guestops-web\src\lib\supabaseServer.ts             60   return getSupabaseRlsServerClient();            
+
+
