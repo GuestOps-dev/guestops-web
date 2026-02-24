@@ -34,6 +34,7 @@ function LoginInner() {
 
     const redirectTo = search.get("redirectTo") || "/dashboard";
     router.replace(redirectTo);
+	router.refresh();
   }
 
   return (
