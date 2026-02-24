@@ -20,6 +20,8 @@ type ConversationRow = {
   properties?: { id: string; name: string } | null;
 };
 
+type PropertyOption = { id: string; name: string };
+
 export default async function DashboardPage() {
   const sb = await getSupabaseServerClient();
 
@@ -29,19 +31,24 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  // 1) Load accessible properties (RLS enforced)
-  const { data: propsData, error: propsErr } = await (sb as any)
-    .from("properties")
-    .select("id, name")
-    .eq("active", true)
-    .order("name", { ascending: true });
+  // Canonical: memberships (RLS truth)
+  const { data: memberships, error: membershipsErr } = await (sb as any).rpc(
+    "my_property_memberships"
+  );
 
-  if (propsErr) console.error("Dashboard properties load error:", propsErr);
+  if (membershipsErr) {
+    console.error("Dashboard memberships RPC error:", membershipsErr);
+  }
 
-  const propsList: Array<{ id: string; name: string }> = (propsData as any) ?? [];
-  const nameById = new Map(propsList.map((p) => [p.id, p.name]));
+  const propertyOptions: PropertyOption[] = (memberships ?? []).map((m: any) => ({
+    id: m.property_id,
+    name: m.property_name,
+  }));
 
-  // 2) Load conversations WITHOUT join
+  const allowedPropertyIds = propertyOptions.map((p) => p.id);
+  const nameById = new Map(propertyOptions.map((p) => [p.id, p.name]));
+
+  // Load conversations (RLS enforced). No join.
   const { data: conversations, error } = await (sb as any)
     .from("conversations")
     .select(
@@ -67,10 +74,22 @@ export default async function DashboardPage() {
 
   if (error) console.error("Dashboard conversations load error:", error);
 
-  const initial: ConversationRow[] = ((conversations as any) ?? []).map((c: any) => ({
+  // Defensive: ensure we only send conversations from allowed properties
+  const raw: any[] = (conversations as any) ?? [];
+  const filtered = allowedPropertyIds.length
+    ? raw.filter((c) => allowedPropertyIds.includes(c.property_id))
+    : raw;
+
+  const initial: ConversationRow[] = filtered.map((c: any) => ({
     ...c,
     properties: { id: c.property_id, name: nameById.get(c.property_id) ?? c.property_id },
   }));
 
-  return <InboxClient initial={initial} />;
+  return (
+    <InboxClient
+      initial={initial}
+      propertyOptions={propertyOptions}
+      allowedPropertyIds={allowedPropertyIds}
+    />
+  );
 }

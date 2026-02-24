@@ -26,9 +26,13 @@ type ConversationRow = {
 
 type Props = {
   initial: ConversationRow[];
+  propertyOptions: Array<{ id: string; name: string }>;
+  allowedPropertyIds: string[];
 };
 
 type StatusFilter = "open" | "closed" | "all";
+
+const SELECTED_PROPERTY_KEY = "guestops:selectedPropertyId";
 
 function isUnread(c: ConversationRow) {
   if (!c.last_inbound_at) return false;
@@ -40,7 +44,7 @@ function sortByUpdatedDesc(a: ConversationRow, b: ConversationRow) {
   return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
 }
 
-export default function InboxClient({ initial }: Props) {
+export default function InboxClient({ initial, propertyOptions, allowedPropertyIds }: Props) {
   const [rows, setRows] = useState<ConversationRow[]>(() =>
     [...(initial || [])].sort(sortByUpdatedDesc)
   );
@@ -49,16 +53,14 @@ export default function InboxClient({ initial }: Props) {
   const [status, setStatus] = useState<StatusFilter>("open");
   const [propertyId, setPropertyId] = useState<string>("all");
 
-  const [properties, setProperties] = useState<Array<{ id: string; name: string }>>([]);
-
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
   const unreadCount = useMemo(() => rows.filter(isUnread).length, [rows]);
 
   const propertyNameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const p of properties) map.set(p.id, p.name);
+    for (const p of propertyOptions) map.set(p.id, p.name);
     return map;
-  }, [properties]);
+  }, [propertyOptions]);
 
   function displayPropertyName(c: ConversationRow) {
     return c.properties?.name ?? propertyNameById.get(c.property_id) ?? c.property_id;
@@ -70,31 +72,26 @@ export default function InboxClient({ initial }: Props) {
     return data.session.access_token;
   }
 
-  // Load properties list (for dropdown + name mapping)
+  // Load and validate saved property selection
   useEffect(() => {
-    let cancelled = false;
+    const saved = safeGetLocalStorage(SELECTED_PROPERTY_KEY);
 
-    async function loadProperties() {
-      try {
-        const token = await getAccessToken();
-        const res = await fetch("/api/properties", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+    const normalized =
+      saved && saved !== "all" && allowedPropertyIds.includes(saved) ? saved : "all";
 
-        if (!res.ok) throw new Error("Failed to load properties");
-        const data = await res.json();
+    setPropertyId(normalized);
 
-        if (!cancelled) setProperties(data || []);
-      } catch (err) {
-        console.error("Failed to load properties:", err);
-      }
+    // If invalid, overwrite so it doesn't "stick" and hide everything
+    if (saved !== normalized) {
+      safeSetLocalStorage(SELECTED_PROPERTY_KEY, normalized);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowedPropertyIds.join(",")]);
 
-    loadProperties();
-    return () => {
-      cancelled = true;
-    };
-  }, [sb]);
+  // Persist selection
+  useEffect(() => {
+    safeSetLocalStorage(SELECTED_PROPERTY_KEY, propertyId);
+  }, [propertyId]);
 
   // Fetch conversations via secure API
   useEffect(() => {
@@ -108,7 +105,16 @@ export default function InboxClient({ initial }: Props) {
 
         const params = new URLSearchParams();
         if (status !== "all") params.set("status", status);
-        if (propertyId !== "all") params.set("propertyId", propertyId);
+
+        // Only apply property filter if it is allowed
+        if (propertyId !== "all") {
+          if (!allowedPropertyIds.includes(propertyId)) {
+            // fail closed
+            setPropertyId("all");
+          } else {
+            params.set("propertyId", propertyId);
+          }
+        }
 
         const res = await fetch(`/api/conversations?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -117,7 +123,14 @@ export default function InboxClient({ initial }: Props) {
         if (!res.ok) throw new Error("Failed to load conversations");
         const data = await res.json();
 
-        if (!cancelled) setRows((data || []).sort(sortByUpdatedDesc));
+        const nextRows: ConversationRow[] = (data || []).sort(sortByUpdatedDesc);
+
+        // Defensive: only show rows in allowed properties
+        const filtered = allowedPropertyIds.length
+          ? nextRows.filter((c) => allowedPropertyIds.includes(c.property_id))
+          : nextRows;
+
+        if (!cancelled) setRows(filtered);
       } catch (err) {
         console.error("Inbox refetch error:", err);
       }
@@ -129,7 +142,7 @@ export default function InboxClient({ initial }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [sb, status, propertyId]);
+  }, [sb, status, propertyId, allowedPropertyIds]);
 
   return (
     <>
@@ -160,7 +173,7 @@ export default function InboxClient({ initial }: Props) {
             }}
           >
             <option value="all">All properties</option>
-            {properties.map((p) => (
+            {propertyOptions.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>
@@ -244,37 +257,45 @@ export default function InboxClient({ initial }: Props) {
                   gap: 12,
                   padding: 12,
                   borderTop: "1px solid #eee",
-                  alignItems: "center",
-                  background: unread ? "#fafafa" : "white",
-                  borderLeft: unread ? "4px solid #111" : "4px solid transparent",
+                  background: unread ? "#fffdf3" : "white",
                 }}
               >
                 <div style={{ fontWeight: unread ? 700 : 500 }}>
-                  <code>{c.guest_number}</code> {unread ? <span style={{ marginLeft: 8 }}>●</span> : null}
+                  {unread ? "● " : ""}
+                  {c.guest_number}
                 </div>
                 <div>
                   <code>{c.service_number ?? "-"}</code>
                 </div>
-                <div style={{ fontSize: 12, opacity: 0.85 }}>
+                <div>
                   <code>{displayPropertyName(c)}</code>
                 </div>
                 <div>{c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}</div>
                 <div>{c.status ?? "-"}</div>
                 <div>
-                  <Link href={`/dashboard/conversations/${c.id}`}>View</Link>
+                  <Link href={`/dashboard/conversations/${c.id}`}>Open</Link>
                 </div>
               </div>
             );
           })}
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .mobileOnly { display: block !important; }
-          .desktopOnly { display: none !important; }
-        }
-      `}</style>
     </>
   );
+}
+
+function safeGetLocalStorage(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetLocalStorage(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore
+  }
 }
