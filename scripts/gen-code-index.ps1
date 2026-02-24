@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-function Read-TextSafe([string]$path, [int]$maxLines = 120) {
+function Read-TextSafe([string]$path, [int]$maxLines = 4000) {
   if (-not (Test-Path $path)) { return "Missing: " + $path }
   $lines = Get-Content $path -ErrorAction SilentlyContinue
   if (-not $lines) { return "" }
@@ -15,6 +15,27 @@ function List-Files([string]$root, [string]$pattern) {
     ForEach-Object { $_.FullName.Replace((Resolve-Path ".").Path + "\", "") }
 }
 
+function Add-FileBlock([ref]$linesRef, [string]$path, [string]$mode) {
+  # mode: "full" or "head"
+  $lines = $linesRef.Value
+
+  $lines += ""
+  $lines += "----- FILE: " + $path + " -----"
+  if (-not (Test-Path $path)) {
+    $lines += "Missing: " + $path
+    $linesRef.Value = $lines
+    return
+  }
+
+  $max = 200
+  if ($mode -eq "full") { $max = 4000 }
+  if ($mode -eq "head") { $max = 200 }
+
+  $lines += Read-TextSafe $path $max
+  $lines += "----- END FILE: " + $path + " -----"
+  $linesRef.Value = $lines
+}
+
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
 # Git commit (best effort)
@@ -26,6 +47,9 @@ $lines += "# GuestOpsHQ - Code Index"
 $lines += ""
 $lines += "Generated: " + $timestamp
 $lines += "Commit: " + $commit
+$lines += ""
+$lines += "NOTE: This is a curated snapshot of important code and routes."
+$lines += "Do NOT store secrets here."
 $lines += ""
 $lines += "========================================"
 $lines += ""
@@ -61,37 +85,57 @@ if (($apiApp.Count + $apiSrc.Count) -eq 0) {
 }
 
 $lines += "========================================"
-$lines += "## Critical Endpoint Snapshots (first 120 lines)"
+$lines += "## Critical Files (FULL CONTENT)"
+$lines += ""
+$lines += "These are included in full to let a new chat patch safely without uploading the repo."
 $lines += ""
 
-$critical = @(
+$criticalFull = @(
   "app/api/conversations/route.ts",
-  "src/app/api/me/memberships/route.ts"
-)
-
-foreach ($f in $critical) {
-  $lines += "----- " + $f + " -----"
-  $lines += Read-TextSafe $f 120
-  $lines += ""
-}
-
-$lines += "========================================"
-$lines += "## Auth / Supabase Helpers (existence check)"
-$lines += ""
-
-$helpers = @(
+  "app/api/messages/send/route.ts",
+  "src/app/api/me/memberships/route.ts",
   "src/lib/api/requireApiAuth.ts",
   "src/lib/supabase/getSupabaseRlsServerClient.ts",
-  "src/lib/supabaseApiAuth.ts",
   "src/lib/supabaseServer.ts",
-  "src/lib/supabaseBrowser.ts"
+  "src/lib/supabaseBrowser.ts",
+  "app/dashboard/page.tsx",
+  "app/dashboard/InboxClient.tsx",
+  "app/dashboard/conversations/[id]/page.tsx"
 )
 
-foreach ($h in $helpers) {
-  $lines += $h + " => " + (Test-Path $h)
+foreach ($p in $criticalFull) {
+  Add-FileBlock ([ref]$lines) $p "full"
 }
 
 $lines += ""
+$lines += "========================================"
+$lines += "## Additional Helpers (HEAD ONLY)"
+$lines += ""
+
+$headOnly = @(
+  "src/lib/supabaseApiAuth.ts",
+  "src/lib/access/getMyMemberships.ts",
+  "src/lib/access/fetchMembershipsClient.ts",
+  "src/lib/access/validateSelectedProperty.ts"
+)
+
+foreach ($p in $headOnly) {
+  Add-FileBlock ([ref]$lines) $p "head"
+}
+
+$lines += ""
+$lines += "========================================"
+$lines += "## Env var names referenced (best effort)"
+$lines += ""
+
+$lines += "- HANDOFF_VIEW_KEY"
+$lines += "- NEXT_PUBLIC_SUPABASE_URL"
+$lines += "- NEXT_PUBLIC_SUPABASE_ANON_KEY"
+$lines += "- SUPABASE_SERVICE_ROLE_KEY"
+$lines += "- TWILIO_ACCOUNT_SID"
+$lines += "- TWILIO_AUTH_TOKEN"
+$lines += ""
+
 $lines += "========================================"
 $lines += "End of Code Index"
 
