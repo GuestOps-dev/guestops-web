@@ -9,9 +9,23 @@ export default async function DashboardPage() {
 
   const { data: conversations, error } = await sb
     .from("conversations")
-    .select(
-      "id, property_id, guest_number, service_number, channel, provider, last_message_at, updated_at, status, priority, assigned_to, last_inbound_at, last_outbound_at, last_read_at"
-    )
+.select(`
+  id,
+  property_id,
+  guest_number,
+  service_number,
+  channel,
+  provider,
+  last_message_at,
+  updated_at,
+  status,
+  priority,
+  assigned_to,
+  last_inbound_at,
+  last_outbound_at,
+  last_read_at,
+  properties:property_id ( id, name )
+`)
     .order("updated_at", { ascending: false })
     .limit(100);
 
