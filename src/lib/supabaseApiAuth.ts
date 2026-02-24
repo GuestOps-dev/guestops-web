@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export type ApiAuthContext = {
   token: string;
-  supabase: ReturnType<typeof createClient>;
+  supabase: any;
   userId: string;
   role?: string | null;
 };
@@ -44,12 +44,11 @@ export async function requireApiAuth(req: NextRequest): Promise<ApiAuthContext> 
         Authorization: `Bearer ${token}`,
       },
     },
-  });
+  }) as any;
 
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) throw new Error("Unauthorized");
 
-  // Optional role fetch (RLS remains authoritative)
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -92,27 +91,14 @@ export function requirePropertyId(v: unknown): string {
   return s;
 }
 
-/**
- * In legacy code, this did a membership check. We now rely on RLS.
- * Keep it for compatibility: it will throw if the user can't read the property row.
- */
-export async function assertCanAccessProperty(
-  supabase: ReturnType<typeof createClient>,
-  propertyId: string
-) {
+export async function assertCanAccessProperty(supabase: any, propertyId: string) {
   const { data, error } = await supabase
     .from("properties")
     .select("id")
     .eq("id", propertyId)
     .maybeSingle();
 
-  // If RLS denies, data will be null and/or error returned depending on select config
-  if (error) {
-    const err: any = new Error("Forbidden");
-    err.status = 403;
-    throw err;
-  }
-  if (!data) {
+  if (error || !data) {
     const err: any = new Error("Forbidden");
     err.status = 403;
     throw err;
