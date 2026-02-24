@@ -47,8 +47,9 @@ export default function InboxClient() {
   } = usePropertyWorkspace();
 
   const [rows, setRows] = useState<ConversationRow[]>([]);
+  const [rawCount, setRawCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<StatusFilter>("open");
+  const [status, setStatus] = useState<StatusFilter>("all");
   const [error, setError] = useState<string | null>(null);
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
@@ -71,12 +72,6 @@ export default function InboxClient() {
     setError(null);
 
     try {
-      // If user has no memberships, just show empty state
-      if (!allowedPropertyIds.length) {
-        setRows([]);
-        return;
-      }
-
       const token = await getAccessToken();
 
       const params = new URLSearchParams();
@@ -90,29 +85,33 @@ export default function InboxClient() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      const text = await res.text();
       if (!res.ok) {
-        const text = await res.text();
         throw new Error(`Failed to load conversations: ${res.status} ${text}`);
       }
 
-      const data = (await res.json()) as ConversationRow[];
+      const data = (text ? JSON.parse(text) : []) as ConversationRow[];
+      setRawCount(Array.isArray(data) ? data.length : 0);
 
-      // Defensive: only show conversations from allowed properties
-      const filtered = (data ?? []).filter((c) =>
-        allowedPropertyIds.includes(c.property_id)
-      );
+      // IMPORTANT:
+      // Only apply allowedPropertyIds filtering if we actually have memberships.
+      // If allowedPropertyIds is empty, do NOT drop everything — show what RLS returns.
+      const filtered =
+        allowedPropertyIds.length > 0
+          ? (data ?? []).filter((c) => allowedPropertyIds.includes(c.property_id))
+          : (data ?? []);
 
       setRows([...filtered].sort(sortByUpdatedDesc));
     } catch (e: any) {
       console.error("Inbox refetch error:", e);
       setError(e?.message ?? "Failed to load conversations");
       setRows([]);
+      setRawCount(0);
     } finally {
       setLoading(false);
     }
   }
 
-  // Fetch on filter change
   useEffect(() => {
     void refetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,6 +126,9 @@ export default function InboxClient() {
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
         <div style={{ fontSize: 14, opacity: 0.75 }}>
           {loading ? "Refreshing…" : `${rows.length} threads • ${unreadCount} unread`}
+          <span style={{ marginLeft: 10, fontSize: 12, opacity: 0.65 }}>
+            (debug: allowed={allowedPropertyIds.length}, selected={selectedPropertyId}, apiRows={rawCount})
+          </span>
         </div>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
@@ -170,6 +172,7 @@ export default function InboxClient() {
             borderRadius: 10,
             marginBottom: 12,
             fontSize: 13,
+            whiteSpace: "pre-wrap",
           }}
         >
           {error}
