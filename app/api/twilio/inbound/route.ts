@@ -145,7 +145,8 @@ export async function POST(req: Request) {
 
           status: "open",
         })
-        .eq("id", convo.id);
+        .eq("id", convo.id)
+        .eq("property_id", propertyId);
 
       if (updErr) {
         console.error("Conversation update error:", updErr);
