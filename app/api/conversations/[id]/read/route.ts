@@ -11,7 +11,10 @@ export async function POST(
     const conversationId = (id || "").trim();
 
     if (!conversationId) {
-      return NextResponse.json({ error: "Missing conversation id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing conversation id" },
+        { status: 400 }
+      );
     }
 
     const { supabase } = await requireApiAuth(req);
@@ -21,10 +24,9 @@ export async function POST(
 
     const now = new Date().toISOString();
 
-    // RLS enforces access; property_id match prevents cross-property updates.
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("conversations")
-      .update({ last_read_at: now, updated_at: now })
+      .update({ last_read_at: now, updated_at: now } as any)
       .eq("id", conversationId)
       .eq("property_id", propertyId)
       .select("id")
@@ -36,15 +38,27 @@ export async function POST(
     }
 
     if (!data) {
-      // either doesn't exist OR caller can't access via RLS
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    const msg = err?.message === "Unauthorized" ? "Unauthorized" : err?.message || "Internal error";
-    const status = msg === "Unauthorized" ? 401 : (typeof err?.status === "number" ? err.status : 500);
+    const msg =
+      err?.message === "Unauthorized"
+        ? "Unauthorized"
+        : err?.message || "Internal error";
+    const status =
+      msg === "Unauthorized"
+        ? 401
+        : typeof err?.status === "number"
+          ? err.status
+          : 500;
+
     if (status === 500) console.error("Unexpected error:", err);
-    return NextResponse.json({ error: status === 500 ? "Internal error" : msg }, { status });
+
+    return NextResponse.json(
+      { error: status === 500 ? "Internal error" : msg },
+      { status }
+    );
   }
 }
