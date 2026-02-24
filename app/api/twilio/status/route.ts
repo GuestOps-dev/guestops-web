@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getSupabaseServiceClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
@@ -8,8 +8,7 @@ function getAbsoluteUrl(req: NextRequest) {
   const url = new URL(req.url);
 
   const proto = req.headers.get("x-forwarded-proto");
-  const host =
-    req.headers.get("x-forwarded-host") || req.headers.get("host");
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
 
   if (proto) url.protocol = `${proto}:`;
   if (host) url.host = host;
@@ -48,11 +47,13 @@ export async function POST(req: NextRequest) {
 
   const payload = Object.fromEntries(params.entries());
 
-  const supabase = getSupabaseServerClient();
+  // Webhook = server-to-server => service client (bypass RLS is OK here)
+  const supabase = getSupabaseServiceClient();
+  const sb: any = supabase as any;
 
   // If we can't identify the message, just log and exit.
   if (!messageSid) {
-    await supabase.from("message_events").insert({
+    await sb.from("message_events").insert({
       event_type: "status_callback",
       twilio_message_sid: null,
       outbound_message_id: null,
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Find outbound message by SID so we can link message_events.outbound_message_id
-  const { data: outbound, error: findErr } = await supabase
+  const { data: outbound, error: findErr } = await sb
     .from("outbound_messages")
     .select("id")
     .eq("twilio_message_sid", messageSid)
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Log callback payload (linked when possible)
-  await supabase.from("message_events").insert({
+  await sb.from("message_events").insert({
     event_type: "status_callback",
     twilio_message_sid: messageSid,
     outbound_message_id: outbound?.id ?? null,
@@ -92,11 +93,10 @@ export async function POST(req: NextRequest) {
       [errorCode, errorMessage].filter(Boolean).join(" - ") ||
       "Delivery failed/undelivered";
   } else {
-    // Clear prior error if later updates indicate success
     update.error = null;
   }
 
-  await supabase
+  await sb
     .from("outbound_messages")
     .update(update)
     .eq("twilio_message_sid", messageSid);
