@@ -27,6 +27,11 @@ function normalizeBody(body: string) {
   return (body || "").trim().replace(/\s+/g, " ");
 }
 
+function isLegacyConfigError(err?: string | null) {
+  const e = (err || "").toLowerCase();
+  return e.includes("statuscallback") && e.includes("undefined/api/twilio/status");
+}
+
 export default async function ConversationPage({
   params,
 }: {
@@ -76,6 +81,10 @@ export default async function ConversationPage({
       twilio_message_sid: m.twilio_message_sid,
     })) ?? [];
 
+  // Hide legacy config failures (when StatusCallback URL was misconfigured)
+  const legacyConfigErrors = outboundRows.filter((r) => isLegacyConfigError(r.error));
+  const filteredOutboundRows = outboundRows.filter((r) => !isLegacyConfigError(r.error));
+
   /**
    * Collapse old attempts:
    * Group outbound attempts by normalized body text.
@@ -86,7 +95,7 @@ export default async function ConversationPage({
     { latest: OutboundRow; older: OutboundRow[] }
   >();
 
-  for (const row of outboundRows) {
+  for (const row of filteredOutboundRows) {
     const key = normalizeBody(row.body);
     const existing = groupedOutbound.get(key);
 
@@ -124,7 +133,6 @@ export default async function ConversationPage({
       status: g.latest.status,
       error: g.latest.error,
       twilio_message_sid: g.latest.twilio_message_sid,
-      // pass along the older attempts so the client bubble can toggle
       older_attempts: g.older,
     },
   }));
@@ -147,6 +155,23 @@ export default async function ConversationPage({
         </p>
       )}
 
+      {legacyConfigErrors.length > 0 && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 12,
+            background: "#fff7ed",
+            border: "1px solid #fed7aa",
+            color: "#7c2d12",
+            fontSize: 13,
+          }}
+        >
+          System note: {legacyConfigErrors.length} earlier outbound attempt(s) failed
+          due to a configuration issue that has since been fixed.
+        </div>
+      )}
+
       <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
         {messages.map((m) => {
           if (m.direction === "outbound") {
@@ -164,6 +189,7 @@ export default async function ConversationPage({
             );
           }
 
+          // Inbound bubble
           return (
             <div
               key={`in-${m.id}`}
