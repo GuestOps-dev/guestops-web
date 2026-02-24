@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
+    const conversationId = id;
+
     const sb = getSupabaseServerClient();
-    const conversationId = params.id;
 
     const { error } = await sb
       .from("conversations")
-      .update({
-        last_read_at: new Date().toISOString(),
-      })
+      .update({ last_read_at: new Date().toISOString() })
       .eq("id", conversationId);
 
     if (error) {
@@ -22,7 +23,7 @@ export async function POST(
     }
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Unexpected error:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }

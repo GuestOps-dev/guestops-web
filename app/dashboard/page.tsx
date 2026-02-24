@@ -1,23 +1,5 @@
 import InboxClient from "./InboxClient";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import MarkRead from "./MarkRead";
-
-export default async function ConversationPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const conversationId = params.id;
-
-  return (
-    <>
-      <MarkRead conversationId={conversationId} />
-
-      {/* your existing thread UI below */}
-      <Thread conversationId={conversationId} />
-    </>
-  );
-}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +10,7 @@ export default async function DashboardPage() {
   const { data: conversations, error } = await sb
     .from("conversations")
     .select(
-      "id, property_id, guest_number, service_number, channel, provider, last_message_at, updated_at, status, priority, assigned_to, last_inbound_at, last_outbound_at"
+      "id, property_id, guest_number, service_number, channel, provider, last_message_at, updated_at, status, priority, assigned_to, last_inbound_at, last_outbound_at, last_read_at"
     )
     .order("updated_at", { ascending: false })
     .limit(100);
@@ -52,9 +34,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {!error && (
-        <InboxClient initial={(conversations as any) ?? []} />
-      )}
+      {!error && <InboxClient initial={(conversations as any) ?? []} />}
     </main>
   );
 }
