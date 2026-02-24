@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireApiAuth } from "@/src/lib/supabaseApiAuth";
+import { requireApiAuth } from "@/lib/supabaseApiAuth";
 
 export async function GET(req: NextRequest) {
   try {

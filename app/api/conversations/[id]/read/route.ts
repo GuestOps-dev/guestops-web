@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import {
-  assertCanAccessProperty,
-  requirePropertyId,
-  requireSupabaseUser,
-} from "@/lib/supabaseApiAuth";
+import { requireApiAuth, requirePropertyId } from "@/lib/supabaseApiAuth";
 
 export async function POST(
   req: NextRequest,
@@ -12,33 +8,43 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    const conversationId = id;
+    const conversationId = (id || "").trim();
 
-    const { supabase } = await requireSupabaseUser(req);
+    if (!conversationId) {
+      return NextResponse.json({ error: "Missing conversation id" }, { status: 400 });
+    }
+
+    const { supabase } = await requireApiAuth(req);
 
     const json = await req.json().catch(() => null);
     const propertyId = requirePropertyId(json?.property_id);
 
-    await assertCanAccessProperty(supabase, propertyId);
+    const now = new Date().toISOString();
 
-    const { error } = await supabase
+    // RLS enforces access; property_id match prevents cross-property updates.
+    const { data, error } = await supabase
       .from("conversations")
-      .update({ last_read_at: new Date().toISOString() })
+      .update({ last_read_at: now, updated_at: now })
       .eq("id", conversationId)
-      .eq("property_id", propertyId);
+      .eq("property_id", propertyId)
+      .select("id")
+      .maybeSingle();
 
     if (error) {
       console.error("Mark read error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Query failed" }, { status: 400 });
+    }
+
+    if (!data) {
+      // either doesn't exist OR caller can't access via RLS
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    const status = typeof (err as any)?.status === "number" ? (err as any).status : 500;
+  } catch (err: any) {
+    const msg = err?.message === "Unauthorized" ? "Unauthorized" : err?.message || "Internal error";
+    const status = msg === "Unauthorized" ? 401 : (typeof err?.status === "number" ? err.status : 500);
     if (status === 500) console.error("Unexpected error:", err);
-    return NextResponse.json(
-      { error: status === 500 ? "Internal error" : (err as any).message },
-      { status }
-    );
+    return NextResponse.json({ error: status === 500 ? "Internal error" : msg }, { status });
   }
 }

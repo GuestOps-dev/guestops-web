@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireApiAuth } from "@/src/lib/supabaseApiAuth";
+import { requireApiAuth } from "@/lib/supabaseApiAuth";
 
 export async function GET(req: NextRequest) {
   try {
     const { supabase } = await requireApiAuth(req);
 
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get("status"); // open | closed | all | null
-    const propertyId = searchParams.get("propertyId"); // uuid | all | null
+    const status = searchParams.get("status");
+    const propertyId = searchParams.get("propertyId");
 
     let q = supabase
       .from("conversations")
