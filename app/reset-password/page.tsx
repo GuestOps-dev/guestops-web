@@ -1,17 +1,67 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
+import {
+  Suspense,
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 function ResetPasswordInner() {
   const searchParams = useSearchParams();
+
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function prepareSession() {
+      const code = searchParams.get("code");
+
+      if (!code) {
+        if (!cancelled) {
+          setSessionError("Invalid or expired recovery link.");
+          setSessionLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const sb = getSupabaseBrowserClient();
+        const { error } = await sb.auth.exchangeCodeForSession(code);
+
+        if (cancelled) return;
+
+        if (error) {
+          setSessionError("Invalid or expired recovery link.");
+        }
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setSessionError("Invalid or expired recovery link.");
+        }
+      } finally {
+        if (!cancelled) {
+          setSessionLoading(false);
+        }
+      }
+    }
+
+    prepareSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -48,7 +98,34 @@ function ResetPasswordInner() {
     }
   }
 
-  const redirectTo = searchParams.get("redirectTo") || "/login";
+  if (sessionLoading) {
+    return (
+      <main style={{ maxWidth: 420, margin: "60px auto", padding: 16 }}>
+        Loading…
+      </main>
+    );
+  }
+
+  if (sessionError) {
+    return (
+      <main style={{ maxWidth: 420, margin: "60px auto", padding: 16 }}>
+        <h1 style={{ fontSize: 28, marginBottom: 12 }}>Reset password</h1>
+        <div
+          style={{
+            padding: 12,
+            background: "#fee",
+            border: "1px solid #f99",
+            borderRadius: 10,
+          }}
+        >
+          {sessionError}
+        </div>
+        <div style={{ marginTop: 16, fontSize: 13 }}>
+          <Link href="/login">Back to login</Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main style={{ maxWidth: 420, margin: "60px auto", padding: 16 }}>
@@ -132,10 +209,6 @@ function ResetPasswordInner() {
           {busy ? "Updating…" : "Update password"}
         </button>
       </form>
-
-      <div style={{ marginTop: 16, fontSize: 13 }}>
-        <Link href={redirectTo}>Back to login</Link>
-      </div>
     </main>
   );
 }
