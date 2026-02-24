@@ -8,7 +8,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function ConversationPage(props: any) {
-  const conversationId = props?.params?.id;
+  const resolvedParams = await Promise.resolve(props?.params);
+  const conversationId = resolvedParams?.id;
 
   if (!conversationId) {
     return (
