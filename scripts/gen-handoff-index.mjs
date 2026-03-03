@@ -46,7 +46,9 @@ function listFilesRec(dirAbs) {
 }
 
 function toRel(abs) {
-  return abs.replace(ROOT + path.sep, "");
+  // Always normalize to forward slashes for portability
+  const rel = abs.replace(ROOT + path.sep, "");
+  return rel.split(path.sep).join("/");
 }
 
 function filterByExt(files, exts) {
@@ -85,7 +87,6 @@ function curatedStructureSection(title, rel, includeExts) {
 }
 
 function getCommit() {
-  // Best effort: prefer Vercel-provided env vars
   const envCommit =
     process.env.VERCEL_GIT_COMMIT_SHA ||
     process.env.GIT_COMMIT_SHA ||
@@ -112,10 +113,7 @@ function buildStructureMd() {
   );
   parts.push("");
 
-  // Keep this intentionally curated, not a full repo tree
-  parts.push(
-    curatedStructureSection("App (Routes + UI)", "app", [".ts", ".tsx"])
-  );
+  parts.push(curatedStructureSection("App (Routes + UI)", "app", [".ts", ".tsx"]));
   parts.push(curatedStructureSection("Src (Libraries)", "src", [".ts", ".tsx"]));
   parts.push(
     curatedStructureSection("Supabase", "supabase", [".sql", ".toml", ".json", ".ts"])
@@ -138,7 +136,6 @@ function buildCodeIndexMd() {
   parts.push("Do NOT store secrets here.");
   parts.push("");
 
-  // API route listing
   const appRoutes = findRouteFiles("app/api");
   const srcRoutes = findRouteFiles("src/app/api");
 
@@ -153,7 +150,6 @@ function buildCodeIndexMd() {
   else parts.push("(none)");
   parts.push("");
 
-  // Critical files (full content, truncated by byte size guard)
   const criticalFull = [
     "app/api/conversations/route.ts",
     "app/api/messages/send/route.ts",
@@ -176,7 +172,6 @@ function buildCodeIndexMd() {
     parts.push("");
   }
 
-  // Env var names (no values)
   parts.push("## Env var names referenced");
   parts.push("");
   [
@@ -192,17 +187,88 @@ function buildCodeIndexMd() {
   return parts.join("\n");
 }
 
+function buildHandoffPackTxt() {
+  // Goal: portable, repo-relative "index" for humans (no absolute paths).
+  const parts = [];
+  parts.push("GuestOpsHQ - HANDOFF_PACK (Generated)");
+  parts.push("");
+  parts.push(`Generated: ${new Date().toISOString()}`);
+  parts.push(`Commit: ${getCommit()}`);
+  parts.push("");
+  parts.push("This file is generated at build time and contains only repo-relative paths.");
+  parts.push("Do NOT store secrets here.");
+  parts.push("");
+
+  // Key docs the handoff page renders
+  const keyDocs = [
+    "docs/PRODUCT_BRIEF.md",
+    "docs/PRODUCT_VISION.md",
+    "docs/TECH_HANDOFF.md",
+    "docs/M1_SMOKE_TESTS.md",
+    "docs/HANDOFF_README.md",
+    "docs/STRUCTURE.md",
+    "docs/CODE_INDEX.md",
+  ];
+
+  parts.push("== Key Docs ==");
+  keyDocs.forEach((p) => parts.push("- " + p));
+  parts.push("");
+
+  // Key UI + key libs + route listing
+  parts.push("== Key UI Files ==");
+  [
+    "app/dashboard/page.tsx",
+    "app/dashboard/InboxClient.tsx",
+    "app/dashboard/conversations/[id]/page.tsx",
+  ].forEach((p) => parts.push("- " + p));
+  parts.push("");
+
+  parts.push("== API Routes (route.ts) ==");
+  const appRoutes = findRouteFiles("app/api");
+  const srcRoutes = findRouteFiles("src/app/api");
+  parts.push("app/api:");
+  if (appRoutes.length) appRoutes.forEach((r) => parts.push("- " + r));
+  else parts.push("- (none)");
+  parts.push("");
+  parts.push("src/app/api:");
+  if (srcRoutes.length) srcRoutes.forEach((r) => parts.push("- " + r));
+  else parts.push("- (none)");
+  parts.push("");
+
+  parts.push("== Auth / Supabase Helpers ==");
+  [
+    "src/lib/api/requireApiAuth.ts",
+    "src/lib/supabase/getSupabaseRlsServerClient.ts",
+    "src/lib/supabaseServer.ts",
+    "src/lib/supabaseBrowser.ts",
+    "src/lib/supabaseApiAuth.ts",
+  ].forEach((p) => parts.push("- " + p));
+  parts.push("");
+
+  parts.push("== How to update (local) ==");
+  parts.push("- (optional) Run: .\\scripts\\gen-structure.ps1");
+  parts.push("- (optional) Run: .\\scripts\\gen-code-index.ps1");
+  parts.push("- Build-time generation runs automatically via package.json prebuild:");
+  parts.push("  - node scripts/gen-handoff-index.mjs");
+  parts.push("");
+
+  return parts.join("\n");
+}
+
 function main() {
   ensureDir(DOCS_DIR);
 
   const structureMd = buildStructureMd();
   const codeIndexMd = buildCodeIndexMd();
+  const handoffPack = buildHandoffPackTxt();
 
   writeFile("docs/STRUCTURE.md", structureMd);
   writeFile("docs/CODE_INDEX.md", codeIndexMd);
+  writeFile("HANDOFF_PACK.txt", handoffPack);
 
   console.log("Generated docs/STRUCTURE.md");
   console.log("Generated docs/CODE_INDEX.md");
+  console.log("Generated HANDOFF_PACK.txt");
 }
 
 main();
