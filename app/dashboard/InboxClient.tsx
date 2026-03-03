@@ -51,6 +51,7 @@ export default function InboxClient() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<StatusFilter>("all");
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
   const unreadCount = useMemo(() => rows.filter(isUnread).length, [rows]);
@@ -60,6 +61,49 @@ export default function InboxClient() {
     for (const p of propertyOptions) map.set(p.id, p.name);
     return map;
   }, [propertyOptions]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRole() {
+      const { data, error } = await sb.from("profiles").select("role").maybeSingle();
+      if (cancelled) return;
+      if (!error && data?.role === "admin") {
+        setIsAdmin(true);
+      }
+    }
+
+    void loadRole();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sb]);
+
+  async function updateStatus(conversationId: string, nextStatus: string) {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === conversationId
+          ? {
+              ...r,
+              status: nextStatus,
+            }
+          : r
+      )
+    );
+
+    try {
+      const { error } = await sb
+        .from("conversations")
+        .update({ status: nextStatus })
+        .eq("id", conversationId);
+      if (error) {
+        console.error("Failed to update status:", error);
+      }
+    } catch (e) {
+      console.error("Unexpected status update error:", e);
+    }
+  }
 
   async function getAccessToken(): Promise<string> {
     const { data, error } = await sb.auth.getSession();
@@ -239,7 +283,26 @@ export default function InboxClient() {
                 <code>{displayPropertyName(c.property_id)}</code>
               </div>
               <div>{c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}</div>
-              <div>{c.status ?? "-"}</div>
+              <div>
+                {isAdmin ? (
+                  <select
+                    value={c.status ?? "open"}
+                    onChange={(e) => updateStatus(c.id, e.target.value)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      border: "1px solid #ddd",
+                      fontSize: 12,
+                      background: "white",
+                    }}
+                  >
+                    <option value="open">Open</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                ) : (
+                  <StatusBadge status={c.status} />
+                )}
+              </div>
               <div>
                 <Link href={`/dashboard/conversations/${c.id}`}>Open</Link>
               </div>
@@ -249,4 +312,39 @@ export default function InboxClient() {
       </div>
     </>
   );
+}
+
+function StatusBadge({ status }: { status: string | null }) {
+  const s = (status || "").toLowerCase();
+  const label = status ?? "-";
+
+  const style: React.CSSProperties =
+    s === "open"
+      ? {
+          background: "#dcfce7",
+          color: "#166534",
+          borderRadius: 999,
+          padding: "2px 8px",
+          fontSize: 11,
+          fontWeight: 500,
+        }
+      : s === "closed"
+      ? {
+          background: "#fee2e2",
+          color: "#7f1d1d",
+          borderRadius: 999,
+          padding: "2px 8px",
+          fontSize: 11,
+          fontWeight: 500,
+        }
+      : {
+          background: "#e5e7eb",
+          color: "#374151",
+          borderRadius: 999,
+          padding: "2px 8px",
+          fontSize: 11,
+          fontWeight: 500,
+        };
+
+  return <span style={style}>{label}</span>;
 }
