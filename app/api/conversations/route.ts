@@ -4,59 +4,108 @@ import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerC
 
 type StatusFilter = "open" | "closed" | "all";
 
+async function isAdminUser(supabase: any, userId: string) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) return false;
+  return data?.role === "admin";
+}
+
+async function isMemberOfProperty(supabase: any, userId: string, propertyId: string) {
+  const { data, error } = await supabase
+    .from("property_users")
+    .select("property_id")
+    .eq("profile_id", userId)
+    .eq("property_id", propertyId)
+    .eq("active", true)
+    .limit(1);
+
+  if (error) return false;
+  return Array.isArray(data) && data.length > 0;
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const status = (url.searchParams.get("status") ?? "open") as StatusFilter;
   const propertyId = url.searchParams.get("propertyId"); // optional
 
-  // 1) Prefer Bearer auth (API-style)
   const authHeader =
     req.headers.get("authorization") ?? req.headers.get("Authorization");
 
   let supabase: any = null;
+  let userId: string | null = null;
 
+  // 1) Prefer Bearer auth (API-style)
   if (authHeader?.toLowerCase().startsWith("bearer ")) {
     const { supabase: sb, user, error } = await requireApiAuth(req);
     if (error || !user) {
       return NextResponse.json({ error: error ?? "Unauthorized" }, { status: 401 });
     }
     supabase = sb;
+    userId = user.id;
   } else {
     // 2) Fallback: cookie session (dashboard-style)
-    // Still RLS-bound. No service role.
     supabase = await getSupabaseRlsServerClient();
 
     const { data, error } = await supabase.auth.getUser();
     if (error || !data?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    userId = data.user.id;
   }
 
-  // Build query (RLS is the truth; optional filters narrow further)
+  // If caller requested a specific property, enforce membership/admin up front.
+  if (propertyId && userId) {
+    const admin = await isAdminUser(supabase, userId);
+    if (!admin) {
+      const allowed = await isMemberOfProperty(supabase, userId, propertyId);
+      if (!allowed) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+  }
+
+  // Build query (RLS is still truth; optional filters narrow further)
   let q = supabase
     .from("conversations")
     .select(
-      "id, property_id, guest_number, service_number, channel, provider, status, priority, assigned_to, updated_at, last_message_at, last_inbound_at, last_outbound_at, last_read_at"
+      [
+        "id",
+        "property_id",
+        "guest_number",
+        "service_number",
+        "channel",
+        "provider",
+        "status",
+        "priority",
+        "assigned_to",
+        "assigned_to_user_id",
+        "assigned_user_id",
+        "updated_at",
+        "last_message_at",
+        "last_inbound_at",
+        "last_outbound_at",
+        "last_read_at",
+      ].join(",")
     )
     .order("updated_at", { ascending: false })
     .limit(200);
 
   if (propertyId) q = q.eq("property_id", propertyId);
 
-  // Be permissive: don’t accidentally filter everything due to status mismatches
   if (status === "open") {
-    // Your DB says status=open exists, so we honor it.
     q = q.eq("status", "open");
   } else if (status === "closed") {
     q = q.eq("status", "closed");
-  } else {
-    // "all" => no status filter
   }
 
   const { data, error } = await q;
 
   if (error) {
-    // IMPORTANT: Return 500 with details so we don't get silent 400s
     return NextResponse.json(
       { error: error.message, hint: (error as any).hint ?? null },
       { status: 500 }
