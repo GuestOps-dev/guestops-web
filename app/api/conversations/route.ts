@@ -113,8 +113,14 @@ export async function GET(req: Request) {
 
   if (error) {
     return NextResponse.json(
-      { error: error.message, hint: (error as any).hint ?? null },
-      { status: 500 }
+      {
+        error: error.message,
+        details: (error as any).details ?? null,
+        hint: (error as any).hint ?? null,
+        code: (error as any).code ?? null,
+        status: (error as any).status ?? null,
+      },
+      { status: (error as any).status ?? 500 }
     );
   }
 
