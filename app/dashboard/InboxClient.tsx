@@ -303,7 +303,7 @@ export default function InboxClient() {
       {!loading && !error && rows.length === 0 ? (
         <div
           style={{
-            border: "1px solid "#eee",
+            border: "1px solid #eee",
             borderRadius: 12,
             padding: 16,
             background: "#fafafa",
