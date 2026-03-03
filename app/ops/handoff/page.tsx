@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import fs from "fs";
 import path from "path";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 function readFileSafe(relPath: string) {
   try {
@@ -11,18 +12,26 @@ function readFileSafe(relPath: string) {
   }
 }
 
-export default async function HandoffPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
-  const kRaw = sp.k;
-  const k = Array.isArray(kRaw) ? kRaw[0] : kRaw;
+export default async function HandoffPage() {
+  const supabase = await getSupabaseServerClient();
 
-  const expected = process.env.HANDOFF_VIEW_KEY;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!expected || !k || k !== expected) notFound();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error || !profile || profile.role !== "admin") {
+    notFound();
+  }
 
   const productBrief = readFileSafe("docs/PRODUCT_BRIEF.md");
   const productVision = readFileSafe("docs/PRODUCT_VISION.md");
