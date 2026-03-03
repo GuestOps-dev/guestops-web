@@ -18,14 +18,20 @@ async function isAdminUser(supabase: any, userId: string) {
 async function isMemberOfProperty(supabase: any, userId: string, propertyId: string) {
   const { data, error } = await supabase
     .from("property_users")
-    .select("property_id")
+    .select("property_id, active")
     .eq("profile_id", userId)
     .eq("property_id", propertyId)
-    .eq("active", true)
     .limit(1);
 
   if (error) return false;
-  return Array.isArray(data) && data.length > 0;
+
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) return false;
+
+  // treat NULL as active for safety (older rows)
+  if (row.active === false) return false;
+
+  return true;
 }
 
 export async function GET(req: Request) {
