@@ -8,7 +8,17 @@ import { requireApiAuth } from "@/lib/supabaseApiAuth";
 
 export const runtime = "nodejs";
 
-const ALLOWED_STATUSES = new Set(["open", "closed"]);
+function requireUuidOrNull(v: unknown): string | null {
+  if (v === null) return null;
+  if (typeof v !== "string") throw Object.assign(new Error("assigned_user_id must be uuid or null"), { status: 400 });
+  const s = v.trim();
+  if (!s) throw Object.assign(new Error("assigned_user_id must be uuid or null"), { status: 400 });
+  // lightweight UUID v4-ish check (accepts any valid UUID format)
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) {
+    throw Object.assign(new Error("assigned_user_id must be uuid or null"), { status: 400 });
+  }
+  return s;
+}
 
 export async function POST(
   req: NextRequest,
@@ -25,24 +35,19 @@ export async function POST(
     const json = await req.json().catch(() => null);
     const propertyId = requirePropertyId(json?.property_id);
 
-    const status = typeof json?.status === "string" ? json.status.trim() : "";
-    if (!ALLOWED_STATUSES.has(status)) {
-      return NextResponse.json(
-        { error: "Invalid status. Allowed: open, closed" },
-        { status: 400 }
-      );
-    }
+    const assignedUserId = requireUuidOrNull(json?.assigned_user_id);
 
     await assertCanAccessProperty(supabase, propertyId);
 
     const now = new Date().toISOString();
 
+    // Write BOTH columns for now to avoid breaking any existing code paths
     const { data, error } = await supabase
       .from("conversations")
       .update({
-        status,
+        assigned_to_user_id: assignedUserId,
+        assigned_user_id: assignedUserId,
         updated_at: now,
-        last_message_at: now,
       })
       .eq("id", id)
       .eq("property_id", propertyId)
@@ -52,7 +57,7 @@ export async function POST(
       .maybeSingle();
 
     if (error) {
-      console.error("Status update error:", error);
+      console.error("Assign update error:", error);
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
     if (!data) {
@@ -63,7 +68,7 @@ export async function POST(
   } catch (err: any) {
     const status = typeof err?.status === "number" ? err.status : 500;
     const message = status === 500 ? "Internal error" : err?.message || "Error";
-    if (status === 500) console.error("POST /status unexpected:", err);
+    if (status === 500) console.error("POST /assign unexpected:", err);
     return NextResponse.json({ error: message }, { status });
   }
 }
