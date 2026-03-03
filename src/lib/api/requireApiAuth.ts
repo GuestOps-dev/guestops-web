@@ -1,31 +1,50 @@
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
-// Minimal helper to create a Supabase client from request bearer token (if present)
+type ApiAuthResult = {
+  supabase: any; // keep broad to avoid TS generic mismatches across supabase-js versions
+  user: { id: string } | null;
+  error: string | null;
+};
+
+function getPublicEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anon) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  }
+  return { url, anon };
+}
+
 function supabaseFromBearer(token: string) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const { url, anon } = getPublicEnv();
   return createClient(url, anon, {
     global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
   });
 }
 
-// Minimal helper to create a Supabase client using cookies (server-side)
-function supabaseFromCookies() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const cookieStore = cookies();
+async function supabaseFromCookies() {
+  const { url, anon } = getPublicEnv();
 
-  // Forward all cookies to Supabase so it can read sb-* auth cookies
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
+  // In your Next.js version, cookies() returns a Promise
+  const cookieStore = await cookies();
+  const all = cookieStore.getAll?.() ?? [];
+
+  const cookieHeader = all.map((c) => `${c.name}=${c.value}`).join("; ");
 
   return createClient(url, anon, {
     global: cookieHeader ? { headers: { Cookie: cookieHeader } } : undefined,
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
   });
 }
 
@@ -35,45 +54,36 @@ function supabaseFromCookies() {
  *  - Authorization: Bearer <jwt>
  *  - OR Supabase auth cookies (server-side)
  */
-export async function requireApiAuth(req: Request): Promise<{
-  supabase: ReturnType<typeof createClient>;
-  user: { id: string } | null;
-  error: string | null;
-}> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anon) {
-    return { supabase: createClient("http://invalid", "invalid"), user: null, error: "Missing Supabase env vars" };
-  }
-
-  // 1) Try Bearer token first
+export async function requireApiAuth(req: Request): Promise<ApiAuthResult> {
+  // 1) Try Bearer first (current behavior)
   const authHeader = req.headers.get("authorization") || "";
   const bearer =
     authHeader.toLowerCase().startsWith("bearer ")
       ? authHeader.slice(7).trim()
       : null;
 
-  try {
-    if (bearer) {
-      const supabase = supabaseFromBearer(bearer);
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data?.user) {
-        return { supabase, user: null, error: "Unauthorized" };
-      }
-      return { supabase, user: { id: data.user.id }, error: null };
+  if (bearer) {
+    const supabase = supabaseFromBearer(bearer);
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data?.user) {
+      return { supabase, user: null, error: "Unauthorized" };
     }
-  } catch {
-    // fall through to cookie auth
+
+    return { supabase, user: { id: data.user.id }, error: null };
   }
 
-  // 2) Fallback to cookie-based auth (server-side)
-  const supabase = supabaseFromCookies();
-  const { data, error } = await supabase.auth.getUser();
+  // 2) Fallback: cookies (for same-origin calls from logged-in app)
+  try {
+    const supabase = await supabaseFromCookies();
+    const { data, error } = await supabase.auth.getUser();
 
-  if (error || !data?.user) {
-    return { supabase, user: null, error: "Missing or invalid Authorization header" };
+    if (error || !data?.user) {
+      return { supabase, user: null, error: "Missing or invalid Authorization header" };
+    }
+
+    return { supabase, user: { id: data.user.id }, error: null };
+  } catch (e: any) {
+    return { supabase: null, user: null, error: e?.message ?? "Unauthorized" };
   }
-
-  return { supabase, user: { id: data.user.id }, error: null };
 }
