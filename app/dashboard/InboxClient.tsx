@@ -18,6 +18,7 @@ type ConversationRow = {
   status: string | null;
   priority: string | null;
   assigned_to: string | null;
+  assigned_to_user_id?: string | null;
 
   updated_at: string;
   last_message_at: string | null;
@@ -52,6 +53,7 @@ export default function InboxClient() {
   const [status, setStatus] = useState<StatusFilter>("all");
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
   const unreadCount = useMemo(() => rows.filter(isUnread).length, [rows]);
@@ -65,25 +67,44 @@ export default function InboxClient() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadRole() {
-      const { data, error } = await sb.from("profiles").select("role").maybeSingle();
+    async function loadUserAndRole() {
+      const { data: userData, error: userError } = await sb.auth.getUser();
       if (cancelled) return;
-      if (!error && data?.role === "admin") {
-        setIsAdmin(true);
+      if (!userError && userData?.user) {
+        setCurrentUserId(userData.user.id);
+
+        const { data: profile, error: profileError } = await sb
+          .from("profiles")
+          .select("role")
+          .eq("id", userData.user.id)
+          .maybeSingle();
+
+        if (cancelled) return;
+        if (!profileError && profile?.role === "admin") {
+          setIsAdmin(true);
+        }
       }
     }
 
-    void loadRole();
+    void loadUserAndRole();
 
     return () => {
       cancelled = true;
     };
   }, [sb]);
 
-  async function updateStatus(conversationId: string, nextStatus: string) {
+  async function getAccessToken(): Promise<string> {
+    const { data, error } = await sb.auth.getSession();
+    if (error || !data.session?.access_token) throw new Error("No Supabase session");
+    return data.session.access_token;
+  }
+
+  async function updateStatus(row: ConversationRow, nextStatus: string) {
+    const previousRows = rows;
+
     setRows((prev) =>
       prev.map((r) =>
-        r.id === conversationId
+        r.id === row.id
           ? {
               ...r,
               status: nextStatus,
@@ -93,22 +114,71 @@ export default function InboxClient() {
     );
 
     try {
-      const { error } = await sb
-        .from("conversations")
-        .update({ status: nextStatus })
-        .eq("id", conversationId);
-      if (error) {
-        console.error("Failed to update status:", error);
+      const token = await getAccessToken();
+
+      const res = await fetch(`/api/conversations/${row.id}/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          property_id: row.property_id,
+          status: nextStatus,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.error("Status update failed:", res.status, text);
+        setRows(previousRows);
       }
     } catch (e) {
       console.error("Unexpected status update error:", e);
+      setRows(previousRows);
     }
   }
 
-  async function getAccessToken(): Promise<string> {
-    const { data, error } = await sb.auth.getSession();
-    if (error || !data.session?.access_token) throw new Error("No Supabase session");
-    return data.session.access_token;
+  async function claimConversation(row: ConversationRow) {
+    if (!currentUserId) return;
+
+    const previousRows = rows;
+
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === row.id
+          ? {
+              ...r,
+              assigned_to_user_id: currentUserId,
+            }
+          : r
+      )
+    );
+
+    try {
+      const token = await getAccessToken();
+
+      const res = await fetch(`/api/conversations/${row.id}/assign`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          property_id: row.property_id,
+          assigned_user_id: currentUserId,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.error("Assign failed:", res.status, text);
+        setRows(previousRows);
+      }
+    } catch (e) {
+      console.error("Unexpected assign error:", e);
+      setRows(previousRows);
+    }
   }
 
   async function refetch() {
@@ -165,13 +235,20 @@ export default function InboxClient() {
     return propertyNameById.get(propertyId) ?? propertyId;
   }
 
+  function shortAssignedLabel(row: ConversationRow): string {
+    const id = row.assigned_to_user_id ?? null;
+    if (!id) return "Unassigned";
+    return id.slice(0, 8);
+  }
+
   return (
     <>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
         <div style={{ fontSize: 14, opacity: 0.75 }}>
           {loading ? "Refreshing…" : `${rows.length} threads • ${unreadCount} unread`}
           <span style={{ marginLeft: 10, fontSize: 12, opacity: 0.65 }}>
-            (debug: allowed={allowedPropertyIds.length}, selected={selectedPropertyId}, apiRows={rawCount})
+            (debug: allowed={allowedPropertyIds.length}, selected={selectedPropertyId}, apiRows=
+            {rawCount})
           </span>
         </div>
 
@@ -226,7 +303,7 @@ export default function InboxClient() {
       {!loading && !error && rows.length === 0 ? (
         <div
           style={{
-            border: "1px solid #eee",
+            border: "1px solid "#eee",
             borderRadius: 12,
             padding: 16,
             background: "#fafafa",
@@ -242,7 +319,7 @@ export default function InboxClient() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "2.2fr 2fr 2fr 1.2fr 1fr 1fr",
+            gridTemplateColumns: "2.2fr 2fr 2fr 1.4fr 1.4fr 1fr",
             gap: 12,
             padding: 12,
             background: "#fafafa",
@@ -253,8 +330,8 @@ export default function InboxClient() {
           <div>Twilio #</div>
           <div>Property</div>
           <div>Last Message</div>
+          <div>Assigned</div>
           <div>Status</div>
-          <div>Open</div>
         </div>
 
         {rows.map((c) => {
@@ -265,7 +342,7 @@ export default function InboxClient() {
               key={c.id}
               style={{
                 display: "grid",
-                gridTemplateColumns: "2.2fr 2fr 2fr 1.2fr 1fr 1fr",
+                gridTemplateColumns: "2.2fr 2fr 2fr 1.4fr 1.4fr 1fr",
                 gap: 12,
                 padding: 12,
                 borderTop: "1px solid #eee",
@@ -284,10 +361,30 @@ export default function InboxClient() {
               </div>
               <div>{c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}</div>
               <div>
+                <div style={{ fontSize: 12 }}>{shortAssignedLabel(c)}</div>
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => claimConversation(c)}
+                    style={{
+                      marginTop: 4,
+                      padding: "4px 8px",
+                      borderRadius: 999,
+                      border: "1px solid #ddd",
+                      background: "#f9fafb",
+                      fontSize: 11,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Claim
+                  </button>
+                ) : null}
+              </div>
+              <div>
                 {isAdmin ? (
                   <select
                     value={c.status ?? "open"}
-                    onChange={(e) => updateStatus(c.id, e.target.value)}
+                    onChange={(e) => updateStatus(c, e.target.value)}
                     style={{
                       padding: "6px 10px",
                       borderRadius: 999,
@@ -302,9 +399,6 @@ export default function InboxClient() {
                 ) : (
                   <StatusBadge status={c.status} />
                 )}
-              </div>
-              <div>
-                <Link href={`/dashboard/conversations/${c.id}`}>Open</Link>
               </div>
             </div>
           );
