@@ -3,10 +3,8 @@ import { requireApiAuth } from "@/lib/api/requireApiAuth";
 
 /**
  * GET /api/me/memberships
- * Bearer-token authenticated. RLS enforced.
- *
- * Returns a normalized shape used by the dashboard UI:
- * { memberships: [{ property_id, property_name, property_role }] }
+ * Returns { memberships: [{ property_id, property_name, property_role }] }
+ * Uses direct selects (no RPC) to avoid any profiles-policy recursion.
  */
 export async function GET(req: Request) {
   const { supabase, user, error } = await requireApiAuth(req);
@@ -18,39 +16,44 @@ export async function GET(req: Request) {
     );
   }
 
-  const { data, error: rpcError } = await supabase.rpc("my_property_memberships");
+  // 1) fetch memberships for this user
+  const { data: pus, error: puErr } = await supabase
+    .from("property_users")
+    .select("property_id, property_role")
+    .eq("profile_id", user.id);
 
-  if (rpcError) {
-    return NextResponse.json({ error: rpcError.message }, { status: 500 });
+  if (puErr) {
+    return NextResponse.json({ error: puErr.message }, { status: 500 });
   }
 
-  const rows = Array.isArray(data) ? data : [];
+  const propertyIds = Array.from(
+    new Set((pus ?? []).map((r: any) => r.property_id).filter(Boolean))
+  );
 
-  // Normalize keys defensively (RPC output can vary)
-  const memberships = rows
-    .map((r: any) => {
-      const property_id =
-        r?.property_id ?? r?.propertyId ?? r?.property ?? r?.id ?? null;
+  if (propertyIds.length === 0) {
+    return NextResponse.json({ memberships: [] }, { status: 200 });
+  }
 
-      const property_name =
-        r?.property_name ??
-        r?.propertyName ??
-        r?.name ??
-        r?.property_display_name ??
-        null;
+  // 2) fetch property names
+  const { data: props, error: pErr } = await supabase
+    .from("properties")
+    .select("id, name")
+    .in("id", propertyIds);
 
-      const property_role =
-        r?.property_role ?? r?.propertyRole ?? r?.role ?? r?.property_user_role ?? null;
+  if (pErr) {
+    return NextResponse.json({ error: pErr.message }, { status: 500 });
+  }
 
-      if (!property_id) return null;
+  const nameById = new Map<string, string>();
+  for (const p of props ?? []) {
+    if (p?.id) nameById.set(String(p.id), String(p.name ?? ""));
+  }
 
-      return {
-        property_id: String(property_id),
-        property_name: property_name ? String(property_name) : null,
-        property_role: property_role ? String(property_role) : null,
-      };
-    })
-    .filter(Boolean);
+  const memberships = (pus ?? []).map((m: any) => ({
+    property_id: String(m.property_id),
+    property_name: (nameById.get(String(m.property_id)) ?? "").trim() || null,
+    property_role: m.property_role ? String(m.property_role) : null,
+  }));
 
   return NextResponse.json({ memberships }, { status: 200 });
 }
