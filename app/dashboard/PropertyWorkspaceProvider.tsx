@@ -64,27 +64,53 @@ export function PropertyWorkspaceProvider({
     let cancelled = false;
 
     async function loadMemberships() {
-      // If caller provided data, don’t fetch.
-      if (allowedOverride && optionsOverride) return;
-
+      // Always attempt to fetch memberships so dropdown stays accurate.
+      // (Overrides can still seed initial state via useState above.)
       setLoadingMemberships(true);
       setMembershipsError(null);
-
+    
+      const MAX_RETRIES = 8;
+      const RETRY_DELAY_MS = 250;
+    
       try {
-        const token = await getAccessToken();
+        let token: string | null = null;
+    
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+          try {
+            token = await getAccessToken();
+            if (token) break;
+          } catch (e) {
+            // No session yet; wait and retry
+          }
+    
+          if (attempt < MAX_RETRIES) {
+            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+          }
+        }
+    
+        if (!token) {
+          throw new Error("No Supabase session (memberships fetch)");
+        }
+    
+        console.log("Workspace: fetching /api/me/memberships…");
+    
         const res = await fetch("/api/me/memberships", {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
         });
-
+    
         const text = await res.text();
+    
+        console.log("Workspace memberships status:", res.status);
+        console.log("Workspace memberships response:", text);
+    
         if (!res.ok) {
           throw new Error(`Failed to load memberships: ${res.status} ${text}`);
         }
-
+    
         const json = text ? JSON.parse(text) : {};
         const memberships = (json?.memberships ?? []) as MembershipRow[];
-
+    
         const allowed = Array.from(
           new Set(
             memberships
@@ -92,17 +118,14 @@ export function PropertyWorkspaceProvider({
               .filter(Boolean)
           )
         );
-
+    
         const opts: PropertyOption[] = memberships
           .map((m) => ({
             id: String(m.property_id),
             name: (m.property_name ?? "").trim() || String(m.property_id),
           }))
-          // de-dupe by id
-          .filter(
-            (o, idx, arr) => arr.findIndex((x) => x.id === o.id) === idx
-          );
-
+          .filter((o, idx, arr) => arr.findIndex((x) => x.id === o.id) === idx);
+    
         if (!cancelled) {
           setAllowedPropertyIds(allowed);
           setPropertyOptions(opts);
