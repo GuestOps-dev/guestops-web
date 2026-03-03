@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePropertyWorkspace } from "./PropertyWorkspaceProvider";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -32,19 +33,36 @@ type StatusFilter = "open" | "closed" | "all";
 function isUnread(c: ConversationRow) {
   if (!c.last_inbound_at) return false;
   if (!c.last_read_at) return true;
-  return new Date(c.last_inbound_at).getTime() > new Date(c.last_read_at).getTime();
+  return (
+    new Date(c.last_inbound_at).getTime() >
+    new Date(c.last_read_at).getTime()
+  );
 }
 
 function sortByUpdatedDesc(a: ConversationRow, b: ConversationRow) {
   return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
 }
 
+function isInteractiveElement(el: HTMLElement | null) {
+  if (!el) return false;
+  const tag = el.tagName.toLowerCase();
+  if (tag === "a" || tag === "button" || tag === "select" || tag === "input") {
+    return true;
+  }
+  // If clicked inside an interactive element, treat as interactive too.
+  return Boolean(el.closest("a,button,select,input"));
+}
+
 export default function InboxClient() {
+  const router = useRouter();
+
   const {
     selectedPropertyId,
     setSelectedPropertyId,
     allowedPropertyIds,
     propertyOptions,
+    loadingMemberships,
+    membershipsError,
   } = usePropertyWorkspace();
 
   const [rows, setRows] = useState<ConversationRow[]>([]);
@@ -54,6 +72,9 @@ export default function InboxClient() {
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [profileNameById, setProfileNameById] = useState<
+    Record<string, string>
+  >({});
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
   const unreadCount = useMemo(() => rows.filter(isUnread).length, [rows]);
@@ -95,7 +116,8 @@ export default function InboxClient() {
 
   async function getAccessToken(): Promise<string> {
     const { data, error } = await sb.auth.getSession();
-    if (error || !data.session?.access_token) throw new Error("No Supabase session");
+    if (error || !data.session?.access_token)
+      throw new Error("No Supabase session");
     return data.session.access_token;
   }
 
@@ -207,15 +229,74 @@ export default function InboxClient() {
       const data = (text ? JSON.parse(text) : []) as ConversationRow[];
       setRawCount(Array.isArray(data) ? data.length : 0);
 
-      // IMPORTANT:
-      // Only apply allowedPropertyIds filtering if we actually have memberships.
-      // If allowedPropertyIds is empty, do NOT drop everything — show what RLS returns.
       const filtered =
         allowedPropertyIds.length > 0
           ? (data ?? []).filter((c) => allowedPropertyIds.includes(c.property_id))
           : (data ?? []);
 
-      setRows([...filtered].sort(sortByUpdatedDesc));
+      const nextRows = [...filtered].sort(sortByUpdatedDesc);
+      setRows(nextRows);
+
+      // Resolve profile names for assigned users per property
+      const byProperty = new Map<string, Set<string>>();
+      for (const row of nextRows) {
+        const uid = row.assigned_to_user_id;
+        if (!uid) continue;
+        if (profileNameById[uid]) continue;
+        if (!byProperty.has(row.property_id)) {
+          byProperty.set(row.property_id, new Set<string>());
+        }
+        byProperty.get(row.property_id)!.add(uid);
+      }
+
+      const lookups = Array.from(byProperty.entries()).map(
+        async ([propertyId, ids]) => {
+          const body = {
+            property_id: propertyId,
+            profile_ids: Array.from(ids),
+          };
+
+          try {
+            const res = await fetch("/api/profiles/lookup", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(body),
+            });
+
+            if (!res.ok) {
+              const text = await res.text().catch(() => "");
+              console.error("profiles lookup failed", propertyId, res.status, text);
+              return [];
+            }
+
+            const json = (await res.json().catch(() => null)) as
+              | { profiles?: Array<{ id: string; full_name: string | null }> }
+              | null;
+            return json?.profiles ?? [];
+          } catch (e) {
+            console.error("profiles lookup error", propertyId, e);
+            return [];
+          }
+        }
+      );
+
+      if (lookups.length > 0) {
+        const results = await Promise.all(lookups);
+        const merged: Record<string, string> = {};
+        for (const batch of results) {
+          for (const p of batch) {
+            if (!p.id) continue;
+            if (p.full_name) merged[p.id] = p.full_name;
+          }
+        }
+
+        if (Object.keys(merged).length > 0) {
+          setProfileNameById((prev) => ({ ...prev, ...merged }));
+        }
+      }
     } catch (e: any) {
       console.error("Inbox refetch error:", e);
       setError(e?.message ?? "Failed to load conversations");
@@ -235,9 +316,13 @@ export default function InboxClient() {
     return propertyNameById.get(propertyId) ?? propertyId;
   }
 
-  function shortAssignedLabel(row: ConversationRow): string {
+  function assignedLabel(row: ConversationRow): string {
     const id = row.assigned_to_user_id ?? null;
     if (!id) return "Unassigned";
+
+    const name = profileNameById[id];
+    if (name && name.trim()) return name;
+
     return id.slice(0, 8);
   }
 
@@ -247,12 +332,17 @@ export default function InboxClient() {
         <div style={{ fontSize: 14, opacity: 0.75 }}>
           {loading ? "Refreshing…" : `${rows.length} threads • ${unreadCount} unread`}
           <span style={{ marginLeft: 10, fontSize: 12, opacity: 0.65 }}>
-            (debug: allowed={allowedPropertyIds.length}, selected={selectedPropertyId}, apiRows=
-            {rawCount})
+            (debug: allowed={allowedPropertyIds.length}, selected={selectedPropertyId}, apiRows={rawCount})
           </span>
         </div>
 
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          {loadingMemberships ? (
+            <span style={{ fontSize: 12, opacity: 0.65 }}>Loading properties…</span>
+          ) : membershipsError ? (
+            <span style={{ fontSize: 12, color: "#b42318" }}>Property load failed</span>
+          ) : null}
+
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as StatusFilter)}
@@ -319,7 +409,7 @@ export default function InboxClient() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "2.2fr 2fr 2fr 1.4fr 1.4fr 1fr",
+            gridTemplateColumns: "2.1fr 1.8fr 2fr 1.4fr 1.4fr 1fr 0.8fr",
             gap: 12,
             padding: 12,
             background: "#fafafa",
@@ -332,6 +422,7 @@ export default function InboxClient() {
           <div>Last Message</div>
           <div>Assigned</div>
           <div>Status</div>
+          <div>Open</div>
         </div>
 
         {rows.map((c) => {
@@ -340,13 +431,29 @@ export default function InboxClient() {
           return (
             <div
               key={c.id}
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                const target = e.target as HTMLElement | null;
+                if (isInteractiveElement(target)) return;
+                router.push(`/dashboard/conversations/${c.id}`);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  const target = e.target as HTMLElement | null;
+                  if (isInteractiveElement(target)) return;
+                  e.preventDefault();
+                  router.push(`/dashboard/conversations/${c.id}`);
+                }
+              }}
               style={{
                 display: "grid",
-                gridTemplateColumns: "2.2fr 2fr 2fr 1.4fr 1.4fr 1fr",
+                gridTemplateColumns: "2.1fr 1.8fr 2fr 1.4fr 1.4fr 1fr 0.8fr",
                 gap: 12,
                 padding: 12,
                 borderTop: "1px solid #eee",
                 background: unread ? "#fffdf3" : "white",
+                cursor: "pointer",
               }}
             >
               <div style={{ fontWeight: unread ? 700 : 500 }}>
@@ -359,9 +466,11 @@ export default function InboxClient() {
               <div>
                 <code>{displayPropertyName(c.property_id)}</code>
               </div>
-              <div>{c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}</div>
               <div>
-                <div style={{ fontSize: 12 }}>{shortAssignedLabel(c)}</div>
+                {c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}
+              </div>
+              <div>
+                <div style={{ fontSize: 12 }}>{assignedLabel(c)}</div>
                 {isAdmin ? (
                   <button
                     type="button"
@@ -399,6 +508,15 @@ export default function InboxClient() {
                 ) : (
                   <StatusBadge status={c.status} />
                 )}
+              </div>
+              <div>
+                <Link
+                  href={`/dashboard/conversations/${c.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ fontSize: 13 }}
+                >
+                  Open
+                </Link>
               </div>
             </div>
           );
