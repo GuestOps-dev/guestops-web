@@ -18,7 +18,6 @@ type ConversationRow = {
 
   status: string | null;
   priority: string | null;
-  assigned_to: string | null;
   assigned_to_user_id?: string | null;
 
   updated_at: string;
@@ -191,7 +190,7 @@ export default function InboxClient() {
         },
         body: JSON.stringify({
           property_id: row.property_id,
-          assigned_user_id: currentUserId,
+          assigned_to_user_id: currentUserId,
         }),
       });
 

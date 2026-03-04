@@ -11,20 +11,20 @@ export const runtime = "nodejs";
 function requireUuidOrNull(v: unknown): string | null {
   if (v === null) return null;
   if (typeof v !== "string")
-    throw Object.assign(new Error("assigned_user_id must be uuid or null"), {
+    throw Object.assign(new Error("assigned_to_user_id must be uuid or null"), {
       status: 400,
     });
 
   const s = v.trim();
   if (!s)
-    throw Object.assign(new Error("assigned_user_id must be uuid or null"), {
+    throw Object.assign(new Error("assigned_to_user_id must be uuid or null"), {
       status: 400,
     });
 
   if (
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)
   ) {
-    throw Object.assign(new Error("assigned_user_id must be uuid or null"), {
+    throw Object.assign(new Error("assigned_to_user_id must be uuid or null"), {
       status: 400,
     });
   }
@@ -49,9 +49,7 @@ export async function POST(
     const json = await req.json().catch(() => null);
     const propertyId = requirePropertyId(json?.property_id);
 
-    // Keep request shape (client sends assigned_user_id),
-    // but write to DB column `assigned_to_user_id`.
-    const assignedUserId = requireUuidOrNull(json?.assigned_user_id);
+    const assignedUserId = requireUuidOrNull(json?.assigned_to_user_id);
 
     await assertCanAccessProperty(supabase, propertyId);
 
@@ -66,7 +64,7 @@ export async function POST(
       .eq("id", id)
       .eq("property_id", propertyId)
       .select(
-        "id, property_id, status, priority, updated_at, last_message_at, assigned_to, assigned_to_user_id"
+        "id, property_id, status, priority, updated_at, last_message_at, assigned_to_user_id"
       )
       .maybeSingle();
 

@@ -47,7 +47,7 @@ export async function GET(req: Request) {
   let q = supabase
     .from("conversations")
     .select(
-      "id, property_id, guest_number, service_number, channel, provider, status, priority, assigned_user_id, updated_at, last_message_at, last_inbound_at, last_outbound_at, last_read_at"
+      "id, property_id, guest_number, service_number, channel, provider, status, priority, assigned_to_user_id, updated_at, last_message_at, last_inbound_at, last_outbound_at, last_read_at"
     )
     .order("updated_at", { ascending: false })
     .limit(200);
@@ -76,11 +76,5 @@ export async function GET(req: Request) {
     );
   }
 
-  const rows = (data ?? []) as Array<Record<string, unknown>>;
-  const mapped = rows.map((row) => {
-    const { assigned_user_id, ...rest } = row;
-    return { ...rest, assigned_to_user_id: assigned_user_id ?? null };
-  });
-
-  return NextResponse.json(mapped, { status: 200 });
+  return NextResponse.json(data ?? [], { status: 200 });
 }

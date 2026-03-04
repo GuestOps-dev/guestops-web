@@ -1,58 +1,101 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { requireApiAuth } from "@/lib/api/requireApiAuth";
 import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerClient";
 
-export const runtime = "nodejs";
+type StatusFilter = "open" | "waiting_guest" | "closed" | "all";
 
-type ConversationStatus = "open" | "waiting_guest" | "closed";
+async function getSupabaseFromReq(req: Request) {
+  const authHeader =
+    req.headers.get("authorization") ?? req.headers.get("Authorization");
 
-export async function POST(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await context.params;
+  // 1) If caller provided Bearer, try it first (API-style)
+  if (authHeader?.toLowerCase().startsWith("bearer ")) {
+    const { supabase, user, error } = await requireApiAuth(req);
 
-    if (!id) {
-      return NextResponse.json({ error: "Missing conversation id" }, { status: 400 });
+    // If Bearer is valid, use it
+    if (!error && user) {
+      return { supabase, user, mode: "bearer" as const };
     }
 
-    const supabase = await getSupabaseRlsServerClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const json = await req.json().catch(() => null);
-    const status = (json?.status ?? "") as ConversationStatus;
-
-    if (!status || !["open", "waiting_guest", "closed"].includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    }
-
-    const now = new Date().toISOString();
-
-    const { error } = await supabase
-      .from("conversations")
-      .update({
-        status,
-        updated_at: now,
-      })
-      .eq("id", id);
-
-    if (error) {
-      console.error("Status update error:", error);
-      return NextResponse.json({ error: "Update failed" }, { status: 500 });
-    }
-
-    return NextResponse.json({ ok: true }, { status: 200 });
-  } catch (err) {
-    console.error("Unexpected status handler error:", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    // If Bearer is present but invalid, fall back to cookie auth.
   }
+
+  // 2) Cookie session fallback (RLS-bound; no service role)
+  const supabase = await getSupabaseRlsServerClient();
+  const { data, error } = await supabase.auth.getUser();
+
+  if (error || !data?.user) {
+    return {
+      supabase: null,
+      user: null,
+      mode: "none" as const,
+      error: "Unauthorized",
+    };
+  }
+
+  return { supabase, user: data.user, mode: "cookie" as const };
 }
 
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const status = (url.searchParams.get("status") ?? "open") as StatusFilter;
+  const propertyId = url.searchParams.get("propertyId"); // optional
+
+  const auth = await getSupabaseFromReq(req);
+  if (!auth.supabase || !auth.user) {
+    return NextResponse.json(
+      { error: auth.error ?? "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  const supabase: any = auth.supabase;
+
+  let q = supabase
+    .from("conversations")
+    .select(
+      [
+        "id",
+        "property_id",
+        "guest_number",
+        "service_number",
+        "channel",
+        "provider",
+        "status",
+        "priority",
+        "assigned_to_user_id",
+        "updated_at",
+        "last_message_at",
+        "last_inbound_at",
+        "last_outbound_at",
+        "last_read_at",
+      ].join(",")
+    )
+    .order("updated_at", { ascending: false })
+    .limit(200);
+
+  if (propertyId) q = q.eq("property_id", propertyId);
+
+  if (status !== "all") {
+    q = q.eq("status", status);
+  }
+
+  const { data, error } = await q;
+
+  if (error) {
+    const statusCode =
+      (error as any).status ?? ((error as any).code === "42501" ? 403 : 500);
+
+    return NextResponse.json(
+      {
+        error: error.message,
+        code: (error as any).code ?? null,
+        hint: (error as any).hint ?? null,
+      },
+      { status: statusCode }
+    );
+  }
+
+  // InboxClient expects `assigned_to_user_id` already, so no mapping needed.
+  return NextResponse.json(data ?? [], { status: 200 });
+}
