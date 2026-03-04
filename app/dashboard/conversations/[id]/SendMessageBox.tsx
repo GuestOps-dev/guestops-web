@@ -95,7 +95,7 @@ export default function SendMessageBox({
                 cursor: "pointer",
               }}
             >
-              Quick Replies
+              ⚡ Quick Replies
             </button>
             {error ? (
               <span style={{ color: "crimson", fontSize: 12 }}>{error}</span>

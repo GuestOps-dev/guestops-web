@@ -27,9 +27,7 @@ export default async function QuickRepliesPage() {
   const allowedPropertyIds = propertyOptions.map((p: any) => p.id);
 
   const isAdmin = profile?.role === "admin";
-  if (!isAdmin && allowedPropertyIds.length === 0) {
-    notFound();
-  }
+  if (!isAdmin) notFound();
 
   return (
     <PropertyWorkspaceProvider

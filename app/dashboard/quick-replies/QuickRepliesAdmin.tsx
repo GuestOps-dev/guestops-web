@@ -8,9 +8,9 @@ type QuickReplyRow = {
   id: string;
   title: string;
   body: string;
-  category: string | null;
   is_active?: boolean;
   created_at?: string;
+  updated_at?: string;
 };
 
 export default function QuickRepliesAdmin() {
@@ -26,12 +26,10 @@ export default function QuickRepliesAdmin() {
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [category, setCategory] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
-  const [editCategory, setEditCategory] = useState("");
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
 
@@ -109,7 +107,6 @@ export default function QuickRepliesAdmin() {
           property_id: pid,
           title: t,
           body: b,
-          category: category.trim() || null,
         }),
       });
       if (!res.ok) {
@@ -118,7 +115,6 @@ export default function QuickRepliesAdmin() {
       }
       setTitle("");
       setBody("");
-      setCategory("");
       await fetchList();
     } catch (e: any) {
       setError(e?.message ?? "Create failed");
@@ -128,6 +124,11 @@ export default function QuickRepliesAdmin() {
   }
 
   async function handleUpdate(id: string) {
+    const pid =
+      selectedPropertyId && selectedPropertyId !== "all"
+        ? selectedPropertyId
+        : null;
+    if (!pid) return;
     const t = editTitle.trim();
     const b = editBody.trim();
     if (!t || !b) return;
@@ -144,9 +145,9 @@ export default function QuickRepliesAdmin() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
+          property_id: pid,
           title: t,
           body: b,
-          category: editCategory.trim() || null,
         }),
       });
       if (!res.ok) {
@@ -163,6 +164,11 @@ export default function QuickRepliesAdmin() {
   }
 
   async function handleDeactivate(id: string) {
+    const pid =
+      selectedPropertyId && selectedPropertyId !== "all"
+        ? selectedPropertyId
+        : null;
+    if (!pid) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -175,7 +181,7 @@ export default function QuickRepliesAdmin() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ is_active: false }),
+        body: JSON.stringify({ property_id: pid, is_active: false }),
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
@@ -280,22 +286,6 @@ export default function QuickRepliesAdmin() {
                 placeholder="Message text…"
               />
             </div>
-            <div>
-              <label style={{ fontSize: 12, display: "block", marginBottom: 4 }}>
-                Category (optional)
-              </label>
-              <input
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  border: "1px solid #ddd",
-                }}
-                placeholder="e.g. Check-out"
-              />
-            </div>
             <button
               type="submit"
               disabled={submitting}
@@ -355,16 +345,6 @@ export default function QuickRepliesAdmin() {
                           }}
                           placeholder="Body"
                         />
-                        <input
-                          value={editCategory}
-                          onChange={(e) => setEditCategory(e.target.value)}
-                          style={{
-                            padding: "6px 8px",
-                            borderRadius: 6,
-                            border: "1px solid #ddd",
-                          }}
-                          placeholder="Category (optional)"
-                        />
                         <div style={{ display: "flex", gap: 8 }}>
                           <button
                             type="button"
@@ -408,17 +388,6 @@ export default function QuickRepliesAdmin() {
                         >
                           <div>
                             <strong>{r.title}</strong>
-                            {r.category && (
-                              <span
-                                style={{
-                                  marginLeft: 8,
-                                  fontSize: 12,
-                                  color: "#666",
-                                }}
-                              >
-                                {r.category}
-                              </span>
-                            )}
                             {r.is_active === false && (
                               <span
                                 style={{
@@ -440,7 +409,6 @@ export default function QuickRepliesAdmin() {
                                     setEditingId(r.id);
                                     setEditTitle(r.title);
                                     setEditBody(r.body);
-                                    setEditCategory(r.category ?? "");
                                   }}
                                   style={{
                                     padding: "4px 8px",

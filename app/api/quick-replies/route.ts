@@ -52,10 +52,10 @@ export async function GET(req: Request) {
 
   let q = (auth.supabase as any)
     .from("quick_replies")
-    .select("id, title, body, category, is_active, created_at")
+    .select("id, property_id, title, body, is_active, created_at, updated_at")
     .eq("property_id", pid)
-    .order("category", { ascending: true, nullsFirst: false })
-    .order("title", { ascending: true });
+    .order("title", { ascending: true })
+    .order("created_at", { ascending: true });
   if (activeOnly) q = q.eq("is_active", true);
   const { data, error } = await q;
 
@@ -63,7 +63,11 @@ export async function GET(req: Request) {
     console.error("Quick replies list error:", error);
     const code = (error as any).code === "42501" ? 403 : 500;
     return NextResponse.json(
-      { error: (error as any).message ?? "Failed to load quick replies" },
+      {
+        error: (error as any).message ?? "Failed to load quick replies",
+        code: (error as any).code ?? null,
+        hint: (error as any).hint ?? null,
+      },
       { status: code }
     );
   }
@@ -84,7 +88,6 @@ export async function POST(req: Request) {
     property_id?: string;
     title?: string;
     body?: string;
-    category?: string | null;
     is_active?: boolean;
   };
   try {
@@ -114,10 +117,6 @@ export async function POST(req: Request) {
     );
   }
 
-  const category =
-    body?.category != null && typeof body.category === "string"
-      ? body.category.trim() || null
-      : null;
   const is_active =
     typeof body?.is_active === "boolean" ? body.is_active : true;
 
@@ -127,18 +126,22 @@ export async function POST(req: Request) {
       property_id: pid,
       title,
       body: bodyText,
-      category,
+      category: null,
       is_active,
       created_by: auth.user.id,
     })
-    .select("id, title, body, category, is_active, created_at")
+    .select("id, property_id, title, body, is_active, created_at, updated_at")
     .single();
 
   if (error) {
     console.error("Quick reply create error:", error);
     const code = (error as any).code === "42501" ? 403 : 500;
     return NextResponse.json(
-      { error: (error as any).message ?? "Failed to create quick reply" },
+      {
+        error: (error as any).message ?? "Failed to create quick reply",
+        code: (error as any).code ?? null,
+        hint: (error as any).hint ?? null,
+      },
       { status: code }
     );
   }
