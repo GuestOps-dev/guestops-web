@@ -217,6 +217,8 @@ export default function InboxClient() {
         const text = await res.text().catch(() => "");
         console.error("Assign failed:", res.status, text);
         setAllRows(previousAllRows);
+      } else {
+        void refetch();
       }
     } catch (e) {
       console.error("Unexpected assign error:", e);

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import MarkRead from "./MarkRead";
 import LiveThread from "./LiveThread";
 import SendMessageBox from "./SendMessageBox";
+import InternalNotesSection from "./InternalNotesSection";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 // Realtime (inbound_messages, outbound_messages filtered by conversation_id) is subscribed in LiveThread.
@@ -108,29 +109,6 @@ export default async function ConversationPage({
     error: m.error ?? null,
   }));
 
-  const { data: notesData } = await (sb as any)
-    .from("internal_notes")
-    .select("id, conversation_id, property_id, body, created_by, created_at")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true })
-    .limit(500);
-
-  const initialInternalNotes: Array<{
-    id: string;
-    conversation_id: string;
-    property_id: string;
-    body: string;
-    created_by: string | null;
-    created_at: string;
-  }> = ((notesData as any) ?? []).map((n: any) => ({
-    id: n.id,
-    conversation_id: n.conversation_id,
-    property_id: n.property_id,
-    body: (n.body ?? "").toString(),
-    created_by: n.created_by ?? null,
-    created_at: n.created_at,
-  }));
-
   return (
     <main style={{ padding: 16, maxWidth: 900, margin: "0 auto" }}>
       <MarkRead conversationId={conversationId} propertyId={propertyId} />
@@ -206,13 +184,14 @@ export default async function ConversationPage({
           propertyId={propertyId}
           initialInbound={initialInbound}
           initialOutbound={initialOutbound}
-          initialInternalNotes={initialInternalNotes}
         />
       </div>
 
       <div style={{ marginTop: 12 }}>
         <SendMessageBox conversationId={conversationId} propertyId={propertyId} />
       </div>
+
+      <InternalNotesSection conversationId={conversationId} propertyId={propertyId} />
     </main>
   );
 }

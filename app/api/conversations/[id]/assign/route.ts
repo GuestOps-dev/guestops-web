@@ -4,9 +4,29 @@ import {
   assertCanAccessProperty,
   requirePropertyId,
 } from "@/lib/supabaseApiAuth";
-import { requireApiAuth } from "@/lib/supabaseApiAuth";
+import { requireApiAuth } from "@/lib/api/requireApiAuth";
+import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerClient";
 
 export const runtime = "nodejs";
+
+async function getSupabaseFromReq(req: Request) {
+  const authHeader =
+    req.headers.get("authorization") ?? req.headers.get("Authorization");
+
+  if (authHeader?.toLowerCase().startsWith("bearer ")) {
+    const { supabase, user, error } = await requireApiAuth(req as any);
+    if (!error && user) {
+      return { supabase, user };
+    }
+  }
+
+  const supabase = await getSupabaseRlsServerClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) {
+    return { supabase: null, user: null, error: "Unauthorized" };
+  }
+  return { supabase, user: data.user };
+}
 
 function requireUuidOrNull(v: unknown): string | null {
   if (v === null) return null;
@@ -44,18 +64,23 @@ export async function POST(
       );
     }
 
-    const { supabase } = await requireApiAuth(req);
+    const auth = await getSupabaseFromReq(req);
+    if (!auth.supabase || !auth.user) {
+      return NextResponse.json(
+        { error: auth.error ?? "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
     const json = await req.json().catch(() => null);
     const propertyId = requirePropertyId(json?.property_id);
-
     const assignedUserId = requireUuidOrNull(json?.assigned_to_user_id);
 
-    await assertCanAccessProperty(supabase, propertyId);
+    await assertCanAccessProperty(auth.supabase, propertyId);
 
     const now = new Date().toISOString();
 
-    const { data, error } = await supabase
+    const { data, error } = await (auth.supabase as any)
       .from("conversations")
       .update({
         assigned_to_user_id: assignedUserId,
@@ -63,9 +88,7 @@ export async function POST(
       })
       .eq("id", id)
       .eq("property_id", propertyId)
-      .select(
-        "id, property_id, status, priority, updated_at, last_message_at, assigned_to_user_id"
-      )
+      .select("id, property_id, assigned_to_user_id, updated_at")
       .maybeSingle();
 
     if (error) {
@@ -79,7 +102,10 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({ ok: true, conversation: data }, { status: 200 });
+    return NextResponse.json(
+      { ok: true, conversation: data },
+      { status: 200 }
+    );
   } catch (err: any) {
     const status = typeof err?.status === "number" ? err.status : 500;
     const message = status === 500 ? "Internal error" : err?.message || "Error";
