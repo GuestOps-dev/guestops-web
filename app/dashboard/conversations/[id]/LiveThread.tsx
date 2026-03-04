@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import OutboundBubble from "./OutboundBubble";
 
@@ -41,6 +41,19 @@ export default function LiveThread({
   const [inbound, setInbound] = useState<InboundRow[]>(initialInbound);
   const [outbound, setOutbound] = useState<OutboundRow[]>(initialOutbound);
   const [realtimeReady, setRealtimeReady] = useState(true);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(
+    initialInbound.length + initialOutbound.length
+  );
+
+  // Auto-scroll to bottom when a new message is appended
+  useEffect(() => {
+    const total = inbound.length + outbound.length;
+    if (total > prevMessageCountRef.current) {
+      prevMessageCountRef.current = total;
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [inbound.length, outbound.length]);
 
   // Subscribe to realtime changes
   useEffect(() => {
@@ -69,6 +82,7 @@ export default function LiveThread({
         },
         (payload) => {
           const row = payload.new as any;
+          if (!row?.id) return;
           setInbound((prev) => {
             if (prev.some((m) => m.id === row.id)) return prev;
             const next = [
@@ -94,6 +108,7 @@ export default function LiveThread({
         },
         (payload) => {
           const row = payload.new as any;
+          if (!row?.id) return;
           setOutbound((prev) => {
             if (prev.some((m) => m.id === row.id)) return prev;
             const next = [
@@ -125,6 +140,7 @@ export default function LiveThread({
         },
         (payload) => {
           const row = payload.new as any;
+          if (!row?.id) return;
           setOutbound((prev) => {
             const next = prev.map((m) =>
               m.id === row.id
@@ -298,6 +314,7 @@ export default function LiveThread({
             </div>
           );
         })}
+        <div ref={bottomRef} aria-hidden="true" />
       </div>
     </>
   );

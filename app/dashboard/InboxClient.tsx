@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePropertyWorkspace } from "./PropertyWorkspaceProvider";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -317,6 +317,47 @@ export default function InboxClient() {
     void refetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, selectedPropertyId, allowedPropertyIds.join(",")]);
+
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+
+  useEffect(() => {
+    const sb = getSupabaseBrowserClient();
+    if (!sb) return;
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        refetchRef.current();
+      }, 400);
+    };
+
+    const channel = sb
+      .channel("dashboard-inbox")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "conversations" },
+        () => scheduleRefetch()
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "inbound_messages" },
+        () => scheduleRefetch()
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "outbound_messages" },
+        () => scheduleRefetch()
+      )
+      .subscribe();
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      sb.removeChannel(channel);
+    };
+  }, []);
 
   function displayPropertyName(propertyId: string) {
     return propertyNameById.get(propertyId) ?? propertyId;
