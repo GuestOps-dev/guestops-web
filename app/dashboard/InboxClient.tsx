@@ -25,6 +25,8 @@ type ConversationRow = {
   last_inbound_at: string | null;
   last_outbound_at: string | null;
   last_read_at: string | null;
+  /** From API: last_inbound_at > last_read_at */
+  is_unread?: boolean;
 };
 
 type StatusFilter = "open" | "waiting_guest" | "closed" | "all";
@@ -612,7 +614,7 @@ export default function InboxClient() {
         </div>
 
         {displayRows.map((c) => {
-          const unread = isUnread(c);
+          const unread = c.is_unread ?? isUnread(c);
 
           return (
             <div

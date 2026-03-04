@@ -76,5 +76,18 @@ export async function GET(req: Request) {
     );
   }
 
-  return NextResponse.json(data ?? [], { status: 200 });
+  const rows = (data ?? []) as Array<{
+    last_inbound_at: string | null;
+    last_read_at: string | null;
+    [k: string]: unknown;
+  }>;
+  const withUnread = rows.map((row) => ({
+    ...row,
+    is_unread:
+      row.last_inbound_at != null &&
+      (row.last_read_at == null ||
+        new Date(row.last_inbound_at) > new Date(row.last_read_at)),
+  }));
+
+  return NextResponse.json(withUnread, { status: 200 });
 }
