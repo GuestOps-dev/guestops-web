@@ -4,6 +4,13 @@ import { getSupabaseServiceClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
+function ok() {
+  return new Response("OK", {
+    status: 200,
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
+}
+
 function normalizePhone(raw: string | null): string | null {
   if (!raw) return null;
   const s = raw.trim();
@@ -110,7 +117,11 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", convo.id);
 
-    return NextResponse.json({ ok: true });
+      return new Response("OK", {
+        status: 200,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      });
+
   } catch (err) {
     console.error("Twilio inbound error:", err);
     return NextResponse.json({ ok: true });
