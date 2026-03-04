@@ -2,6 +2,15 @@ import { notFound, redirect } from "next/navigation";
 import fs from "fs";
 import path from "path";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+
+const supabaseAdmin = getSupabaseAdmin();
+const { data: schemaSnapshot, error: schemaErr } =
+  await supabaseAdmin.rpc("ops_schema_snapshot");
+
+const schemaText = schemaErr
+  ? `Schema snapshot error: ${schemaErr.message}`
+  : JSON.stringify(schemaSnapshot, null, 2);
 
 function readFileSafe(relPath: string) {
   try {
@@ -68,6 +77,8 @@ export default async function HandoffPage() {
       <Section title="NEW CHAT PROMPT (Copy/Paste This First)" text={newChatPrompt} />
 
       <Section title="Auto Handoff Pack (Optional)" text={handoffPack} />
+
+      <Section title="Live DB Schema Snapshot (Realtime)" text={schemaText} />
     </div>
   );
 }

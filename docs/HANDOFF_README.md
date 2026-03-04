@@ -41,6 +41,56 @@ When opening a new ChatGPT thread:
 Never invent file paths.
 
 
+# 📅 SESSION SNAPSHOT — March 3, 2026
+
+## Build Status
+- Production build: SUCCESS
+- Vercel deploy: SUCCESS
+- No TypeScript errors
+- No RLS recursion errors
+- Next.js 16 route handler signatures fixed
+
+## Messaging Architecture (Current State)
+
+Outbound:
+- Route: app/api/messages/send/route.ts
+- Uses requireApiAuth for access check
+- Uses Supabase service role for DB writes
+- Twilio send confirmed working
+- Idempotency supported
+
+Mark Read:
+- Route: app/api/conversations/[id]/read/route.ts
+- Next 16 params pattern: context: { params: Promise<{ id: string }> }
+- Uses admin client for write
+- No status validation here (correct)
+
+Conversations List:
+- Route: app/api/conversations/route.ts
+- RLS-bound
+- Property filtering working
+- Dropdown working
+
+## RLS Model (Stable)
+
+- property_users drives access
+- profiles no longer recursive
+- No infinite recursion policies remain
+- Service role only used in controlled server routes
+
+## Repo Layout Confirmed
+
+- API routes: app/api
+- Shared libs: src/lib
+- Generator script: scripts/gen-handoff-index.mjs
+- Handoff page: app/ops/handoff/page.tsx
+
+## Known Open Items
+- None blocking
+- System stable
+- Ready for feature work
+
+
 
 
 \# GuestOpsHQ Handoff System (How this works)
