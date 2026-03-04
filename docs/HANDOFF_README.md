@@ -1,3 +1,48 @@
+# ⚠️ REPO CANONICAL LAYOUT (DO NOT GUESS PATHS)
+
+- API routes live under: app/api
+- Shared libraries live under: src/lib
+- This repo does NOT use src/app/api
+- Always confirm paths using docs/STRUCTURE.md before suggesting edits.
+
+---
+
+# 🧱 CURRENT VERIFIED STATE
+
+- Next.js version: 16.1.6
+- Supabase JS version: ^2.97.0
+- Production build: SUCCESS
+- RLS recursion: RESOLVED
+- Outbound messaging: Uses service role for writes
+- Read routes: RLS-bound
+- Next 16 route handlers require: context: { params: Promise<{ id: string }> }
+
+---
+
+# 🎯 CURRENT FOCUS
+
+- Messaging outbound route stable
+- Mark-read route stable
+- RLS enforced correctly
+- Inbox working
+- No known compile errors
+
+---
+
+# 🚀 STARTING A NEW CHAT PROTOCOL
+
+When opening a new ChatGPT thread:
+
+1. Paste docs/NEW_CHAT_PROMPT.txt
+2. Confirm repo layout from docs/STRUCTURE.md
+3. Confirm API routes from docs/CODE_INDEX.md
+4. THEN describe the issue
+
+Never invent file paths.
+
+
+
+
 \# GuestOpsHQ Handoff System (How this works)
 
 
