@@ -88,12 +88,17 @@ export async function POST(
       })
       .eq("id", id)
       .eq("property_id", propertyId)
-      .select("id, property_id, assigned_to_user_id, updated_at")
+      .select(
+        "id, property_id, status, priority, updated_at, last_message_at, assigned_to_user_id"
+      )
       .maybeSingle();
 
     if (error) {
       console.error("Assign update error:", error);
-      return NextResponse.json({ error: "Update failed" }, { status: 500 });
+      return NextResponse.json(
+        { error: (error as Error).message ?? "Update failed" },
+        { status: 500 }
+      );
     }
     if (!data) {
       return NextResponse.json(
