@@ -79,7 +79,7 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({ ok: true, conversation: data }, { status: 200 });
+    return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err: any) {
     const status = typeof err?.status === "number" ? err.status : 500;
     const message =

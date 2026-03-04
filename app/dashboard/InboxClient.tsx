@@ -29,9 +29,10 @@ type ConversationRow = {
 
 type StatusFilter = "open" | "waiting_guest" | "closed" | "all";
 
+/** Unread: last_inbound_at is not null AND (last_read_at is null OR last_inbound_at > last_read_at) */
 function isUnread(c: ConversationRow) {
-  if (!c.last_inbound_at) return false;
-  if (!c.last_read_at) return true;
+  if (c.last_inbound_at == null) return false;
+  if (c.last_read_at == null) return true;
   return (
     new Date(c.last_inbound_at).getTime() >
     new Date(c.last_read_at).getTime()
@@ -64,7 +65,7 @@ export default function InboxClient() {
     membershipsError,
   } = usePropertyWorkspace();
 
-  const [rows, setRows] = useState<ConversationRow[]>([]);
+  const [allRows, setAllRows] = useState<ConversationRow[]>([]);
   const [rawCount, setRawCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<StatusFilter>("open");
@@ -76,7 +77,31 @@ export default function InboxClient() {
   >({});
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
-  const unreadCount = useMemo(() => rows.filter(isUnread).length, [rows]);
+
+  const displayRows = useMemo(
+    () =>
+      status === "all"
+        ? allRows
+        : allRows.filter((r) => r.status === status),
+    [allRows, status]
+  );
+  const unreadCount = useMemo(
+    () => displayRows.filter(isUnread).length,
+    [displayRows]
+  );
+  const unreadInbox = useMemo(
+    () => allRows.filter((r) => r.status === "open" && isUnread(r)).length,
+    [allRows]
+  );
+  const unreadWaitingGuest = useMemo(
+    () =>
+      allRows.filter((r) => r.status === "waiting_guest" && isUnread(r)).length,
+    [allRows]
+  );
+  const unreadResolved = useMemo(
+    () => allRows.filter((r) => r.status === "closed" && isUnread(r)).length,
+    [allRows]
+  );
 
   const propertyNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -121,16 +146,11 @@ export default function InboxClient() {
   }
 
   async function updateStatus(row: ConversationRow, nextStatus: string) {
-    const previousRows = rows;
+    const previousAllRows = allRows;
 
-    setRows((prev) =>
+    setAllRows((prev) =>
       prev.map((r) =>
-        r.id === row.id
-          ? {
-              ...r,
-              status: nextStatus,
-            }
-          : r
+        r.id === row.id ? { ...r, status: nextStatus } : r
       )
     );
 
@@ -152,29 +172,26 @@ export default function InboxClient() {
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         console.error("Status update failed:", res.status, text);
-        setRows(previousRows);
+        setAllRows(previousAllRows);
       } else {
         // Best-effort refresh so tabs stay accurate
         void refetch();
       }
     } catch (e) {
       console.error("Unexpected status update error:", e);
-      setRows(previousRows);
+      setAllRows(previousAllRows);
     }
   }
 
   async function claimConversation(row: ConversationRow) {
     if (!currentUserId) return;
 
-    const previousRows = rows;
+    const previousAllRows = allRows;
 
-    setRows((prev) =>
+    setAllRows((prev) =>
       prev.map((r) =>
         r.id === row.id
-          ? {
-              ...r,
-              assigned_to_user_id: currentUserId,
-            }
+          ? { ...r, assigned_to_user_id: currentUserId }
           : r
       )
     );
@@ -197,11 +214,11 @@ export default function InboxClient() {
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         console.error("Assign failed:", res.status, text);
-        setRows(previousRows);
+        setAllRows(previousAllRows);
       }
     } catch (e) {
       console.error("Unexpected assign error:", e);
-      setRows(previousRows);
+      setAllRows(previousAllRows);
     }
   }
 
@@ -213,7 +230,7 @@ export default function InboxClient() {
       const token = await getAccessToken();
 
       const params = new URLSearchParams();
-      if (status !== "all") params.set("status", status);
+      params.set("status", "all");
 
       if (selectedPropertyId !== "all") {
         params.set("propertyId", selectedPropertyId);
@@ -232,7 +249,7 @@ export default function InboxClient() {
       setRawCount(Array.isArray(data) ? data.length : 0);
 
       if (Array.isArray(data) && data.length === 0) {
-        console.log("inbox refetch empty", { status, propertyId: selectedPropertyId });
+        console.log("inbox refetch empty", { propertyId: selectedPropertyId });
       }
 
       const filtered =
@@ -240,12 +257,12 @@ export default function InboxClient() {
           ? (data ?? []).filter((c) => allowedPropertyIds.includes(c.property_id))
           : (data ?? []);
 
-      const nextRows = [...filtered].sort(sortByUpdatedDesc);
-      setRows(nextRows);
+      const nextAllRows = [...filtered].sort(sortByUpdatedDesc);
+      setAllRows(nextAllRows);
 
       // Resolve profile names for assigned users per property
       const byProperty = new Map<string, Set<string>>();
-      for (const row of nextRows) {
+      for (const row of nextAllRows) {
         const uid = row.assigned_to_user_id;
         if (!uid) continue;
         if (profileNameById[uid]) continue;
@@ -306,7 +323,7 @@ export default function InboxClient() {
     } catch (e: any) {
       console.error("Inbox refetch error:", e);
       setError(e?.message ?? "Failed to load conversations");
-      setRows([]);
+      setAllRows([]);
       setRawCount(0);
     } finally {
       setLoading(false);
@@ -316,7 +333,7 @@ export default function InboxClient() {
   useEffect(() => {
     void refetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, selectedPropertyId, allowedPropertyIds.join(",")]);
+  }, [selectedPropertyId, allowedPropertyIds.join(",")]);
 
   const refetchRef = useRef(refetch);
   refetchRef.current = refetch;
@@ -378,7 +395,7 @@ export default function InboxClient() {
     <>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
         <div style={{ fontSize: 14, opacity: 0.75 }}>
-          {loading ? "Refreshing…" : `${rows.length} threads • ${unreadCount} unread`}
+          {loading ? "Refreshing…" : `${displayRows.length} threads • ${unreadCount} unread`}
           <span style={{ marginLeft: 10, fontSize: 12, opacity: 0.65 }}>
             {`(${rawCount} from API)`}
           </span>
@@ -403,9 +420,26 @@ export default function InboxClient() {
                 background: status === "open" ? "#111" : "transparent",
                 color: status === "open" ? "#fff" : "#444",
                 cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
               Inbox
+              {unreadInbox > 0 && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    minWidth: 18,
+                    padding: "2px 6px",
+                    borderRadius: 999,
+                    background: status === "open" ? "rgba(255,255,255,0.25)" : "#111",
+                    color: status === "open" ? "#fff" : "#fff",
+                  }}
+                >
+                  {unreadInbox}
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -416,9 +450,26 @@ export default function InboxClient() {
                 background: status === "waiting_guest" ? "#111" : "transparent",
                 color: status === "waiting_guest" ? "#fff" : "#444",
                 cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
               Waiting on Guest
+              {unreadWaitingGuest > 0 && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    minWidth: 18,
+                    padding: "2px 6px",
+                    borderRadius: 999,
+                    background: status === "waiting_guest" ? "rgba(255,255,255,0.25)" : "#111",
+                    color: "#fff",
+                  }}
+                >
+                  {unreadWaitingGuest}
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -429,9 +480,26 @@ export default function InboxClient() {
                 background: status === "closed" ? "#111" : "transparent",
                 color: status === "closed" ? "#fff" : "#444",
                 cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
               Resolved
+              {unreadResolved > 0 && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    minWidth: 18,
+                    padding: "2px 6px",
+                    borderRadius: 999,
+                    background: status === "closed" ? "rgba(255,255,255,0.25)" : "#111",
+                    color: "#fff",
+                  }}
+                >
+                  {unreadResolved}
+                </span>
+              )}
             </button>
           </div>
 
@@ -472,7 +540,7 @@ export default function InboxClient() {
         </div>
       ) : null}
 
-      {!loading && !error && rows.length === 0 ? (
+      {!loading && !error && displayRows.length === 0 ? (
         <div
           style={{
             border: "1px solid #eee",
@@ -507,7 +575,7 @@ export default function InboxClient() {
           <div>Actions</div>
         </div>
 
-        {rows.map((c) => {
+        {displayRows.map((c) => {
           const unread = isUnread(c);
 
           return (

@@ -146,6 +146,7 @@ export default async function ConversationPage({
       <div style={{ marginTop: 12 }}>
         <LiveThread
           conversationId={conversationId}
+          propertyId={propertyId}
           initialInbound={initialInbound}
           initialOutbound={initialOutbound}
         />

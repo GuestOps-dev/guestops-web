@@ -20,6 +20,7 @@ type OutboundRow = {
 
 type Props = {
   conversationId: string;
+  propertyId: string;
   initialInbound: InboundRow[];
   initialOutbound: OutboundRow[];
 };
@@ -35,6 +36,7 @@ function isLegacyConfigError(err?: string | null) {
 
 export default function LiveThread({
   conversationId,
+  propertyId,
   initialInbound,
   initialOutbound,
 }: Props) {
@@ -45,6 +47,7 @@ export default function LiveThread({
   const prevMessageCountRef = useRef(
     initialInbound.length + initialOutbound.length
   );
+  const markReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-scroll to bottom when a new message is appended
   useEffect(() => {
@@ -69,9 +72,30 @@ export default function LiveThread({
 
     setRealtimeReady(true);
 
+    const scheduleMarkRead = () => {
+      if (markReadTimerRef.current) clearTimeout(markReadTimerRef.current);
+      markReadTimerRef.current = setTimeout(async () => {
+        markReadTimerRef.current = null;
+        try {
+          const { data } = await sb.auth.getSession();
+          if (!data.session?.access_token) return;
+          await fetch(`/api/conversations/${conversationId}/read`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${data.session.access_token}`,
+            },
+            body: JSON.stringify({ property_id: propertyId }),
+          });
+        } catch (e) {
+          console.error("Mark read on new inbound:", e);
+        }
+      }, 500);
+    };
+
     const channel = sb
       .channel(`thread:${conversationId}`)
-      // inbound inserts
+      // inbound inserts: append to thread and mark read (user is viewing)
       .on(
         "postgres_changes",
         {
@@ -95,6 +119,7 @@ export default function LiveThread({
             );
             return next;
           });
+          scheduleMarkRead();
         }
       )
       // outbound inserts
@@ -169,10 +194,11 @@ export default function LiveThread({
 });
 
     return () => {
+      if (markReadTimerRef.current) clearTimeout(markReadTimerRef.current);
       channel.unsubscribe();
       sb.removeChannel(channel);
     };
-  }, [conversationId]);
+  }, [conversationId, propertyId]);
 
   // Apply legacy filtering
   const legacyCount = useMemo(
