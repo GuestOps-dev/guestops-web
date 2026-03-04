@@ -10,16 +10,6 @@ function normalizePhone(raw: string | null): string | null {
   return s ? s : null;
 }
 
-function twimlResponse() {
-  return new NextResponse(
-    `<?xml version="1.0" encoding="UTF-8"?><Response></Response>`,
-    {
-      status: 200,
-      headers: { "Content-Type": "text/xml" },
-    }
-  );
-}
-
 export async function POST(req: NextRequest) {
   try {
     const authToken = process.env.TWILIO_AUTH_TOKEN!;
@@ -30,18 +20,19 @@ export async function POST(req: NextRequest) {
     const params: Record<string, string> = {};
     form.forEach((value, key) => (params[key] = String(value)));
 
-// TEMP: disable validation for debugging
-const valid = true;
+    const valid = twilio.validateRequest(authToken, signature, url, params);
+    if (!valid) return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
 
     const from = normalizePhone(params.From || null);
     const to = normalizePhone(params.To || null);
     const body = (params.Body || "").trim();
     const messageSid = params.MessageSid || null;
 
-    if (!from || !to || !body) return twimlResponse();
+    if (!from || !to || !body) return NextResponse.json({ ok: true });
 
     const sb: any = getSupabaseServiceClient();
 
+    // Route property_id by To number
     const { data: phoneRow } = await sb
       .from("phone_numbers")
       .select("property_id")
@@ -50,8 +41,9 @@ const valid = true;
       .maybeSingle();
 
     const propertyId = phoneRow?.property_id;
-    if (!propertyId) return twimlResponse();
+    if (!propertyId) return NextResponse.json({ ok: true });
 
+    // Find/create guest
     const { data: guest, error: guestErr } = await sb
       .from("guests")
       .upsert({ phone_e164: from }, { onConflict: "phone_e164" })
@@ -60,9 +52,10 @@ const valid = true;
 
     if (guestErr) {
       console.error("guest upsert error:", guestErr);
-      return twimlResponse();
+      return NextResponse.json({ ok: true });
     }
 
+    // Placeholder booking
     const { data: booking, error: bookingErr } = await sb
       .from("bookings")
       .upsert(
@@ -79,14 +72,13 @@ const valid = true;
 
     if (bookingErr) {
       console.error("booking upsert error:", bookingErr);
-      return twimlResponse();
+      return NextResponse.json({ ok: true });
     }
 
     const channel =
-      to.startsWith("whatsapp:") || from.startsWith("whatsapp:")
-        ? "whatsapp"
-        : "sms";
+      to.startsWith("whatsapp:") || from.startsWith("whatsapp:") ? "whatsapp" : "sms";
 
+    // Find/create conversation
     const { data: convo, error: convoErr } = await sb
       .from("conversations")
       .upsert(
@@ -106,11 +98,12 @@ const valid = true;
 
     if (convoErr) {
       console.error("conversation upsert error:", convoErr);
-      return twimlResponse();
+      return NextResponse.json({ ok: true });
     }
 
     const now = new Date().toISOString();
 
+    // Insert inbound into inbound_messages
     const { error: inErr } = await sb.from("inbound_messages").insert({
       conversation_id: convo.id,
       body,
@@ -121,13 +114,13 @@ const valid = true;
 
     if (inErr) {
       console.error("inbound_messages insert error:", inErr);
-      return twimlResponse();
+      return NextResponse.json({ ok: true });
     }
 
+    // Update conversation timestamps (original behavior)
     const { error: convoUpdateErr } = await sb
       .from("conversations")
       .update({
-        status: "awaiting_team",
         updated_at: now,
         last_message_at: now,
         last_inbound_at: now,
@@ -139,9 +132,9 @@ const valid = true;
     if (convoUpdateErr)
       console.error("conversation update error:", convoUpdateErr);
 
-    return twimlResponse();
+    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Twilio inbound error:", err);
-    return twimlResponse();
+    return NextResponse.json({ ok: true });
   }
 }
