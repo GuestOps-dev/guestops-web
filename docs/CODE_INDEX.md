@@ -1,12 +1,14 @@
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-03-04T00:57:29.918Z
-Git SHA: af5a8f8
+Generated: 2026-03-04T18:26:21.558Z
+Git SHA: 200adbe
 
 ---
 
 ## API Routes
 
+- **/api/admin** (GET)  
+  - file: `app/api/admin/route.ts`
 - **/api/conversations/[id]/assign** (POST)  
   - file: `app/api/conversations/[id]/assign/route.ts`
 - **/api/conversations/[id]/messages** (GET)  
@@ -15,6 +17,8 @@ Git SHA: af5a8f8
   - file: `app/api/conversations/[id]/outbound/route.ts`
 - **/api/conversations/[id]/read** (POST)  
   - file: `app/api/conversations/[id]/read/route.ts`
+- **/api/conversations/[id]/status** (POST)  
+  - file: `app/api/conversations/[id]/status/route.ts`
 - **/api/conversations** (GET)  
   - file: `app/api/conversations/route.ts`
 - **/api/me/memberships** (GET)  
@@ -40,6 +44,7 @@ Git SHA: af5a8f8
 
 ## Environment Variables Referenced in Code
 
+- `HANDOFF_KEY`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_ANON_KEY`

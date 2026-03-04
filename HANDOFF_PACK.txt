@@ -1,6 +1,6 @@
 GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)
-Generated: 2026-03-04T00:57:29.978Z
-Git SHA: af5a8f8
+Generated: 2026-03-04T18:26:21.617Z
+Git SHA: 200adbe
 
 RULES FOR NEW CHAT:
 - Prefer code snippets that can be pasted into Cursor.
@@ -18,6 +18,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 ```
 ├─ app
 │  ├─ api
+│  │  ├─ admin
+│  │  │  └─ route.ts
 │  │  ├─ conversations
 │  │  │  ├─ [id]
 │  │  │  │  ├─ assign
@@ -26,7 +28,9 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  │  │  └─ route.ts
 │  │  │  │  ├─ outbound
 │  │  │  │  │  └─ route.ts
-│  │  │  │  └─ read
+│  │  │  │  ├─ read
+│  │  │  │  │  └─ route.ts
+│  │  │  │  └─ status
 │  │  │  │     └─ route.ts
 │  │  │  └─ route.ts
 │  │  ├─ me
@@ -59,8 +63,12 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  ├─ ops
 │  │  ├─ dashboard
 │  │  │  └─ page.tsx
-│  │  └─ handoff
-│  │     └─ page.tsx
+│  │  ├─ handoff
+│  │  │  └─ page.tsx
+│  │  └─ inbox
+│  │     ├─ OpsInboxRow.tsx
+│  │     ├─ page.tsx
+│  │     └─ PropertyFilter.tsx
 │  ├─ page.tsx
 │  ├─ privacy
 │  │  └─ page.tsx
@@ -121,13 +129,15 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-03-04T00:57:29.918Z
-Git SHA: af5a8f8
+Generated: 2026-03-04T18:26:21.558Z
+Git SHA: 200adbe
 
 ---
 
 ## API Routes
 
+- **/api/admin** (GET)  
+  - file: `app/api/admin/route.ts`
 - **/api/conversations/[id]/assign** (POST)  
   - file: `app/api/conversations/[id]/assign/route.ts`
 - **/api/conversations/[id]/messages** (GET)  
@@ -136,6 +146,8 @@ Git SHA: af5a8f8
   - file: `app/api/conversations/[id]/outbound/route.ts`
 - **/api/conversations/[id]/read** (POST)  
   - file: `app/api/conversations/[id]/read/route.ts`
+- **/api/conversations/[id]/status** (POST)  
+  - file: `app/api/conversations/[id]/status/route.ts`
 - **/api/conversations** (GET)  
   - file: `app/api/conversations/route.ts`
 - **/api/me/memberships** (GET)  
@@ -161,6 +173,7 @@ Git SHA: af5a8f8
 
 ## Environment Variables Referenced in Code
 
+- `HANDOFF_KEY`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
@@ -1677,6 +1690,101 @@ If /api/conversations returns 500:
 
 
 ===== docs/HANDOFF_README.md =====
+
+# ⚠️ REPO CANONICAL LAYOUT (DO NOT GUESS PATHS)
+
+- API routes live under: app/api
+- Shared libraries live under: src/lib
+- This repo does NOT use src/app/api
+- Always confirm paths using docs/STRUCTURE.md before suggesting edits.
+
+---
+
+# 🧱 CURRENT VERIFIED STATE
+
+- Next.js version: 16.1.6
+- Supabase JS version: ^2.97.0
+- Production build: SUCCESS
+- RLS recursion: RESOLVED
+- Outbound messaging: Uses service role for writes
+- Read routes: RLS-bound
+- Next 16 route handlers require: context: { params: Promise<{ id: string }> }
+
+---
+
+# 🎯 CURRENT FOCUS
+
+- Messaging outbound route stable
+- Mark-read route stable
+- RLS enforced correctly
+- Inbox working
+- No known compile errors
+
+---
+
+# 🚀 STARTING A NEW CHAT PROTOCOL
+
+When opening a new ChatGPT thread:
+
+1. Paste docs/NEW_CHAT_PROMPT.txt
+2. Confirm repo layout from docs/STRUCTURE.md
+3. Confirm API routes from docs/CODE_INDEX.md
+4. THEN describe the issue
+
+Never invent file paths.
+
+
+# 📅 SESSION SNAPSHOT — March 3, 2026
+
+## Build Status
+- Production build: SUCCESS
+- Vercel deploy: SUCCESS
+- No TypeScript errors
+- No RLS recursion errors
+- Next.js 16 route handler signatures fixed
+
+## Messaging Architecture (Current State)
+
+Outbound:
+- Route: app/api/messages/send/route.ts
+- Uses requireApiAuth for access check
+- Uses Supabase service role for DB writes
+- Twilio send confirmed working
+- Idempotency supported
+
+Mark Read:
+- Route: app/api/conversations/[id]/read/route.ts
+- Next 16 params pattern: context: { params: Promise<{ id: string }> }
+- Uses admin client for write
+- No status validation here (correct)
+
+Conversations List:
+- Route: app/api/conversations/route.ts
+- RLS-bound
+- Property filtering working
+- Dropdown working
+
+## RLS Model (Stable)
+
+- property_users drives access
+- profiles no longer recursive
+- No infinite recursion policies remain
+- Service role only used in controlled server routes
+
+## Repo Layout Confirmed
+
+- API routes: app/api
+- Shared libs: src/lib
+- Generator script: scripts/gen-handoff-index.mjs
+- Handoff page: app/ops/handoff/page.tsx
+
+## Known Open Items
+- None blocking
+- System stable
+- Ready for feature work
+
+
+
 
 \# GuestOpsHQ Handoff System (How this works)
 

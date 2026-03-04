@@ -5,6 +5,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 ```
 ├─ app
 │  ├─ api
+│  │  ├─ admin
+│  │  │  └─ route.ts
 │  │  ├─ conversations
 │  │  │  ├─ [id]
 │  │  │  │  ├─ assign
@@ -13,7 +15,9 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  │  │  └─ route.ts
 │  │  │  │  ├─ outbound
 │  │  │  │  │  └─ route.ts
-│  │  │  │  └─ read
+│  │  │  │  ├─ read
+│  │  │  │  │  └─ route.ts
+│  │  │  │  └─ status
 │  │  │  │     └─ route.ts
 │  │  │  └─ route.ts
 │  │  ├─ me
@@ -46,8 +50,12 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  ├─ ops
 │  │  ├─ dashboard
 │  │  │  └─ page.tsx
-│  │  └─ handoff
-│  │     └─ page.tsx
+│  │  ├─ handoff
+│  │  │  └─ page.tsx
+│  │  └─ inbox
+│  │     ├─ OpsInboxRow.tsx
+│  │     ├─ page.tsx
+│  │     └─ PropertyFilter.tsx
 │  ├─ page.tsx
 │  ├─ privacy
 │  │  └─ page.tsx
