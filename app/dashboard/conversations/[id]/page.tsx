@@ -31,10 +31,10 @@ export default async function ConversationPage({
 
   if (!user) redirect("/login");
 
-  // RLS enforced conversation lookup
+  // RLS enforced conversation lookup (include guest_number, status for header)
   const { data: convo, error: convoErr } = await (sb as any)
     .from("conversations")
-    .select("id, property_id")
+    .select("id, property_id, guest_number, status")
     .eq("id", conversationId)
     .maybeSingle();
 
@@ -45,6 +45,15 @@ export default async function ConversationPage({
   if (!convo) redirect("/dashboard");
 
   const propertyId = (convo as any).property_id as string;
+  const guestNumber = (convo as any).guest_number as string | null;
+  const status = (convo as any).status as string | null;
+
+  const { data: propertyRow } = await (sb as any)
+    .from("properties")
+    .select("name")
+    .eq("id", propertyId)
+    .maybeSingle();
+  const propertyName = (propertyRow as any)?.name ?? "Property";
 
   // Initial inbound from inbound_messages (what LiveThread subscribes to)
   const { data: inboundData, error: inErr } = await (sb as any)
@@ -85,6 +94,52 @@ export default async function ConversationPage({
       <MarkRead conversationId={conversationId} propertyId={propertyId} />
 
       <Link href="/dashboard">← Back</Link>
+
+      <div
+        style={{
+          marginTop: 16,
+          marginBottom: 16,
+          paddingBottom: 12,
+          borderBottom: "1px solid #eee",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <span style={{ fontSize: 18, fontWeight: 600 }}>
+          {propertyName}
+          {guestNumber ? ` · ${guestNumber}` : ""}
+        </span>
+        <span
+          style={{
+            fontSize: 12,
+            padding: "4px 10px",
+            borderRadius: 999,
+            background:
+              status === "closed"
+                ? "#fee2e2"
+                : status === "waiting_guest"
+                  ? "#dbeafe"
+                  : "#dcfce7",
+            color:
+              status === "closed"
+                ? "#7f1d1d"
+                : status === "waiting_guest"
+                  ? "#1d4ed8"
+                  : "#166534",
+            fontWeight: 500,
+          }}
+        >
+          {status === "open"
+            ? "Open"
+            : status === "waiting_guest"
+              ? "Waiting on guest"
+              : status === "closed"
+                ? "Resolved"
+                : status ?? "—"}
+        </span>
+      </div>
 
       <div style={{ marginTop: 12 }}>
         <LiveThread

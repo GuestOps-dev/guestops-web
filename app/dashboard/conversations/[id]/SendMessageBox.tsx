@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 export default function SendMessageBox({
@@ -10,6 +11,7 @@ export default function SendMessageBox({
   conversationId: string;
   propertyId: string;
 }) {
+  const router = useRouter();
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,21 +33,13 @@ export default function SendMessageBox({
 
       const token = data.session.access_token;
 
-      const res = await fetch("/api/messages/send", {
+      const res = await fetch(`/api/conversations/${conversationId}/outbound`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
-          "x-idempotency-key":
-            typeof crypto !== "undefined" && "randomUUID" in crypto
-              ? crypto.randomUUID()
-              : `${Date.now()}-${Math.random()}`,
         },
-        body: JSON.stringify({
-          conversation_id: conversationId,
-          property_id: propertyId,
-          body,
-        }),
+        body: JSON.stringify({ body }),
       });
 
       if (!res.ok) {
@@ -54,6 +48,7 @@ export default function SendMessageBox({
       }
 
       setMessage("");
+      router.refresh();
     } catch (e: any) {
       setError(e?.message || "Send failed");
     } finally {
