@@ -3,9 +3,9 @@ import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerC
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const conversationId = params.id;
+  const { id: conversationId } = await context.params;
 
   const supabase = await getSupabaseRlsServerClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
