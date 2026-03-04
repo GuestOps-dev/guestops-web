@@ -167,7 +167,20 @@ export default function QuickReplyPicker({
                   fontSize: 13,
                 }}
               >
-                <div style={{ fontWeight: 600 }}>{r.title}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontWeight: 600 }}>{r.title}</span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "#666",
+                      background: "#eee",
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                    }}
+                  >
+                    {r.category && r.category.trim() ? r.category : "General"}
+                  </span>
+                </div>
                 {r.body && (
                   <div
                     style={{

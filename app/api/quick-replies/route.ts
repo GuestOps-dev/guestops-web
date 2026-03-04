@@ -54,6 +54,7 @@ export async function GET(req: Request) {
     .from("quick_replies")
     .select("id, title, body, category, is_active, created_at")
     .eq("property_id", pid)
+    .order("category", { ascending: true, nullsFirst: false })
     .order("title", { ascending: true });
   if (activeOnly) q = q.eq("is_active", true);
   const { data, error } = await q;
@@ -79,7 +80,13 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { property_id?: string; title?: string; body?: string; category?: string | null };
+  let body: {
+    property_id?: string;
+    title?: string;
+    body?: string;
+    category?: string | null;
+    is_active?: boolean;
+  };
   try {
     body = await req.json();
   } catch {
@@ -111,6 +118,8 @@ export async function POST(req: Request) {
     body?.category != null && typeof body.category === "string"
       ? body.category.trim() || null
       : null;
+  const is_active =
+    typeof body?.is_active === "boolean" ? body.is_active : true;
 
   const { data, error } = await (auth.supabase as any)
     .from("quick_replies")
@@ -119,7 +128,7 @@ export async function POST(req: Request) {
       title,
       body: bodyText,
       category,
-      is_active: true,
+      is_active,
       created_by: auth.user.id,
     })
     .select("id, title, body, category, is_active, created_at")

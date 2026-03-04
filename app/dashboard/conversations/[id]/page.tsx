@@ -57,6 +57,23 @@ export default async function ConversationPage({
     .maybeSingle();
   const propertyName = (propertyRow as any)?.name ?? "Property";
 
+  const { data: profile } = await (sb as any)
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  const { data: membership } = await (sb as any)
+    .from("property_users")
+    .select("property_role")
+    .eq("property_id", propertyId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const isAdmin = profile?.role === "admin";
+  const isManagerOrOps =
+    membership?.property_role === "property_manager" ||
+    membership?.property_role === "ops";
+  const canManageQuickReplies = isAdmin || isManagerOrOps;
+
   // Initial inbound from inbound_messages (what LiveThread subscribes to)
   const { data: inboundData, error: inErr } = await (sb as any)
     .from("inbound_messages")
@@ -141,6 +158,23 @@ export default async function ConversationPage({
                 ? "Resolved"
                 : status ?? "—"}
         </span>
+        {canManageQuickReplies && (
+          <Link
+            href={`/dashboard/properties/${propertyId}/quick-replies`}
+            style={{
+              fontSize: 13,
+              marginLeft: "auto",
+              padding: "6px 10px",
+              borderRadius: 8,
+              border: "1px solid #ddd",
+              background: "#f9f9f9",
+              color: "#111",
+              textDecoration: "none",
+            }}
+          >
+            Manage Quick Replies
+          </Link>
+        )}
       </div>
 
       <div style={{ marginTop: 12 }}>
