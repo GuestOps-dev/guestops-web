@@ -3,6 +3,8 @@ import InboxClient from "./InboxClient";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { PropertyWorkspaceProvider } from "./PropertyWorkspaceProvider";
 
+// Realtime (conversations, inbound_messages, outbound_messages) is subscribed in InboxClient.
+
 export default async function DashboardPage() {
   const sb = await getSupabaseServerClient();
 

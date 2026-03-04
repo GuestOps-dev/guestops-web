@@ -5,6 +5,8 @@ import LiveThread from "./LiveThread";
 import SendMessageBox from "./SendMessageBox";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
+// Realtime (inbound_messages, outbound_messages filtered by conversation_id) is subscribed in LiveThread.
+
 type InboundRow = { id: string; created_at: string; body: string };
 type OutboundRow = {
   id: string;

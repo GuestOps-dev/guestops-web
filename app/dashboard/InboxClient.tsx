@@ -355,6 +355,7 @@ export default function InboxClient() {
 
     return () => {
       if (debounceTimer) clearTimeout(debounceTimer);
+      channel.unsubscribe();
       sb.removeChannel(channel);
     };
   }, []);

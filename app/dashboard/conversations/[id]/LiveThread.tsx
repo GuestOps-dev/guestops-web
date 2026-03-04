@@ -169,6 +169,7 @@ export default function LiveThread({
 });
 
     return () => {
+      channel.unsubscribe();
       sb.removeChannel(channel);
     };
   }, [conversationId]);
