@@ -79,10 +79,12 @@ export async function GET(req: Request) {
   const rows = (data ?? []) as Array<{
     last_inbound_at: string | null;
     last_read_at: string | null;
+    assigned_to_user_id?: string | null;
     [k: string]: unknown;
   }>;
   const withUnread = rows.map((row) => ({
     ...row,
+    assigned_to_user_id: row.assigned_to_user_id ?? null,
     is_unread:
       row.last_inbound_at != null &&
       (row.last_read_at == null ||
