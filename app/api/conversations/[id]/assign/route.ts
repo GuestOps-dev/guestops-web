@@ -10,12 +10,23 @@ export const runtime = "nodejs";
 
 function requireUuidOrNull(v: unknown): string | null {
   if (v === null) return null;
-  if (typeof v !== "string") throw Object.assign(new Error("assigned_user_id must be uuid or null"), { status: 400 });
+  if (typeof v !== "string")
+    throw Object.assign(new Error("assigned_user_id must be uuid or null"), {
+      status: 400,
+    });
+
   const s = v.trim();
-  if (!s) throw Object.assign(new Error("assigned_user_id must be uuid or null"), { status: 400 });
-  // lightweight UUID v4-ish check (accepts any valid UUID format)
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) {
-    throw Object.assign(new Error("assigned_user_id must be uuid or null"), { status: 400 });
+  if (!s)
+    throw Object.assign(new Error("assigned_user_id must be uuid or null"), {
+      status: 400,
+    });
+
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)
+  ) {
+    throw Object.assign(new Error("assigned_user_id must be uuid or null"), {
+      status: 400,
+    });
   }
   return s;
 }
@@ -27,7 +38,10 @@ export async function POST(
   try {
     const { id } = await context.params;
     if (!id || typeof id !== "string") {
-      return NextResponse.json({ error: "Missing conversation id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing conversation id" },
+        { status: 400 }
+      );
     }
 
     const { supabase } = await requireApiAuth(req);
@@ -35,24 +49,24 @@ export async function POST(
     const json = await req.json().catch(() => null);
     const propertyId = requirePropertyId(json?.property_id);
 
+    // Keep request shape (client sends assigned_user_id),
+    // but write to DB column `assigned_to_user_id`.
     const assignedUserId = requireUuidOrNull(json?.assigned_user_id);
 
     await assertCanAccessProperty(supabase, propertyId);
 
     const now = new Date().toISOString();
 
-    // Write BOTH columns for now to avoid breaking any existing code paths
     const { data, error } = await supabase
       .from("conversations")
       .update({
         assigned_to_user_id: assignedUserId,
-        assigned_user_id: assignedUserId,
         updated_at: now,
       })
       .eq("id", id)
       .eq("property_id", propertyId)
       .select(
-        "id, property_id, status, priority, updated_at, last_message_at, assigned_to, assigned_to_user_id, assigned_user_id"
+        "id, property_id, status, priority, updated_at, last_message_at, assigned_to, assigned_to_user_id"
       )
       .maybeSingle();
 
@@ -61,7 +75,10 @@ export async function POST(
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
     if (!data) {
-      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Conversation not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ ok: true, conversation: data }, { status: 200 });
