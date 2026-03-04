@@ -19,14 +19,35 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { error } = await supabase.from("outbound_messages").insert({
-    conversation_id: id,
-    body,
-    created_by: authData.user.id,
-  });
+  const now = new Date().toISOString();
 
-  if (error) {
-    return NextResponse.json(error, { status: 500 });
+  // Insert outbound message
+  const { error: insertError } = await supabase
+    .from("outbound_messages")
+    .insert({
+      conversation_id: id,
+      body,
+      created_by: authData.user.id,
+      created_at: now,
+    });
+
+  if (insertError) {
+    return NextResponse.json(insertError, { status: 500 });
+  }
+
+  // ✅ Update conversation state
+  const { error: updateError } = await supabase
+    .from("conversations")
+    .update({
+      status: "awaiting_guest",
+      last_outbound_at: now,
+      last_message_at: now,
+      updated_at: now,
+    })
+    .eq("id", id);
+
+  if (updateError) {
+    console.error("conversation update error:", updateError);
   }
 
   return NextResponse.json({ ok: true }, { status: 201 });

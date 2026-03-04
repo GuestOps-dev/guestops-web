@@ -117,17 +117,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // Update conversation timestamps
-    const { error: convoUpdateErr } = await sb
-      .from("conversations")
-      .update({
-        updated_at: now,
-        last_message_at: now,
-        last_inbound_at: now,
-        from_e164: from,
-        to_e164: to,
-      })
-      .eq("id", convo.id);
+// Update conversation state + timestamps
+const { error: convoUpdateErr } = await sb
+  .from("conversations")
+  .update({
+    status: "awaiting_team",
+    updated_at: now,
+    last_message_at: now,
+    last_inbound_at: now,
+    from_e164: from,
+    to_e164: to,
+  })
+  .eq("id", convo.id);
 
     if (convoUpdateErr) console.error("conversation update error:", convoUpdateErr);
 
