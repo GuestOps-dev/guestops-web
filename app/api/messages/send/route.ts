@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     // Ensure the signed-in user can access this property
     await assertCanAccessProperty(userSb, propertyId);
 
-    const admin = getSupabaseAdmin();
+    const admin = getSupabaseAdmin() as any;
 
     // Load convo using admin (avoids RLS issues)
     const { data: convo, error: convoErr } = await admin
