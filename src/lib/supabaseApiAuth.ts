@@ -5,6 +5,7 @@ export type ApiAuthContext = {
   token: string;
   supabase: any;
   userId: string;
+  user: { id: string }; // ✅ add this
   role?: string | null;
 };
 
@@ -32,7 +33,6 @@ export async function requireApiAuth(req: NextRequest): Promise<ApiAuthContext> 
   const supabaseUrl = getEnv("NEXT_PUBLIC_SUPABASE_URL");
   const supabaseAnonKey = getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
-  // Bind JWT to all PostgREST calls. RLS evaluates as this user.
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
@@ -55,12 +55,13 @@ export async function requireApiAuth(req: NextRequest): Promise<ApiAuthContext> 
     .eq("id", data.user.id)
     .maybeSingle();
 
-  return {
-    token,
-    supabase,
-    userId: data.user.id,
-    role: (profile as any)?.role ?? null,
-  };
+    return {
+      token,
+      supabase,
+      userId: data.user.id,
+      user: { id: data.user.id }, // ← ADD THIS LINE
+      role: (profile as any)?.role ?? null,
+    };
 }
 
 /* =========================================================
