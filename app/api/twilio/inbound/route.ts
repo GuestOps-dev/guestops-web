@@ -10,6 +10,16 @@ function normalizePhone(raw: string | null): string | null {
   return s ? s : null;
 }
 
+function twimlResponse() {
+  return new NextResponse(
+    `<?xml version="1.0" encoding="UTF-8"?><Response></Response>`,
+    {
+      status: 200,
+      headers: { "Content-Type": "text/xml" },
+    }
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const authToken = process.env.TWILIO_AUTH_TOKEN!;
@@ -21,18 +31,18 @@ export async function POST(req: NextRequest) {
     form.forEach((value, key) => (params[key] = String(value)));
 
     const valid = twilio.validateRequest(authToken, signature, url, params);
-    if (!valid) return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    if (!valid)
+      return new NextResponse("Invalid signature", { status: 401 });
 
     const from = normalizePhone(params.From || null);
     const to = normalizePhone(params.To || null);
     const body = (params.Body || "").trim();
     const messageSid = params.MessageSid || null;
 
-    if (!from || !to || !body) return NextResponse.json({ ok: true });
+    if (!from || !to || !body) return twimlResponse();
 
     const sb: any = getSupabaseServiceClient();
 
-    // Route property_id by To number
     const { data: phoneRow } = await sb
       .from("phone_numbers")
       .select("property_id")
@@ -41,9 +51,8 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     const propertyId = phoneRow?.property_id;
-    if (!propertyId) return NextResponse.json({ ok: true });
+    if (!propertyId) return twimlResponse();
 
-    // Find/create guest
     const { data: guest, error: guestErr } = await sb
       .from("guests")
       .upsert({ phone_e164: from }, { onConflict: "phone_e164" })
@@ -52,10 +61,9 @@ export async function POST(req: NextRequest) {
 
     if (guestErr) {
       console.error("guest upsert error:", guestErr);
-      return NextResponse.json({ ok: true });
+      return twimlResponse();
     }
 
-    // Placeholder booking
     const { data: booking, error: bookingErr } = await sb
       .from("bookings")
       .upsert(
@@ -72,13 +80,14 @@ export async function POST(req: NextRequest) {
 
     if (bookingErr) {
       console.error("booking upsert error:", bookingErr);
-      return NextResponse.json({ ok: true });
+      return twimlResponse();
     }
 
     const channel =
-      to.startsWith("whatsapp:") || from.startsWith("whatsapp:") ? "whatsapp" : "sms";
+      to.startsWith("whatsapp:") || from.startsWith("whatsapp:")
+        ? "whatsapp"
+        : "sms";
 
-    // Find/create conversation
     const { data: convo, error: convoErr } = await sb
       .from("conversations")
       .upsert(
@@ -98,12 +107,11 @@ export async function POST(req: NextRequest) {
 
     if (convoErr) {
       console.error("conversation upsert error:", convoErr);
-      return NextResponse.json({ ok: true });
+      return twimlResponse();
     }
 
     const now = new Date().toISOString();
 
-    // ✅ Insert inbound into inbound_messages (matches LiveThread)
     const { error: inErr } = await sb.from("inbound_messages").insert({
       conversation_id: convo.id,
       body,
@@ -114,27 +122,27 @@ export async function POST(req: NextRequest) {
 
     if (inErr) {
       console.error("inbound_messages insert error:", inErr);
-      return NextResponse.json({ ok: true });
+      return twimlResponse();
     }
 
-// Update conversation state + timestamps
-const { error: convoUpdateErr } = await sb
-  .from("conversations")
-  .update({
-    status: "awaiting_team",
-    updated_at: now,
-    last_message_at: now,
-    last_inbound_at: now,
-    from_e164: from,
-    to_e164: to,
-  })
-  .eq("id", convo.id);
+    const { error: convoUpdateErr } = await sb
+      .from("conversations")
+      .update({
+        status: "awaiting_team",
+        updated_at: now,
+        last_message_at: now,
+        last_inbound_at: now,
+        from_e164: from,
+        to_e164: to,
+      })
+      .eq("id", convo.id);
 
-    if (convoUpdateErr) console.error("conversation update error:", convoUpdateErr);
+    if (convoUpdateErr)
+      console.error("conversation update error:", convoUpdateErr);
 
-    return NextResponse.json({ ok: true });
+    return twimlResponse();
   } catch (err) {
     console.error("Twilio inbound error:", err);
-    return NextResponse.json({ ok: true });
+    return twimlResponse();
   }
 }
