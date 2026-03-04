@@ -28,7 +28,7 @@ type ConversationRow = {
   last_read_at: string | null;
 };
 
-type StatusFilter = "open" | "closed" | "all";
+type StatusFilter = "awaiting_team" | "waiting_guest" | "closed" | "all";
 
 function isUnread(c: ConversationRow) {
   if (!c.last_inbound_at) return false;
@@ -68,7 +68,7 @@ export default function InboxClient() {
   const [rows, setRows] = useState<ConversationRow[]>([]);
   const [rawCount, setRawCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>("awaiting_team");
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -94,9 +94,16 @@ export default function InboxClient() {
       if (!userError && userData?.user) {
         setCurrentUserId(userData.user.id);
 
-// TEMP: assume admin for now (we'll replace with a proper /api/me endpoint)
-setIsAdmin(true);
+        const { data: profile, error: profileError } = await sb
+          .from("profiles")
+          .select("role")
+          .eq("id", userData.user.id)
+          .maybeSingle();
 
+        if (cancelled) return;
+        if (!profileError && profile?.role === "admin") {
+          setIsAdmin(true);
+        }
       }
     }
 
@@ -147,6 +154,9 @@ setIsAdmin(true);
         const text = await res.text().catch(() => "");
         console.error("Status update failed:", res.status, text);
         setRows(previousRows);
+      } else {
+        // Best-effort refresh so tabs stay accurate
+        void refetch();
       }
     } catch (e) {
       console.error("Unexpected status update error:", e);
@@ -325,26 +335,60 @@ setIsAdmin(true);
         <div style={{ fontSize: 14, opacity: 0.75 }}>
           {loading ? "Refreshing…" : `${rows.length} threads • ${unreadCount} unread`}
           <span style={{ marginLeft: 10, fontSize: 12, opacity: 0.65 }}>
-            (debug: allowed={allowedPropertyIds.length}, selected={selectedPropertyId}, apiRows={rawCount})
+            {`(${rawCount} from API)`}
           </span>
         </div>
 
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-          {loadingMemberships ? (
-            <span style={{ fontSize: 12, opacity: 0.65 }}>Loading properties…</span>
-          ) : membershipsError ? (
-            <span style={{ fontSize: 12, color: "#b42318" }}>Property load failed</span>
-          ) : null}
-
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as StatusFilter)}
-            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ddd" }}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
+          <div
+            style={{
+              display: "inline-flex",
+              borderRadius: 999,
+              border: "1px solid #e5e5e5",
+              overflow: "hidden",
+              fontSize: 12,
+            }}
           >
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
-            <option value="all">All</option>
-          </select>
+            <button
+              type="button"
+              onClick={() => setStatus("awaiting_team")}
+              style={{
+                padding: "6px 10px",
+                border: "none",
+                background: status === "awaiting_team" ? "#111" : "transparent",
+                color: status === "awaiting_team" ? "#fff" : "#444",
+                cursor: "pointer",
+              }}
+            >
+              Inbox
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatus("waiting_guest")}
+              style={{
+                padding: "6px 10px",
+                border: "none",
+                background: status === "waiting_guest" ? "#111" : "transparent",
+                color: status === "waiting_guest" ? "#fff" : "#444",
+                cursor: "pointer",
+              }}
+            >
+              Waiting on Guest
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatus("closed")}
+              style={{
+                padding: "6px 10px",
+                border: "none",
+                background: status === "closed" ? "#111" : "transparent",
+                color: status === "closed" ? "#fff" : "#444",
+                cursor: "pointer",
+              }}
+            >
+              Resolved
+            </button>
+          </div>
 
           <select
             value={selectedPropertyId}
@@ -415,7 +459,7 @@ setIsAdmin(true);
           <div>Last Message</div>
           <div>Assigned</div>
           <div>Status</div>
-          <div>Open</div>
+          <div>Actions</div>
         </div>
 
         {rows.map((c) => {
@@ -483,30 +527,50 @@ setIsAdmin(true);
                 ) : null}
               </div>
               <div>
-                {isAdmin ? (
-                  <select
-                    value={c.status ?? "open"}
-                    onChange={(e) => updateStatus(c, e.target.value)}
+                <StatusBadge status={c.status} />
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {c.status === "closed" ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void updateStatus(c, "awaiting_team");
+                    }}
                     style={{
-                      padding: "6px 10px",
+                      padding: "4px 8px",
                       borderRadius: 999,
                       border: "1px solid #ddd",
-                      fontSize: 12,
-                      background: "white",
+                      background: "#f9fafb",
+                      fontSize: 11,
+                      cursor: "pointer",
                     }}
                   >
-                    <option value="open">Open</option>
-                    <option value="closed">Closed</option>
-                  </select>
+                    Reopen
+                  </button>
                 ) : (
-                  <StatusBadge status={c.status} />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void updateStatus(c, "closed");
+                    }}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 999,
+                      border: "1px solid #ddd",
+                      background: "#f9fafb",
+                      fontSize: 11,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Mark Resolved
+                  </button>
                 )}
-              </div>
-              <div>
                 <Link
                   href={`/dashboard/conversations/${c.id}`}
                   onClick={(e) => e.stopPropagation()}
-                  style={{ fontSize: 13 }}
+                  style={{ fontSize: 13, alignSelf: "center" }}
                 >
                   Open
                 </Link>

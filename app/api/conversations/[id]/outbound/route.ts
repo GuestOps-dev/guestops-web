@@ -35,11 +35,11 @@ export async function POST(
     return NextResponse.json(insertError, { status: 500 });
   }
 
-  // ✅ Update conversation state
+  // Update conversation state for inbox workflow
   const { error: updateError } = await supabase
     .from("conversations")
     .update({
-      status: "awaiting_guest",
+      status: "waiting_guest",
       last_outbound_at: now,
       last_message_at: now,
       updated_at: now,
