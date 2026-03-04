@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
@@ -62,6 +63,12 @@ export default async function OpsDashboardPage() {
               High-level health overview for conversations and inbound activity.
             </p>
           </div>
+          <Link
+            href="/ops/inbox"
+            className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Operator Inbox
+          </Link>
         </header>
 
         <section>
