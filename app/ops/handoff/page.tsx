@@ -37,9 +37,12 @@ export default async function HandoffPage() {
   const productVision = readFileSafe("docs/PRODUCT_VISION.md");
   const techHandoff = readFileSafe("docs/TECH_HANDOFF.md");
   const smokeTests = readFileSafe("docs/M1_SMOKE_TESTS.md");
+
   const structure = readFileSafe("docs/STRUCTURE.md");
+  const routes = readFileSafe("docs/ROUTES.md");
   const handoffReadme = readFileSafe("docs/HANDOFF_README.md");
   const codeIndex = readFileSafe("docs/CODE_INDEX.md");
+  const newChatPrompt = readFileSafe("docs/NEW_CHAT_PROMPT.txt");
   const handoffPack = readFileSafe("HANDOFF_PACK.txt");
 
   return (
@@ -56,21 +59,20 @@ export default async function HandoffPage() {
       <Section title="Product Vision" text={productVision} />
       <Section title="Tech Handoff (Current State)" text={techHandoff} />
       <Section title="Milestone Smoke Tests" text={smokeTests} />
-      <Section title="Folder Structure (Generated)" text={structure} />
+
+      <Section title="API Routes (Generated)" text={routes} />
+      <Section title="Relevant File Tree (Generated)" text={structure} />
+
       <Section title="Handoff Instructions (How This Works)" text={handoffReadme} />
       <Section title="Code Index (Generated Snapshot)" text={codeIndex} />
+      <Section title="NEW CHAT PROMPT (Copy/Paste This First)" text={newChatPrompt} />
+
       <Section title="Auto Handoff Pack (Optional)" text={handoffPack} />
     </div>
   );
 }
 
-function Section({
-  title,
-  text,
-}: {
-  title: string;
-  text: string;
-}) {
+function Section({ title, text }: { title: string; text: string }) {
   return (
     <div style={{ marginBottom: 40 }}>
       <h2 style={{ fontSize: 18, marginBottom: 10 }}>{title}</h2>

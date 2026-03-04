@@ -1,274 +1,326 @@
+#!/usr/bin/env node
+/**
+ * scripts/gen-handoff-index.mjs
+ *
+ * Generates:
+ * - docs/STRUCTURE.md        (filtered tree of relevant source/docs)
+ * - docs/CODE_INDEX.md       (API routes + key files + env var refs)
+ * - HANDOFF_PACK.txt         (single copy/paste pack for new chats)
+ */
+
 import fs from "fs";
 import path from "path";
+import childProcess from "child_process";
 
 const ROOT = process.cwd();
-const DOCS_DIR = path.join(ROOT, "docs");
 
-function ensureDir(p) {
-  fs.mkdirSync(p, { recursive: true });
-}
+// Only show “relevant” file types in tree/index
+const RELEVANT_EXTS = new Set([
+  ".ts",
+  ".tsx",
+  ".js",
+  ".mjs",
+  ".json",
+  ".sql",
+  ".md",
+  ".yaml",
+  ".yml",
+  ".env",
+]);
 
-function exists(p) {
+// Hard excludes
+const EXCLUDE_DIRS = new Set([
+  "node_modules",
+  ".next",
+  ".git",
+  ".vercel",
+  "dist",
+  "build",
+  "out",
+  "coverage",
+  ".turbo",
+]);
+
+// Optional: exclude noisy files
+const EXCLUDE_FILES = new Set([
+  "package-lock.json",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+]);
+
+function safeRead(rel) {
   try {
-    fs.accessSync(p);
-    return true;
+    return fs.readFileSync(path.join(ROOT, rel), "utf8");
   } catch {
-    return false;
+    return "";
   }
 }
 
-function readTextSafe(relPath, maxBytes = 400_000) {
-  const abs = path.join(ROOT, relPath);
-  if (!exists(abs)) return `Missing: ${relPath}`;
-  const buf = fs.readFileSync(abs);
-  if (buf.length > maxBytes) {
-    const head = buf.subarray(0, maxBytes).toString("utf8");
-    return `${head}\n\n[TRUNCATED: file > ${maxBytes} bytes]`;
-  }
-  return buf.toString("utf8");
-}
-
-function listFilesRec(dirAbs) {
-  const out = [];
-  if (!exists(dirAbs)) return out;
-
-  const stack = [dirAbs];
-  while (stack.length) {
-    const cur = stack.pop();
-    const entries = fs.readdirSync(cur, { withFileTypes: true });
-    for (const e of entries) {
-      const p = path.join(cur, e.name);
-      if (e.isDirectory()) stack.push(p);
-      else out.push(p);
-    }
-  }
-  return out;
-}
-
-function toRel(abs) {
-  // Always normalize to forward slashes for portability
-  const rel = abs.replace(ROOT + path.sep, "");
-  return rel.split(path.sep).join("/");
-}
-
-function filterByExt(files, exts) {
-  return files.filter((f) => exts.includes(path.extname(f).toLowerCase()));
-}
-
-function findRouteFiles(baseRel) {
-  const baseAbs = path.join(ROOT, baseRel);
-  const all = listFilesRec(baseAbs);
-  return all
-    .filter((f) => path.basename(f).toLowerCase() === "route.ts")
-    .map(toRel)
-    .sort();
-}
-
-function curatedStructureSection(title, rel, includeExts) {
-  const abs = path.join(ROOT, rel);
-  const all = listFilesRec(abs);
-  const filtered = includeExts ? filterByExt(all, includeExts) : all;
-  const rels = filtered.map(toRel).sort();
-
-  const lines = [];
-  lines.push(`## ${title}`);
-  lines.push(rel);
-  lines.push("");
-
-  if (rels.length === 0) {
-    lines.push("(no matching files)");
-    lines.push("");
-    return lines.join("\n");
-  }
-
-  for (const r of rels) lines.push(`- ${r}`);
-  lines.push("");
-  return lines.join("\n");
-}
-
-function getCommit() {
-  const envCommit =
-    process.env.VERCEL_GIT_COMMIT_SHA ||
-    process.env.GIT_COMMIT_SHA ||
-    process.env.COMMIT_SHA;
-
-  return envCommit || "(unknown)";
+function ensureDir(relDir) {
+  fs.mkdirSync(path.join(ROOT, relDir), { recursive: true });
 }
 
 function writeFile(rel, content) {
-  const abs = path.join(ROOT, rel);
-  ensureDir(path.dirname(abs));
-  fs.writeFileSync(abs, content, "utf8");
+  fs.writeFileSync(path.join(ROOT, rel), content, "utf8");
 }
 
-function buildStructureMd() {
-  const parts = [];
-  parts.push("# GuestOpsHQ - Folder Structure (Generated)");
-  parts.push("");
-  parts.push(`Generated: ${new Date().toISOString()}`);
-  parts.push(`Commit: ${getCommit()}`);
-  parts.push("");
-  parts.push(
-    "Curated listing of files relevant to architecture + daily dev. (Generated at build time.)"
-  );
-  parts.push("");
-
-  parts.push(curatedStructureSection("App (Routes + UI)", "app", [".ts", ".tsx"]));
-  parts.push(curatedStructureSection("Src (Libraries)", "src", [".ts", ".tsx"]));
-  parts.push(
-    curatedStructureSection("Supabase", "supabase", [".sql", ".toml", ".json", ".ts"])
-  );
-  parts.push(curatedStructureSection("Docs", "docs", [".md", ".txt"]));
-
-  return parts.join("\n");
+function run(cmd) {
+  try {
+    return childProcess.execSync(cmd, { cwd: ROOT, stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+  } catch {
+    return "";
+  }
 }
 
-function buildCodeIndexMd() {
-  const parts = [];
-  parts.push("# GuestOpsHQ - Code Index (Generated)");
-  parts.push("");
-  parts.push(`Generated: ${new Date().toISOString()}`);
-  parts.push(`Commit: ${getCommit()}`);
-  parts.push("");
-  parts.push(
-    "This is a curated snapshot to help new chats patch safely without uploading the entire repo."
-  );
-  parts.push("Do NOT store secrets here.");
-  parts.push("");
+function isRelevantFile(fileName) {
+  if (EXCLUDE_FILES.has(fileName)) return false;
+  const ext = path.extname(fileName);
+  return RELEVANT_EXTS.has(ext);
+}
 
-  const appRoutes = findRouteFiles("app/api");
-  const srcRoutes = findRouteFiles("src/app/api");
-
-  parts.push("## API Routes");
-  parts.push("");
-  parts.push("### app/api");
-  if (appRoutes.length) appRoutes.forEach((r) => parts.push(`- ${r}`));
-  else parts.push("(none)");
-  parts.push("");
-  parts.push("### src/app/api");
-  if (srcRoutes.length) srcRoutes.forEach((r) => parts.push(`- ${r}`));
-  else parts.push("(none)");
-  parts.push("");
-
-  const criticalFull = [
-    "app/api/conversations/route.ts",
-    "app/api/messages/send/route.ts",
-    "src/app/api/me/memberships/route.ts",
-    "src/lib/api/requireApiAuth.ts",
-    "src/lib/supabase/getSupabaseRlsServerClient.ts",
-    "src/lib/supabaseServer.ts",
-    "src/lib/supabaseBrowser.ts",
-    "app/dashboard/page.tsx",
-    "app/dashboard/InboxClient.tsx",
-    "app/dashboard/conversations/[id]/page.tsx",
-  ];
-
-  parts.push("## Critical Files (Full Content, size-capped)");
-  parts.push("");
-  for (const p of criticalFull) {
-    parts.push(`----- FILE: ${p} -----`);
-    parts.push(readTextSafe(p));
-    parts.push(`----- END FILE: ${p} -----`);
-    parts.push("");
+function walk(relDir) {
+  const absDir = path.join(ROOT, relDir);
+  let entries = [];
+  try {
+    entries = fs.readdirSync(absDir, { withFileTypes: true });
+  } catch {
+    return [];
   }
 
-  parts.push("## Env var names referenced");
-  parts.push("");
-  [
-    "HANDOFF_VIEW_KEY",
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "TWILIO_ACCOUNT_SID",
-    "TWILIO_AUTH_TOKEN",
-  ].forEach((v) => parts.push(`- ${v}`));
-  parts.push("");
+  const results = [];
 
-  return parts.join("\n");
+  for (const ent of entries) {
+    if (ent.name.startsWith(".")) {
+      // keep dotfiles only if explicitly relevant (like .env)
+      if (!isRelevantFile(ent.name)) continue;
+    }
+    if (ent.isDirectory()) {
+      if (EXCLUDE_DIRS.has(ent.name)) continue;
+      results.push(...walk(path.join(relDir, ent.name)));
+      continue;
+    }
+    if (ent.isFile()) {
+      if (!isRelevantFile(ent.name)) continue;
+      results.push(path.join(relDir, ent.name).replaceAll("\\", "/"));
+    }
+  }
+
+  return results.sort();
 }
 
-function buildHandoffPackTxt() {
-  // Goal: portable, repo-relative "index" for humans (no absolute paths).
-  const parts = [];
-  parts.push("GuestOpsHQ - HANDOFF_PACK (Generated)");
-  parts.push("");
-  parts.push(`Generated: ${new Date().toISOString()}`);
-  parts.push(`Commit: ${getCommit()}`);
-  parts.push("");
-  parts.push("This file is generated at build time and contains only repo-relative paths.");
-  parts.push("Do NOT store secrets here.");
-  parts.push("");
+function buildFilteredTree(files) {
+  // Convert list of file paths into a simple indented tree
+  const root = {};
+  for (const f of files) {
+    const parts = f.split("/");
+    let node = root;
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      node[p] = node[p] || (i === parts.length - 1 ? null : {});
+      node = node[p] ?? {};
+    }
+  }
 
-  // Key docs the handoff page renders
-  const keyDocs = [
-    "docs/PRODUCT_BRIEF.md",
-    "docs/PRODUCT_VISION.md",
-    "docs/TECH_HANDOFF.md",
-    "docs/M1_SMOKE_TESTS.md",
-    "docs/HANDOFF_README.md",
-    "docs/STRUCTURE.md",
-    "docs/CODE_INDEX.md",
+  function render(node, prefix = "") {
+    const keys = Object.keys(node).sort((a, b) => a.localeCompare(b));
+    let out = "";
+    keys.forEach((k, idx) => {
+      const isLast = idx === keys.length - 1;
+      const branch = isLast ? "└─ " : "├─ ";
+      out += `${prefix}${branch}${k}\n`;
+      const child = node[k];
+      if (child && typeof child === "object") {
+        out += render(child, prefix + (isLast ? "   " : "│  "));
+      }
+    });
+    return out;
+  }
+
+  return render(root);
+}
+
+function extractEnvVars(files) {
+  const env = new Set();
+  const re = /\bprocess\.env\.([A-Z0-9_]+)\b/g;
+
+  for (const rel of files) {
+    const abs = path.join(ROOT, rel);
+    let text = "";
+    try {
+      text = fs.readFileSync(abs, "utf8");
+    } catch {
+      continue;
+    }
+    let m;
+    while ((m = re.exec(text))) {
+      env.add(m[1]);
+    }
+  }
+
+  return Array.from(env).sort();
+}
+
+function listApiRoutes(files) {
+  // Index both app/api and src/app/api patterns
+  const routeFiles = files.filter((f) =>
+    f.endsWith("/route.ts") || f.endsWith("/route.tsx") || f.endsWith("/route.js")
+  );
+
+  const apiRouteFiles = routeFiles.filter((f) =>
+    f.includes("app/api/") || f.includes("src/app/api/")
+  );
+
+  // Attempt to infer method exports
+  function inferMethods(rel) {
+    const txt = safeRead(rel);
+    const methods = [];
+    if (/\bexport\s+async\s+function\s+GET\b/.test(txt)) methods.push("GET");
+    if (/\bexport\s+async\s+function\s+POST\b/.test(txt)) methods.push("POST");
+    if (/\bexport\s+async\s+function\s+PUT\b/.test(txt)) methods.push("PUT");
+    if (/\bexport\s+async\s+function\s+PATCH\b/.test(txt)) methods.push("PATCH");
+    if (/\bexport\s+async\s+function\s+DELETE\b/.test(txt)) methods.push("DELETE");
+    return methods.length ? methods.join(", ") : "(unknown)";
+  }
+
+  function toEndpoint(rel) {
+    // Convert file path to URL-ish endpoint
+    // app/api/foo/bar/route.ts => /api/foo/bar
+    const idx = rel.indexOf("app/api/");
+    if (idx >= 0) {
+      const rest = rel.slice(idx + "app/api/".length);
+      return "/api/" + rest.replace(/\/route\.(ts|tsx|js)$/, "");
+    }
+    const idx2 = rel.indexOf("src/app/api/");
+    if (idx2 >= 0) {
+      const rest = rel.slice(idx2 + "src/app/api/".length);
+      return "/api/" + rest.replace(/\/route\.(ts|tsx|js)$/, "");
+    }
+    return rel;
+  }
+
+  return apiRouteFiles.map((rel) => ({
+    file: rel,
+    endpoint: toEndpoint(rel),
+    methods: inferMethods(rel),
+  }));
+}
+
+function buildCodeIndex(files) {
+  const apiRoutes = listApiRoutes(files);
+
+  const keyPaths = [
+    "app/middleware.ts",
+    "src/middleware.ts",
+    "app/lib",
+    "src/lib",
+    "supabase/migrations",
+    "docs",
   ];
 
-  parts.push("== Key Docs ==");
-  keyDocs.forEach((p) => parts.push("- " + p));
-  parts.push("");
+  const existingKeyPaths = keyPaths
+    .map((p) => p.replaceAll("\\", "/"))
+    .filter((p) => fs.existsSync(path.join(ROOT, p)));
 
-  // Key UI + key libs + route listing
-  parts.push("== Key UI Files ==");
-  [
-    "app/dashboard/page.tsx",
-    "app/dashboard/InboxClient.tsx",
-    "app/dashboard/conversations/[id]/page.tsx",
-  ].forEach((p) => parts.push("- " + p));
-  parts.push("");
+  const envVars = extractEnvVars(files);
 
-  parts.push("== API Routes (route.ts) ==");
-  const appRoutes = findRouteFiles("app/api");
-  const srcRoutes = findRouteFiles("src/app/api");
-  parts.push("app/api:");
-  if (appRoutes.length) appRoutes.forEach((r) => parts.push("- " + r));
-  else parts.push("- (none)");
-  parts.push("");
-  parts.push("src/app/api:");
-  if (srcRoutes.length) srcRoutes.forEach((r) => parts.push("- " + r));
-  else parts.push("- (none)");
-  parts.push("");
+  let out = "";
+  out += `# GuestOpsHQ — CODE INDEX (Generated)\n\n`;
+  out += `Generated: ${new Date().toISOString()}\n`;
+  const sha = run("git rev-parse --short HEAD");
+  if (sha) out += `Git SHA: ${sha}\n`;
+  out += `\n---\n\n`;
 
-  parts.push("== Auth / Supabase Helpers ==");
-  [
-    "src/lib/api/requireApiAuth.ts",
-    "src/lib/supabase/getSupabaseRlsServerClient.ts",
-    "src/lib/supabaseServer.ts",
-    "src/lib/supabaseBrowser.ts",
-    "src/lib/supabaseApiAuth.ts",
-  ].forEach((p) => parts.push("- " + p));
-  parts.push("");
+  out += `## API Routes\n\n`;
+  if (!apiRoutes.length) {
+    out += `No route.ts files found under app/api or src/app/api.\n\n`;
+  } else {
+    for (const r of apiRoutes) {
+      out += `- **${r.endpoint}** (${r.methods})  \n  - file: \`${r.file}\`\n`;
+    }
+    out += `\n`;
+  }
 
-  parts.push("== How to update (local) ==");
-  parts.push("- (optional) Run: .\\scripts\\gen-structure.ps1");
-  parts.push("- (optional) Run: .\\scripts\\gen-code-index.ps1");
-  parts.push("- Build-time generation runs automatically via package.json prebuild:");
-  parts.push("  - node scripts/gen-handoff-index.mjs");
-  parts.push("");
+  out += `## Key Areas (exists in repo)\n\n`;
+  for (const p of existingKeyPaths) out += `- \`${p}\`\n`;
+  out += `\n`;
 
-  return parts.join("\n");
+  out += `## Environment Variables Referenced in Code\n\n`;
+  if (!envVars.length) {
+    out += `No process.env.* references found.\n\n`;
+  } else {
+    for (const v of envVars) out += `- \`${v}\`\n`;
+    out += `\n`;
+  }
+
+  out += `## Notes\n\n`;
+  out += `- This index intentionally scans BOTH \`app/\` and \`src/\` layouts to prevent “path mismatch” across chats.\n`;
+  out += `- Keep “handoff” content in repo files so the app can render it at /ops/handoff.\n`;
+
+  return out;
 }
 
-function main() {
-  ensureDir(DOCS_DIR);
+function buildHandoffPackTxt(structureMd, codeIndexMd) {
+  const take = (rel) => {
+    const txt = safeRead(rel);
+    return txt ? `\n\n===== ${rel} =====\n\n${txt}` : `\n\n===== ${rel} =====\n\n(MISSING)\n`;
+  };
 
-  const structureMd = buildStructureMd();
-  const codeIndexMd = buildCodeIndexMd();
-  const handoffPack = buildHandoffPackTxt();
+  let out = "";
+  out += `GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)\n`;
+  out += `Generated: ${new Date().toISOString()}\n`;
+  const sha = run("git rev-parse --short HEAD");
+  if (sha) out += `Git SHA: ${sha}\n`;
+  out += `\n`;
+  out += `RULES FOR NEW CHAT:\n`;
+  out += `- Prefer code snippets that can be pasted into Cursor.\n`;
+  out += `- Always confirm file paths against STRUCTURE.md.\n`;
+  out += `- If the repo uses /app instead of /src/app in some places, treat both as valid and check STRUCTURE.\n`;
+  out += `\n`;
+  out += `---\n`;
+  out += `\n===== docs/STRUCTURE.md =====\n\n${structureMd}\n`;
+  out += `\n===== docs/CODE_INDEX.md =====\n\n${codeIndexMd}\n`;
 
-  writeFile("docs/STRUCTURE.md", structureMd);
-  writeFile("docs/CODE_INDEX.md", codeIndexMd);
-  writeFile("HANDOFF_PACK.txt", handoffPack);
+  // “Source of truth” docs your handoff page already renders
+  out += take("docs/PRODUCT_BRIEF.md");
+  out += take("docs/PRODUCT_VISION.md");
+  out += take("docs/TECH_HANDOFF.md");
+  out += take("docs/M1_SMOKE_TESTS.md");
+  out += take("docs/HANDOFF_README.md");
 
-  console.log("Generated docs/STRUCTURE.md");
-  console.log("Generated docs/CODE_INDEX.md");
-  console.log("Generated HANDOFF_PACK.txt");
+  return out;
 }
 
-main();
+// MAIN
+ensureDir("docs");
+
+// Build list of relevant files (entire repo, filtered)
+const allRelevantFiles = walk(".");
+
+// Generate STRUCTURE.md
+const structureTree = buildFilteredTree(
+  allRelevantFiles
+    // hide leading "./"
+    .map((f) => (f.startsWith("./") ? f.slice(2) : f))
+);
+const structureMd = `# GuestOpsHQ — Filtered Repo Structure (Generated)\n\n` +
+  `Only showing relevant file extensions: ${Array.from(RELEVANT_EXTS).join(", ")}\n\n` +
+  "```\n" +
+  structureTree +
+  "```\n";
+
+writeFile("docs/STRUCTURE.md", structureMd);
+
+// Generate CODE_INDEX.md
+const codeIndexMd = buildCodeIndex(
+  allRelevantFiles.map((f) => (f.startsWith("./") ? f.slice(2) : f))
+);
+writeFile("docs/CODE_INDEX.md", codeIndexMd);
+
+// Generate HANDOFF_PACK.txt (single paste artifact)
+const handoffPack = buildHandoffPackTxt(structureMd, codeIndexMd);
+writeFile("HANDOFF_PACK.txt", handoffPack);
+
+console.log("✅ Handoff artifacts generated:");
+console.log(" - docs/STRUCTURE.md");
+console.log(" - docs/CODE_INDEX.md");
+console.log(" - HANDOFF_PACK.txt");
