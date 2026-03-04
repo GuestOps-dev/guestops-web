@@ -1,14 +1,10 @@
+// app/api/conversations/[id]/read/route.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import {
-  assertCanAccessProperty,
-  requirePropertyId,
-} from "@/lib/supabaseApiAuth";
-import { requireApiAuth } from "@/lib/supabaseApiAuth";
+import { requireApiAuth, requirePropertyId, assertCanAccessProperty } from "@/lib/supabaseApiAuth";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
-
-const ALLOWED_STATUSES = new Set(["open", "closed"]);
 
 export async function POST(
   req: NextRequest,
@@ -25,34 +21,27 @@ export async function POST(
     const json = await req.json().catch(() => null);
     const propertyId = requirePropertyId(json?.property_id);
 
-    const status = typeof json?.status === "string" ? json.status.trim() : "";
-    if (!ALLOWED_STATUSES.has(status)) {
-      return NextResponse.json(
-        { error: "Invalid status. Allowed: open, closed" },
-        { status: 400 }
-      );
-    }
-
+    // Ensure the signed-in user can access this property (RLS-enforced check)
     await assertCanAccessProperty(supabase, propertyId);
 
+    const admin = getSupabaseAdmin();
     const now = new Date().toISOString();
 
-    const { data, error } = await supabase
+    // Mark read should NOT try to set status=open/closed.
+    // It should only stamp last_read_at (assuming you added it in SQL).
+    const { data, error } = await admin
       .from("conversations")
       .update({
-        status,
+        last_read_at: now,
         updated_at: now,
-        last_message_at: now,
       })
       .eq("id", id)
       .eq("property_id", propertyId)
-      .select(
-        "id, property_id, status, priority, updated_at, last_message_at, assigned_to, assigned_to_user_id, assigned_user_id"
-      )
+      .select("id, property_id, status, priority, updated_at, last_message_at, last_read_at")
       .maybeSingle();
 
     if (error) {
-      console.error("Status update error:", error);
+      console.error("Mark read error:", error);
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
     if (!data) {
@@ -63,7 +52,7 @@ export async function POST(
   } catch (err: any) {
     const status = typeof err?.status === "number" ? err.status : 500;
     const message = status === 500 ? "Internal error" : err?.message || "Error";
-    if (status === 500) console.error("POST /status unexpected:", err);
+    if (status === 500) console.error("POST /read unexpected:", err);
     return NextResponse.json({ error: message }, { status });
   }
 }

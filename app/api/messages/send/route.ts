@@ -1,6 +1,8 @@
+// app/api/messages/send/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
-import { requireApiAuth } from "@/lib/supabaseApiAuth";
+import { requireApiAuth, assertCanAccessProperty } from "@/lib/supabaseApiAuth";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
@@ -9,13 +11,13 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN!
 );
 
-function requireNonEmptyString(v: unknown, field: string) {
+function requireNonEmptyString(v: unknown) {
   if (typeof v !== "string" || !v.trim()) return null;
   return v.trim();
 }
 
-function requireUuid(v: unknown, field: string) {
-  const s = requireNonEmptyString(v, field);
+function requireUuid(v: unknown) {
+  const s = requireNonEmptyString(v);
   if (!s) return null;
   const ok =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -26,16 +28,17 @@ function requireUuid(v: unknown, field: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { supabase } = await requireApiAuth(req);
+    // Authed user supabase (for access checks)
+    const { supabase: userSb } = await requireApiAuth(req);
 
     const idempotencyKey =
       req.headers.get("x-idempotency-key")?.trim() || null;
 
     const json = await req.json().catch(() => null);
 
-    const conversationId = requireUuid(json?.conversation_id, "conversation_id");
-    const propertyId = requireUuid(json?.property_id, "property_id");
-    const body = requireNonEmptyString(json?.body, "body");
+    const conversationId = requireUuid(json?.conversation_id);
+    const propertyId = requireUuid(json?.property_id);
+    const body = requireNonEmptyString(json?.body);
 
     if (!conversationId) {
       return NextResponse.json(
@@ -53,12 +56,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing body" }, { status: 400 });
     }
 
-    const origin = req.nextUrl.origin;
+    // Ensure the signed-in user can access this property
+    await assertCanAccessProperty(userSb, propertyId);
 
-    // Cast supabase to any for table typing issues (we'll fix Database typing later)
-    const sb: any = supabase as any;
+    const admin = getSupabaseAdmin();
 
-    const { data: convo, error: convoErr } = await sb
+    // Load convo using admin (avoids RLS issues)
+    const { data: convo, error: convoErr } = await admin
       .from("conversations")
       .select(
         "id, property_id, guest_number, service_number, from_e164, to_e164"
@@ -78,9 +82,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const c: any = convo;
-    const toE164 = c.guest_number ?? c.from_e164; // guest
-    const fromE164 = c.service_number ?? c.to_e164; // your Twilio #
+    const toE164 = (convo as any).guest_number ?? (convo as any).from_e164; // guest
+    const fromE164 = (convo as any).service_number ?? (convo as any).to_e164; // your Twilio #
 
     if (!toE164 || !fromE164) {
       return NextResponse.json(
@@ -89,7 +92,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const insertRes = await sb
+    // Insert outbound using admin (avoids RLS)
+    const insertRes = await admin
       .from("outbound_messages")
       .insert({
         conversation_id: conversationId,
@@ -104,7 +108,7 @@ export async function POST(req: NextRequest) {
 
     if (insertRes.error) {
       if (idempotencyKey) {
-        const existing = await sb
+        const existing = await admin
           .from("outbound_messages")
           .select("*")
           .eq("conversation_id", conversationId)
@@ -124,6 +128,7 @@ export async function POST(req: NextRequest) {
     }
 
     const outboundId = insertRes.data.id;
+    const origin = req.nextUrl.origin;
 
     try {
       const msg = await client.messages.create({
@@ -133,7 +138,7 @@ export async function POST(req: NextRequest) {
         statusCallback: `${origin}/api/twilio/status`,
       });
 
-      const updated = await sb
+      const updated = await admin
         .from("outbound_messages")
         .update({
           status: "queued",
@@ -144,7 +149,8 @@ export async function POST(req: NextRequest) {
         .single();
 
       const now = new Date().toISOString();
-      await sb
+
+      await admin
         .from("conversations")
         .update({
           updated_at: now,
@@ -163,7 +169,7 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       const errorText = e?.message || "Twilio send failed";
 
-      await sb
+      await admin
         .from("outbound_messages")
         .update({ status: "failed", error: errorText })
         .eq("id", outboundId);
@@ -173,6 +179,7 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     const msg = err?.message === "Unauthorized" ? "Unauthorized" : "Internal error";
     const status = msg === "Unauthorized" ? 401 : 500;
+    if (status === 500) console.error("POST /api/messages/send unexpected:", err);
     return NextResponse.json({ error: msg }, { status });
   }
 }
