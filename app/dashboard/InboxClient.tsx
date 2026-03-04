@@ -340,6 +340,7 @@ export default function InboxClient() {
   const refetchRef = useRef(refetch);
   refetchRef.current = refetch;
 
+  // Realtime: when conversations table changes (e.g. updated_at), refetch list
   useEffect(() => {
     if (!allowedPropertyIds.length) return;
 
@@ -348,33 +349,28 @@ export default function InboxClient() {
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "UPDATE",
           schema: "public",
           table: "conversations",
         },
-        (payload) => {
-          console.log("Realtime conversation update", payload);
-          refetchRef.current();
-        }
+        () => refetchRef.current()
       )
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
-          table: "messages",
+          table: "inbound_messages",
         },
-        (payload) => {
-          console.log("Realtime message update", payload);
-          refetchRef.current();
-        }
+        () => refetchRef.current()
       )
       .subscribe();
 
     return () => {
+      channel.unsubscribe();
       sb.removeChannel(channel);
     };
-  }, [sb, allowedPropertyIds.join(","), status, selectedPropertyId]);
+  }, [sb, allowedPropertyIds.join(",")]);
 
   useEffect(() => {
     const sbClient = getSupabaseBrowserClient();

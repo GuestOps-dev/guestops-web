@@ -58,7 +58,7 @@ export default function LiveThread({
     }
   }, [inbound.length, outbound.length]);
 
-  // Subscribe to realtime changes
+  // Supabase Realtime: inbound_messages (filter conversation_id) → append to list; cleanup on unmount
   useEffect(() => {
     const sb = getSupabaseBrowserClient();
 
@@ -186,12 +186,11 @@ export default function LiveThread({
           });
         }
       )
-.subscribe((status) => {
-  console.log("Realtime status:", status, "conversation:", conversationId);
-  if (status === "CHANNEL_ERROR") {
-    console.error("Supabase realtime channel error:", conversationId);
-  }
-});
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.error("Supabase realtime channel error:", conversationId);
+        }
+      });
 
     return () => {
       if (markReadTimerRef.current) clearTimeout(markReadTimerRef.current);
