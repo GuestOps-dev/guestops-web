@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerClient";
 
 export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
-  const conversationId = params.id;
+  const { id } = await context.params;
   const { body } = await req.json();
 
   if (!body) {
@@ -20,7 +20,7 @@ export async function POST(
   }
 
   const { error } = await supabase.from("outbound_messages").insert({
-    conversation_id: conversationId,
+    conversation_id: id,
     body,
     created_by: authData.user.id,
   });
