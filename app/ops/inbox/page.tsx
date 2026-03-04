@@ -118,18 +118,19 @@ export default async function OpsInboxPage({
       .order("name", { ascending: true });
     propertiesForDropdown = (props ?? []) as Array<{ id: string; name: string }>;
   } else {
-    if (allowedPropertyIds.length === 0) {
+    const ids = allowedPropertyIds ?? [];
+    if (ids.length === 0) {
       conversationCount = 0;
     } else {
       let q = supabase
         .from("conversations")
         .select("id, guest_number, channel, status, last_message_at, priority")
         .eq("status", status)
-        .in("property_id", allowedPropertyIds)
+        .in("property_id", ids)
         .order("last_message_at", { ascending: false })
         .limit(50);
 
-      if (selectedPropertyId && allowedPropertyIds.includes(selectedPropertyId)) {
+      if (selectedPropertyId && ids.includes(selectedPropertyId)) {
         q = q.eq("property_id", selectedPropertyId);
       }
 
