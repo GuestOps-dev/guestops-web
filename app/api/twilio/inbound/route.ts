@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import twilio from "twilio";
 import { getSupabaseServiceClient } from "@/lib/supabaseServer";
 
@@ -28,21 +28,18 @@ export async function POST(req: NextRequest) {
     form.forEach((value, key) => (params[key] = String(value)));
 
     const valid = twilio.validateRequest(authToken, signature, url, params);
-    if (!valid) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
+    if (!valid) return new Response("Invalid signature", { status: 401 });
 
     const from = normalizePhone(params.From || null);
     const to = normalizePhone(params.To || null);
     const body = (params.Body || "").trim();
     const messageSid = params.MessageSid || null;
 
-    if (!from || !to || !body) {
-      return NextResponse.json({ ok: true });
-    }
+    if (!from || !to || !body) return ok();
 
     const sb: any = getSupabaseServiceClient();
 
+    // Route property_id by To number
     const { data: phoneRow } = await sb
       .from("phone_numbers")
       .select("property_id")
@@ -51,15 +48,22 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     const propertyId = phoneRow?.property_id;
-    if (!propertyId) return NextResponse.json({ ok: true });
+    if (!propertyId) return ok();
 
-    const { data: guest } = await sb
+    // Find/create guest
+    const { data: guest, error: guestErr } = await sb
       .from("guests")
       .upsert({ phone_e164: from }, { onConflict: "phone_e164" })
       .select("id")
       .single();
 
-    const { data: booking } = await sb
+    if (guestErr) {
+      console.error("guest upsert error:", guestErr);
+      return ok();
+    }
+
+    // Placeholder booking
+    const { data: booking, error: bookingErr } = await sb
       .from("bookings")
       .upsert(
         {
@@ -73,12 +77,18 @@ export async function POST(req: NextRequest) {
       .select("id")
       .single();
 
+    if (bookingErr) {
+      console.error("booking upsert error:", bookingErr);
+      return ok();
+    }
+
     const channel =
       to.startsWith("whatsapp:") || from.startsWith("whatsapp:")
         ? "whatsapp"
         : "sms";
 
-    const { data: convo } = await sb
+    // Find/create conversation
+    const { data: convo, error: convoErr } = await sb
       .from("conversations")
       .upsert(
         {
@@ -95,9 +105,15 @@ export async function POST(req: NextRequest) {
       .select("id")
       .single();
 
+    if (convoErr) {
+      console.error("conversation upsert error:", convoErr);
+      return ok();
+    }
+
     const now = new Date().toISOString();
 
-    await sb.from("inbound_messages").insert({
+    // Insert inbound into inbound_messages
+    const { error: inErr } = await sb.from("inbound_messages").insert({
       conversation_id: convo.id,
       body,
       provider: "twilio",
@@ -105,7 +121,13 @@ export async function POST(req: NextRequest) {
       created_at: now,
     });
 
-    await sb
+    if (inErr) {
+      console.error("inbound_messages insert error:", inErr);
+      return ok();
+    }
+
+    // Update conversation state + timestamps
+    const { error: convoUpdateErr } = await sb
       .from("conversations")
       .update({
         status: "awaiting_team",
@@ -117,13 +139,11 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", convo.id);
 
-      return new Response("OK", {
-        status: 200,
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      });
+    if (convoUpdateErr) console.error("conversation update error:", convoUpdateErr);
 
+    return ok();
   } catch (err) {
     console.error("Twilio inbound error:", err);
-    return NextResponse.json({ ok: true });
+    return ok();
   }
 }
