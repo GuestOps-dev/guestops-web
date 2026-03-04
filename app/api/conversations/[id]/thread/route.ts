@@ -101,6 +101,17 @@ export async function GET(
     );
   }
 
+  const { data: internalNotes, error: notesErr } = await supabase
+    .from("internal_notes")
+    .select("id, conversation_id, property_id, body, created_by, created_at")
+    .eq("conversation_id", id)
+    .order("created_at", { ascending: true })
+    .limit(500);
+
+  if (notesErr) {
+    console.error("Thread internal notes fetch error:", notesErr);
+  }
+
   return NextResponse.json(
     {
       conversation: conversationWithName,
@@ -111,6 +122,14 @@ export async function GET(
         body: string;
         status?: string | null;
         error?: string | null;
+      }>,
+      internal_notes: (internalNotes ?? []) as Array<{
+        id: string;
+        conversation_id: string;
+        property_id: string;
+        body: string;
+        created_by: string | null;
+        created_at: string;
       }>,
     },
     { status: 200 }
