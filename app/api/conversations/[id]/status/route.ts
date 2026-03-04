@@ -3,7 +3,7 @@ import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerC
 
 export const runtime = "nodejs";
 
-type ConversationStatus = "awaiting_team" | "waiting_guest" | "closed";
+type ConversationStatus = "open" | "waiting_guest" | "closed";
 
 export async function POST(
   req: NextRequest,
@@ -30,7 +30,7 @@ export async function POST(
     const json = await req.json().catch(() => null);
     const status = (json?.status ?? "") as ConversationStatus;
 
-    if (!status || !["awaiting_team", "waiting_guest", "closed"].includes(status)) {
+    if (!status || !["open", "waiting_guest", "closed"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 

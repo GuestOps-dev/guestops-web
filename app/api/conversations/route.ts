@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiAuth } from "@/lib/api/requireApiAuth";
 import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerClient";
 
-type StatusFilter = "awaiting_team" | "waiting_guest" | "closed" | "all";
+type StatusFilter = "open" | "waiting_guest" | "closed" | "all";
 
 async function getSupabaseFromReq(req: Request) {
   const authHeader =
@@ -34,7 +34,7 @@ async function getSupabaseFromReq(req: Request) {
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const status = (url.searchParams.get("status") ?? "awaiting_team") as StatusFilter;
+  const status = (url.searchParams.get("status") ?? "open") as StatusFilter;
   const propertyId = url.searchParams.get("propertyId"); // optional
 
   const auth = await getSupabaseFromReq(req);
@@ -47,7 +47,7 @@ export async function GET(req: Request) {
   let q = supabase
     .from("conversations")
     .select(
-      "id, property_id, guest_number, service_number, channel, provider, status, priority, assigned_to, updated_at, last_message_at, last_inbound_at, last_outbound_at, last_read_at"
+      "id, property_id, guest_number, service_number, channel, provider, status, priority, assigned_user_id, updated_at, last_message_at, last_inbound_at, last_outbound_at, last_read_at"
     )
     .order("updated_at", { ascending: false })
     .limit(200);
@@ -76,5 +76,11 @@ export async function GET(req: Request) {
     );
   }
 
-  return NextResponse.json(data ?? [], { status: 200 });
+  const rows = (data ?? []) as Array<Record<string, unknown>>;
+  const mapped = rows.map((row) => {
+    const { assigned_user_id, ...rest } = row;
+    return { ...rest, assigned_to_user_id: assigned_user_id ?? null };
+  });
+
+  return NextResponse.json(mapped, { status: 200 });
 }

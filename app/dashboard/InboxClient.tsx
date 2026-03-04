@@ -28,7 +28,7 @@ type ConversationRow = {
   last_read_at: string | null;
 };
 
-type StatusFilter = "awaiting_team" | "waiting_guest" | "closed" | "all";
+type StatusFilter = "open" | "waiting_guest" | "closed" | "all";
 
 function isUnread(c: ConversationRow) {
   if (!c.last_inbound_at) return false;
@@ -68,7 +68,7 @@ export default function InboxClient() {
   const [rows, setRows] = useState<ConversationRow[]>([]);
   const [rawCount, setRawCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<StatusFilter>("awaiting_team");
+  const [status, setStatus] = useState<StatusFilter>("open");
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -232,6 +232,10 @@ export default function InboxClient() {
       const data = (text ? JSON.parse(text) : []) as ConversationRow[];
       setRawCount(Array.isArray(data) ? data.length : 0);
 
+      if (Array.isArray(data) && data.length === 0) {
+        console.log("inbox refetch empty", { status, propertyId: selectedPropertyId });
+      }
+
       const filtered =
         allowedPropertyIds.length > 0
           ? (data ?? []).filter((c) => allowedPropertyIds.includes(c.property_id))
@@ -351,12 +355,12 @@ export default function InboxClient() {
           >
             <button
               type="button"
-              onClick={() => setStatus("awaiting_team")}
+              onClick={() => setStatus("open")}
               style={{
                 padding: "6px 10px",
                 border: "none",
-                background: status === "awaiting_team" ? "#111" : "transparent",
-                color: status === "awaiting_team" ? "#fff" : "#444",
+                background: status === "open" ? "#111" : "transparent",
+                color: status === "open" ? "#fff" : "#444",
                 cursor: "pointer",
               }}
             >
@@ -535,7 +539,7 @@ export default function InboxClient() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void updateStatus(c, "awaiting_team");
+                      void updateStatus(c, "open");
                     }}
                     style={{
                       padding: "4px 8px",
@@ -585,13 +589,29 @@ export default function InboxClient() {
 
 function StatusBadge({ status }: { status: string | null }) {
   const s = (status || "").toLowerCase();
-  const label = status ?? "-";
+  const label =
+    s === "open"
+      ? "Open"
+      : s === "waiting_guest"
+        ? "Waiting on guest"
+        : s === "closed"
+          ? "Resolved"
+          : status ?? "-";
 
   const style: React.CSSProperties =
     s === "open"
       ? {
           background: "#dcfce7",
           color: "#166534",
+          borderRadius: 999,
+          padding: "2px 8px",
+          fontSize: 11,
+          fontWeight: 500,
+        }
+      : s === "waiting_guest"
+      ? {
+          background: "#dbeafe",
+          color: "#1d4ed8",
           borderRadius: 999,
           padding: "2px 8px",
           fontSize: 11,
