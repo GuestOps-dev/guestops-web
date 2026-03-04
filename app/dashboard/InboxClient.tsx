@@ -339,8 +339,44 @@ export default function InboxClient() {
   refetchRef.current = refetch;
 
   useEffect(() => {
-    const sb = getSupabaseBrowserClient();
-    if (!sb) return;
+    if (!allowedPropertyIds.length) return;
+
+    const channel = sb
+      .channel("conversations-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "conversations",
+        },
+        (payload) => {
+          console.log("Realtime conversation update", payload);
+          refetchRef.current();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          console.log("Realtime message update", payload);
+          refetchRef.current();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      sb.removeChannel(channel);
+    };
+  }, [sb, allowedPropertyIds.join(","), status, selectedPropertyId]);
+
+  useEffect(() => {
+    const sbClient = getSupabaseBrowserClient();
+    if (!sbClient) return;
 
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const scheduleRefetch = () => {
@@ -351,7 +387,7 @@ export default function InboxClient() {
       }, 400);
     };
 
-    const channel = sb
+    const channel = sbClient
       .channel("dashboard-inbox")
       .on(
         "postgres_changes",
@@ -373,7 +409,7 @@ export default function InboxClient() {
     return () => {
       if (debounceTimer) clearTimeout(debounceTimer);
       channel.unsubscribe();
-      sb.removeChannel(channel);
+      sbClient.removeChannel(channel);
     };
   }, []);
 
