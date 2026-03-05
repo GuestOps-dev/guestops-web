@@ -68,7 +68,7 @@ export default function ConversationStatusSelect({
         const msg = (() => {
           try {
             const j = JSON.parse(text) as { error?: string };
-            return j?.error ?? text || res.statusText;
+            return j?.error ?? (text || res.statusText);
           } catch {
             return text || res.statusText;
           }
