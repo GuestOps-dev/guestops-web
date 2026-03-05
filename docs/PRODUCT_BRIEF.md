@@ -1,1370 +1,707 @@
 I am building GuestOpsHQ, a multi-property guest communications and operations platform for short-term rentals (Costa Rica-first).
 
-
-
 Before proposing architecture changes, assume everything below is the current state of the system.
-
-
 
 PRODUCT VISION
 
-
-
-GuestOpsHQ is an operations + concierge platform for STR operators.
-
-
+GuestOpsHQ is an operations and concierge platform for STR operators.
 
 Core goals:
 
-
-
 Reduce repetitive guest communication
-
-
 
 Centralize property knowledge
 
-
-
 Automate vendor coordination (taxi, chef, tours)
-
-
 
 Enable AI-assisted replies with concierge oversight
 
-
-
 Enforce strict multi-property isolation (SaaS-ready)
-
-
 
 Guests:
 
+Guests do not log in.
 
-
-Do NOT login
-
-
-
-Communicate via WhatsApp or SMS (Twilio)
-
-
+Guests communicate via WhatsApp or SMS using Twilio.
 
 Staff:
 
+Staff log in via Supabase Auth.
 
+Staff are assigned to properties.
 
-Login via Supabase Auth
-
-
-
-Assigned to properties
-
-
-
-Role-based access control
-
-
+Role-based access control is enforced.
 
 CURRENT STACK
 
+Next.js 16 (App Router)
 
+Vercel deployment
 
-• Next.js 16 (App Router)
+Supabase (Auth, Postgres, Realtime, RLS)
 
-• Vercel deployment
+Twilio SMS and WhatsApp
 
-• Supabase (Auth + Postgres + Realtime + RLS)
+Supabase Realtime subscriptions working
 
-• Twilio SMS + WhatsApp
+Bearer-token secured API routes
 
-• Supabase Realtime subscriptions working
+Middleware protecting /dashboard
 
-• Bearer-token secured API routes
+Property-scoped RLS
 
-• Middleware protecting /dashboard
-
-• Property-scoped RLS
-
-• Global admin role supported
-
-
+Global admin role supported
 
 DATA MODEL (CORE TABLES)
 
-
-
 properties
 
-
-
-property\_users (many-to-many staff assignment)
-
-
+property_users (many-to-many staff assignment)
 
 profiles (linked to auth.users)
 
-
-
 guests
-
-
 
 bookings
 
-
-
 conversations
 
+inbound_messages
 
+outbound_messages
 
-inbound\_messages
-
-
-
-outbound\_messages
-
-
-
-message\_events
-
-
+message_events
 
 vendors
 
-
-
 experiences
-
-
 
 reminders
 
+phone_numbers
 
+Important notes:
 
-phone\_numbers
+inbound_messages and outbound_messages are separate tables.
 
+conversations are property-scoped.
 
+All operational tables must be property-scoped.
 
-Important:
+RLS enforces property isolation.
 
-
-
-inbound\_messages and outbound\_messages are separate tables
-
-
-
-conversations is property-scoped
-
-
-
-All operational tables must be property-scoped
-
-
-
-RLS enforces property isolation
-
-
-
-Global admin can bypass property restriction
-
-
+Global admin can bypass property restriction.
 
 AUTH ARCHITECTURE (FINAL STATE)
 
-
-
 Browser:
-
-
 
 createBrowserClient (@supabase/ssr)
 
-
-
 Cookie-based session
-
-
 
 Server Components:
 
+getSupabaseRlsServerClient()
 
-
-getSupabaseRlsServerClient() (RLS-bound, cookie-based)
-
-
+RLS-bound and cookie-based
 
 API routes:
 
-
-
 requireApiAuth(req)
 
-
-
-Authorization: Bearer <access\_token>
-
-
+Authorization header uses Bearer access_token
 
 Supabase client bound to JWT for RLS enforcement
 
-
-
 Webhooks (Twilio):
-
-
 
 getSupabaseServiceClient()
 
+Uses SUPABASE_SERVICE_ROLE_KEY
 
-
-Uses SUPABASE\_SERVICE\_ROLE\_KEY
-
-
-
-Only server-to-server operations
-
-
+Used only for server-to-server operations
 
 Middleware:
 
+Guards only /dashboard/*
 
-
-Guards ONLY /dashboard/\*
-
-
-
-APIs use Bearer auth, not cookies
-
-
+APIs use Bearer authentication, not cookies
 
 CURRENT STATUS
 
+Dashboard loads successfully
 
+Property names hydrate correctly
 
-✅ Dashboard loads
+Conversation threads load from inbound_messages and outbound_messages
 
-✅ Property names hydrate correctly
+Twilio inbound writes to inbound_messages
 
-✅ Conversation threads load from inbound\_messages + outbound\_messages
+Twilio status updates outbound_messages
 
-✅ Twilio inbound writes to inbound\_messages
+Realtime subscriptions work
 
-✅ Twilio status updates outbound\_messages
-
-✅ Realtime subscriptions work
-
-✅ Role-based property access working
-
-
+Role-based property access working
 
 NEXT PRIORITY
 
-
-
-We want to move forward cleanly without more reactive patching.
-
-
+We want to move forward cleanly without reactive patching.
 
 Primary goal:
 
-
-
-Build a robust, production-grade multi-property role + assignment system and prepare for AI-assisted message drafting.
-
-
+Build a robust, production-grade multi-property role and assignment system and prepare for AI-assisted message drafting.
 
 IMPORTANT WORKFLOW PREFERENCE
 
-
-
 When responding:
 
-
-
-Always give FULL file replacements (not partial snippets).
-
-
+Always give full file replacements, not partial snippets.
 
 When appropriate, provide Cursor-ready prompts.
 
-
-
-Always provide a PowerShell-compatible:
+Always provide a PowerShell compatible command:
 
 git add .; git commit -m "message"; git push
 
-
-
 Keep answers decisive.
 
-
-
-Avoid incremental “small fix” spirals.
-
-
+Avoid incremental small-fix spirals.
 
 Assume production-grade SaaS architecture.
 
-
-
 Minimize unnecessary explanation unless requested.
-
-
 
 IMMEDIATE TASK
 
-
-
 Before implementing anything new:
 
-
-
-Propose the next 3 milestones in order of architectural importance.
-
-
+Propose the next three milestones in order of architectural importance.
 
 Do not rewrite working auth again.
 
+Do not reintroduce service-role access into user-facing queries.
 
-
-Do not reintroduce service-role into user-facing queries.
-
-
-
-Keep RLS as source of truth for isolation.
-
-
+Keep RLS as the source of truth for isolation.
 
 Then we proceed.
 
+VISION AND POSITIONING
 
+GuestOpsHQ is an operations and concierge platform for short-term rentals, starting with Costa Rica.
 
+It manages guest communication and stay operations from the moment a reservation is created through checkout.
 
+Two-sided product model initially:
 
-Vision \& Positioning
+Concierge or Operator side
 
+The operational dashboard where concierges manage bookings, guest context, property information, vendors, and experiences.
 
+Guest side
 
-What it is: GuestOpsHQ is an operations + concierge platform for short-term rentals (STRs) (Costa Rica-first), built to handle guest communication and stay operations from the moment a reservation is created through checkout.
+Guests do not log in.
 
+Guests communicate via WhatsApp or SMS.
 
+Core promise:
 
-Two-sided product (initially):
+Reduce repetitive guest questions and operational workload by combining:
 
+Centralized property and stay data
 
-
-Concierge/Operator side: The operational dashboard where concierges manage bookings, guest context, property info, vendors, and experiences.
-
-
-
-Guest side: No login. Guests communicate via WhatsApp or SMS (depending on preference).
-
-
-
-Core promise: Reduce repetitive guest questions and operational load by combining:
-
-
-
-Centralized property \& stay data
-
-
-
-Vendor coordination workflows (taxi/chef/tours)
-
-
+Vendor coordination workflows (taxi, chef, tours)
 
 Proactive reminders
 
-
-
 AI-assisted responses that learn from previous answers
 
+Human concierge available for escalation
 
+Market positioning:
 
-Human concierge always available for escalation
+Initial focus is STR operators in Costa Rica.
 
+The system will start with your own properties, then expand to other owners and markets.
 
+CORE MESSAGING ENGINE
 
-Market positioning: Built for STR operators in Costa Rica (Airbnb tourism heavy) as initial wedge; expands to other towns and eventually broader STR markets. Designed to start with your properties, then sell to other owners/operators.
+Channels
 
+Primary channel is WhatsApp.
 
+Secondary fallback is SMS.
 
-Core Messaging Engine
+Messaging provider is Twilio.
 
+Twilio account has been started with a New Jersey SMS number.
 
+WhatsApp sandbox will be used for MVP testing.
 
-Channels:
+Inbound webhook
 
+Hosted on Vercel using Next.js App Router.
 
+Endpoint: /api/twilio/inbound
 
-Primary: WhatsApp (guest-preferred in Costa Rica travel context)
+Inbound pipeline behavior for MVP:
 
+Twilio sends inbound message to webhook.
 
+Webhook validates Twilio signature.
 
-Secondary/Fallback: SMS
+Message is stored in the database.
 
+Phone numbers are normalized.
 
+Guest is identified by phone.
 
-Messaging provider: Twilio (fresh account started; NJ local SMS number purchased; WhatsApp sandbox planned for MVP testing).
+If no booking exists, a placeholder booking is created.
 
+A conversation thread is created per booking and channel.
 
+Message record is stored.
 
-Inbound webhook: Hosted on Vercel + Next.js, endpoint:
+Twilio signature validation uses x-twilio-signature.
 
+Stored message data includes:
 
+direction (inbound or outbound)
 
-/api/twilio/inbound (Next.js App Router API route)
+channel (whatsapp or sms)
 
-
-
-Inbound pipeline behavior (MVP):
-
-
-
-Twilio sends inbound message → webhook validates Twilio signature → stores message in DB.
-
-
-
-Normalizes phone formats (whatsapp:+...).
-
-
-
-Creates/uses:
-
-
-
-guest (by phone)
-
-
-
-booking (placeholder booking if no matching booking exists yet)
-
-
-
-conversation thread per booking + channel
-
-
-
-message record
-
-
-
-Twilio signature validation: Implemented in webhook using Twilio’s request validation (x-twilio-signature).
-
-
-
-Message storage includes:
-
-
-
-direction (inbound/outbound)
-
-
-
-channel (whatsapp/sms)
-
-
-
-from/to phone
-
-
+from and to phone numbers
 
 body
 
+provider and provider_message_id (Twilio MessageSid)
 
+status fields
 
-provider + provider\_message\_id (Twilio MessageSid)
+AI metadata fields
 
+MULTI-PROPERTY ARCHITECTURE
 
+Properties are first-class entities.
 
-status fields (received/sent/etc.)
-
-
-
-AI metadata (drafted\_by\_ai, approved\_by\_profile\_id)
-
-
-
-Multi-Property Architecture
-
-
-
-Properties are first-class.
-
-
-
-Designed for:
-
-
+System supports:
 
 One concierge managing multiple properties
 
+Multiple concierges assigned to a property
 
+Each property stores:
 
-Multiple concierges per property
+Structured information (wifi, check-in instructions)
 
+Unstructured knowledge notes used by AI
 
-
-Property holds both:
-
-
-
-Structured info (wifi, check-in/out)
-
-
-
-Unstructured “knowledge base” notes for AI
-
-
-
-Sleeping arrangements modeled structurally (rooms + beds) for accurate answers and nice UI display.
-
-
-
-Vibe system per property:
-
-
-
-Standard vibe catalog + per-property assignments (weighted)
-
-
-
-Custom vibes per property for unique “soul”/nuance (weighted + guest-facing toggle)
-
-
-
-User Roles \& Permissions
-
-
-
-Guests: No login, no auth, identified by phone and booking context.
-
-
-
-Staff users: Use Supabase Auth (auth.users) for login.
-
-
-
-Profiles table: App-specific user metadata linked 1:1 to Supabase Auth user id.
-
-
-
-Roles discussed:
-
-
-
-owner
-
-
-
-concierge
-
-
-
-admin
-
-
-
-(optionally ops)
-
-
-
-Property assignment: Many-to-many via property\_users join table.
-
-
-
-RLS enforcement: Users can only access data for properties they’re assigned to (via helper functions).
-
-
-
-Inbox \& Realtime Requirements
-
-
-
-Inbox-style UI is a key MVP screen:
-
-
-
-List of conversations
-
-
-
-Thread view with messages
-
-
-
-Guest + booking + property context visible while replying
-
-
-
-AI drafts suggested, concierge approves/sends (at least initially)
-
-
-
-Realtime: Mentioned desire for “Realtime Inbox Plan”; implied need for near-real-time updates/refresh.
-
-
-
-Proactive reminders: System should schedule messages (e.g., “chef at 5pm”) and support after-hours handling.
-
-
-
-Operational Workflows
-
-Booking lifecycle
-
-
-
-Concierge starts working as soon as booking arrives.
-
-
-
-Booking stores:
-
-
-
-guest name
-
-
-
-arrival/departure dates
-
-
-
-property (Airbnb/VRBO/etc.)
-
-
-
-check-in/out details
-
-
-
-maid schedule + maid name (planned)
-
-
-
-guest party composition: adults/children/infants (moved to booking, not guest)
-
-
-
-Common guest questions (validated from WhatsApp exports)
-
-
-
-Top recurring patterns:
-
-
-
-Wi-Fi password/network
-
-
-
-Check-in / arrival directions \& gate access
-
-
-
-Restaurant recommendations
-
-
-
-Beach recommendations
-
-
-
-Hikes / activities
-
-
-
-Taxi requests
-
-
-
-Tour/excursion questions
-
-
-
-Troubleshooting: toilet clogged, TV not working, power outage
-
-
-
-Re-confirmations: checkout time, pickup times
-
-
-
-“Just checking / reassurance” type messages (tone matters)
-
-
-
-Property knowledge
-
-
-
-Properties must store:
-
-
-
-Wi-Fi SSID/password
-
-
-
-Check-in instructions
-
-
-
-Check-out instructions
-
-
-
-Long-form notes (short or long) used by AI for Q\&A (“where is breaker panel”, etc.)
-
-
-
-Sleeping arrangements stored in structured tables:
-
-
+Sleeping arrangements stored structurally:
 
 rooms
 
-
-
 beds
 
+Property vibe system:
 
+Standard vibe catalog
 
-Experiences (formerly “tours”)
+Per-property vibe assignments with weights
 
+Custom property-specific vibes
 
+USER ROLES AND PERMISSIONS
 
-Experiences cover:
+Guests do not log in.
 
+Guests are identified by phone and booking.
 
+Staff users log in via Supabase Auth.
 
-airport rides
+profiles table stores application user metadata.
 
+Roles include:
 
+owner
+
+concierge
+
+admin
+
+optional operations role
+
+Property assignment uses property_users join table.
+
+RLS ensures users can access only assigned properties.
+
+INBOX AND REALTIME REQUIREMENTS
+
+Inbox UI includes:
+
+Conversation list
+
+Thread view
+
+Guest, booking, and property context visible during reply
+
+AI draft suggestions
+
+Concierge approval and send
+
+Realtime updates required for new messages.
+
+Proactive reminders supported.
+
+After-hours AI responses supported.
+
+OPERATIONAL WORKFLOWS
+
+Booking lifecycle
+
+Concierge begins work when booking arrives.
+
+Booking stores:
+
+guest name
+
+arrival and departure dates
+
+property
+
+channel source
+
+check-in details
+
+check-out details
+
+maid schedule
+
+guest party composition
+
+Common guest questions include:
+
+Wi-Fi details
+
+Check-in instructions
+
+Restaurant recommendations
+
+Beach recommendations
+
+Tours and activities
+
+Taxi requests
+
+Troubleshooting issues
+
+Checkout timing
+
+Pickup confirmations
+
+Property knowledge includes:
+
+Wi-Fi details
+
+Check-in instructions
+
+Check-out instructions
+
+Long-form operational notes
+
+Sleeping arrangements stored in:
+
+property_rooms
+
+property_beds
+
+EXPERIENCES
+
+Experiences include:
+
+airport transportation
 
 car rentals
 
-
-
 taxis
-
-
 
 private chefs
 
+tours
 
+restaurant reservations
 
-excursions/tours
+Each experience stores:
 
-
-
-reservations (restaurants eventually)
-
-
-
-Experience needs:
-
-
-
-date/time
-
-
+date and time
 
 guest-facing instructions
 
+internal notes
 
+internal cost
 
-internal notes for AI \& ops
+guest price
 
+vendor information
 
+confirmation status
 
-internal cost and guest price
+VENDOR COORDINATION
 
+Example: Chef booking
 
+Concierge messages vendor.
 
-vendor/contact relationship
+Vendor requires guest details.
 
-
-
-confirmation reference/status
-
-
-
-Vendor coordination workflows
-
-
-
-Chef booking example:
-
-
-
-Orlando messages vendor “Marlon” via WhatsApp
-
-
-
-Vendor requires guest email, name, number of guests, etc.
-
-
-
-System should know required fields and collect them before booking.
-
-
+System collects required fields before booking.
 
 Taxi automation concept:
 
+Round-robin vendor messaging.
 
+Vendor attempts tracked.
 
-Orlando texts preferred taxi drivers in order until someone accepts.
+Restaurant reservations may use WhatsApp or phone.
 
+AFTER HOURS BEHAVIOR
 
+AI answers common questions.
 
-System should automate round-robin:
+Urgent keywords trigger concierge escalation.
 
+AUTOMATION AND AI
 
+AI answers repetitive questions.
 
-message vendor 1 → wait → if no/decline → vendor 2 → etc.
+Concierge can approve drafts.
 
+AI escalates urgent issues.
 
+AI uses property notes and context.
 
-Track attempts and outcomes.
+Proactive reminders include:
 
+chef arrival reminders
 
+tour pickup reminders
 
-Restaurant reservations workflow
+checkout reminders
 
+Experience knowledge contains:
 
+guest instructions
 
-Unknown whether Orlando calls or WhatsApps restaurants; system should support both methods.
+internal notes
 
+private internal notes
 
+optional structured facts
 
-After-hours behavior
+REPORTING AND METRICS
 
+Potential metrics include:
 
+message volume
 
-AI can answer common questions after hours.
+guest question frequency
 
+automation rates
 
+vendor responsiveness
 
-If urgent keywords or issues arise, system should escalate / wake concierge.
+concierge workload
 
+response times
 
+LONG TERM SAAS EXPANSION
 
-Automation \& AI Possibilities
+Start with your properties.
 
+Expand to other property owners.
 
+Expand geographically.
 
-AI role: Answer most repetitive questions, learn from prior answers, keep concierge in loop.
+Develop vendor partnerships.
 
+Integrate booking platforms.
 
+BUSINESS MODEL IDEAS
 
-Personality: Each concierge can define their own personality/tone.
+Subscription per property.
 
+Add-ons for AI usage.
 
+Vendor referral commissions.
 
-Context awareness:
+ARCHITECTURAL DECISIONS
 
+Backend database and auth: Supabase
 
+Frontend and webhooks: Next.js on Vercel
 
-AI can infer if guest has a car from prior conversations / booking state.
+Messaging: Twilio
 
+AI integration planned.
 
+Data modeling rules:
 
-AI uses property notes, vibe, and experience instructions to answer accurately.
+Guests are persistent identities.
 
+Party composition belongs to booking.
 
+Bookings include source reservation ID.
 
-Response types:
+Experiences are generalized service items.
 
+Guest-facing and internal notes are separated.
 
+SCHEMA VERSION 1
 
-Auto-answer safe FAQs (wifi, check-in/out, directions, basic recommendations)
-
-
-
-AI draft → concierge approve for sensitive/edge cases
-
-
-
-Always escalate for safety/urgent issues (power outage prolonged, access issues, explicit “call me”, etc.)
-
-
-
-Proactive reminders (automation):
-
-
-
-Chef coming at 5pm
-
-
-
-Catamaran pickup at 7am; bring bug spray; includes fruit/juice
-
-
-
-Checkout reminders, airport ride reminders
-
-
-
-Experience knowledge lanes (critical):
-
-
-
-Guest-facing instructions
-
-
-
-Internal notes (guest-safe facts AI can share)
-
-
-
-Internal private notes (costs/commission/vendor quirks; must not be exposed)
-
-
-
-Optional structured “facts” for experiences: JSON-style facts like “no water bottles allowed”, “4WD required”, etc. (discussed as possible v1.5 improvement).
-
-
-
-Reporting \& Metrics (implied/desired)
-
-
-
-Not fully designed yet, but directionally:
-
-
-
-Message volume by property/stay
-
-
-
-Top guest intents/questions frequency
-
-
-
-Automation rate:
-
-
-
-% auto-answered
-
-
-
-% AI-drafted then approved
-
-
-
-% escalated
-
-
-
-Vendor responsiveness:
-
-
-
-taxi drivers response time / accept rate
-
-
-
-Concierge workload:
-
-
-
-messages per stay
-
-
-
-after-hours escalations
-
-
-
-Quality signals:
-
-
-
-time-to-first-response
-
-
-
-time-to-resolution for incidents (TV/toilet/power)
-
-
-
-Long-Term SaaS Expansion
-
-
-
-Start with your properties → sell to other owners you know → expand to other towns → hire concierge sales + operations staffing.
-
-
-
-Future direction includes:
-
-
-
-vendor partnerships willing to work with platform (car rental, etc.)
-
-
-
-deeper reservation integrations (Airbnb/VRBO/Booking.com) and/or PMS integrations
-
-
-
-scaling concierge teams and cross-property operations
-
-
-
-vendor booking via APIs where available
-
-
-
-restaurant reservation workflows integrated (WhatsApp/call/online)
-
-
-
-Possible product packaging:
-
-
-
-Multi-tenant SaaS with property owners as customers
-
-
-
-Concierge teams as users within each customer
-
-
-
-Business Model Ideas Discussed
-
-
-
-Start with your properties to prove value.
-
-
-
-Sell to other property owners/operators (subscription SaaS).
-
-
-
-Potential vendor partnership/commission layer later (car rentals, tours, etc.).
-
-
-
-Not deeply priced yet, but implied revenue drivers:
-
-
-
-SaaS subscription per property or per unit
-
-
-
-Add-ons for messaging volume, AI usage, automation modules
-
-
-
-Vendor referral/commission in future
-
-
-
-Architectural Decisions Already Made
-
-Stack \& hosting
-
-
-
-Backend database + auth: Supabase
-
-
-
-Frontend + webhooks host: Next.js (App Router) deployed to Vercel
-
-
-
-Messaging provider: Twilio (SMS + WhatsApp)
-
-
-
-AI: OpenAI/ChatGPT integration planned (drafting + Q\&A + automation)
-
-
-
-Data modeling principles
-
-
-
-Guests are persistent identities (phone-based), but party composition belongs to booking.
-
-
-
-Bookings include STR channel + external reservation ID to avoid duplicates.
-
-
-
-Experiences are generalized “line items” across many categories (transport, chef, tours, etc.).
-
-
-
-Separate guest-facing vs internal-only notes to prevent leakage.
-
-
-
-Property knowledge includes structured fields + long-form notes + sleeping arrangement tables.
-
-
-
-Many-to-many relationships for staff↔property via join table.
-
-
-
-Schema created (v1)
-
-
-
-Core tables:
-
-
+Core tables include:
 
 properties
 
+property_rooms
 
-
-property\_rooms
-
-
-
-property\_beds
-
-
+property_beds
 
 guests
 
-
-
-bookings (includes source and source\_reservation\_id with unique constraint per property)
-
-
+bookings
 
 conversations
 
-
-
 messages
-
-
 
 vendors
 
+vendor_requirements
 
-
-vendor\_requirements
-
-
-
-experience\_types
-
-
+experience_types
 
 experiences
 
+experience_media
 
-
-experience\_media (photos stored via Supabase Storage paths)
-
-
-
-vendor\_requests (to track round-robin outreach attempts)
-
-
+vendor_requests
 
 reminders
 
+vibe_catalog
 
+property_vibes
 
-vibe\_catalog
+property_custom_vibes
 
+profiles
 
+property_users
 
-property\_vibes
+RLS AND ACCESS CONTROL
 
+RLS enabled on key tables.
 
+Helper SQL functions include:
 
-property\_custom\_vibes
+is_assigned_to_property(property_id)
 
+is_active_profile()
 
+Policies enforce property-based access.
 
-profiles (linked to auth.users)
+Inbound webhook implemented.
 
+Next.js Twilio webhook route created.
 
+Placeholder bookings supported for MVP.
 
-property\_users
+SECURITY AND COMPLIANCE
 
+RLS ensures tenant isolation.
 
+Supabase service keys stay server-side.
 
-RLS \& access control
+Twilio signature validation prevents spoofing.
 
+Internal notes separated from guest-facing data.
 
+A2P 10DLC compliance planned later.
 
-Row Level Security enabled on key tables.
+WhatsApp business approval planned later.
 
+CURRENT MILESTONE STATUS
 
+Step 1: MVP scope agreed.
 
-Helper SQL functions:
+Step 2: Database schema created.
 
+Step 3: Supabase Auth and RLS implemented.
 
+Step 4A: Twilio account created and SMS number purchased.
 
-is\_assigned\_to\_property(property\_id)
+Step 4B: Next.js project created and webhook route implemented.
 
+NEXT TASKS
 
+Deploy to Vercel.
 
-is\_active\_profile()
+Configure Twilio inbound webhooks.
 
+Verify messages land in Supabase.
 
+Create outbound messaging endpoint.
 
-Policies enforce property-scoped access via property\_users.
+Build Inbox UI.
 
+Add AI draft functionality.
 
+PRODUCT RULES
 
-Inbound webhook created
+Guests do not log in.
 
+Identity is phone plus booking.
 
+AI handles repetitive questions.
 
-Next.js API route implemented for Twilio inbound.
+Concierge handles escalation.
 
+Proactive reminders reduce inbound messages.
 
+Vendor bookings should become structured workflows.
 
-Signature validation enabled.
+Property vibe system improves recommendation tone.
 
+Most Recent Notes as of 3/4/26
 
+### Guest Profile / Guest Linking
 
-Placeholder booking creation used for MVP until booking imports are added.
+conversations.guest_id exists (nullable uuid FK -> guests.id)
 
+Guest tables in play: guests, guest_properties, guest_notes
 
+Linking is enforced by DB trigger ensure_conversation_guest_link calling public.ensure_conversation_guest_link()
 
-Security / Compliance Considerations Mentioned
+Important gotcha: trigger must be BEFORE INSERT OR UPDATE (AFTER triggers can’t set NEW.guest_id)
 
+Backfill command used:
 
+update public.conversations set updated_at = now() where guest_id is null;
 
-RLS enabled early to ensure future SaaS safety and proper data isolation.
+Confirm query:
 
+select count(*) total, count(guest_id) linked from public.conversations;
 
+### Quick Replies
 
-Service secret key (Supabase “secret key”) must remain server-side only (never shipped to frontend).
+quick_replies table exists + seeded rows
 
+UI button “Quick Replies” in conversation composer
 
+Note any columns that actually exist (ex: no sort_order)
 
-Twilio signature validation to prevent spoofed inbound webhooks.
+### Assign / Claim (RLS + permissions)
 
+If “Claim” fails, it’s usually RLS/GRANT/policy on conversations updates
 
-
-Separation of internal/private notes vs guest-facing content to prevent accidental disclosure (especially costs/commission/vendor details).
-
-
-
-A2P 10DLC warning acknowledged: SMS compliance needed later for US messaging at scale (not blocking MVP).
-
-
-
-WhatsApp business approval noted as later step (sandbox first).
-
-
-
-Emergency address warning in Twilio noted as irrelevant for SMS/WhatsApp use case.
-
-
-
-Where implementation currently stands (milestone status)
-
-
-
-✅ Step 1: MVP scope agreed
-
-
-
-✅ Step 2: Database schema created in Supabase
-
-
-
-✅ Step 3: Supabase Auth + profiles + property assignments + RLS policies implemented
-
-
-
-✅ Step 4A: Twilio account started fresh; NJ SMS number purchased; WhatsApp sandbox planned
-
-
-
-✅ Step 4B: Next.js project created locally; env configured; webhook route added; dev server restarted clean
-
-
-
-⏭ Next immediate tasks:
-
-
-
-Deploy to Vercel
-
-
-
-Configure Twilio inbound webhook URLs (SMS number + WhatsApp sandbox)
-
-
-
-Verify inbound message lands in Supabase
-
-
-
-Add outbound messaging endpoint (send replies)
-
-
-
-Begin Inbox UI screen + AI drafting (later steps)
-
-
-
-Notes on key product behaviors (important “rules”)
-
-
-
-Guests do not login; identity is by phone + booking.
-
-
-
-AI should handle repetitive questions and reassurance, but:
-
-
-
-escalate urgent/safety/access issues
-
-
-
-allow concierge jump-in any time
-
-
-
-Proactive reminders reduce inbound volume and improve guest experience.
-
-
-
-Vendor booking should become structured:
-
-
-
-required info collection
-
-
-
-booking attempts tracking
-
-
-
-confirmation capture
-
-
-
-Property vibe and custom vibes improve recommendation tone and accuracy
-
-
-
-
-
+Final fix was granting/policy update (whatever you ran) + now claim persists

@@ -54,6 +54,8 @@ export default async function HandoffPage() {
   const newChatPrompt = readFileSafe("docs/NEW_CHAT_PROMPT.txt");
   const handoffPack = readFileSafe("HANDOFF_PACK.txt");
 
+  const roadMap = readFileSafe("docs/ROADMAP.md");
+
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
       <h1 style={{ fontSize: 28, marginBottom: 8 }}>
@@ -79,6 +81,7 @@ export default async function HandoffPage() {
       <Section title="Auto Handoff Pack (Optional)" text={handoffPack} />
 
       <Section title="Live DB Schema Snapshot (Realtime)" text={schemaText} />
+      <Section title="Roadmap (Generated)" text={roadMap} />
     </div>
   );
 }
