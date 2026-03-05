@@ -20,8 +20,15 @@ type OutboundRow = {
 
 type InternalNoteRow = {
   id: string;
-  conversation_id: string;
-  property_id: string;
+  conversation_id?: string;
+  property_id?: string;
+  body: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+type GuestNoteRow = {
+  id: string;
   body: string;
   created_by: string | null;
   created_at: string;
@@ -30,9 +37,11 @@ type InternalNoteRow = {
 type Props = {
   conversationId: string;
   propertyId: string;
+  guestId?: string;
   initialInbound: InboundRow[];
   initialOutbound: OutboundRow[];
   initialInternalNotes?: InternalNoteRow[];
+  initialGuestNotes?: GuestNoteRow[];
 };
 
 function normalizeBody(body: string) {
@@ -147,28 +156,33 @@ function InternalNoteComposer({
 export default function LiveThread({
   conversationId,
   propertyId,
+  guestId,
   initialInbound,
   initialOutbound,
   initialInternalNotes = [],
+  initialGuestNotes = [],
 }: Props) {
   const [inbound, setInbound] = useState<InboundRow[]>(initialInbound);
   const [outbound, setOutbound] = useState<OutboundRow[]>(initialOutbound);
   const [internalNotes, setInternalNotes] = useState<InternalNoteRow[]>(initialInternalNotes);
+  const [guestNotes, setGuestNotes] = useState<GuestNoteRow[]>(
+    initialGuestNotes.map((n) => ({ id: n.id, body: n.body, created_by: n.created_by, created_at: n.created_at }))
+  );
   const [realtimeReady, setRealtimeReady] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(
-    initialInbound.length + initialOutbound.length + initialInternalNotes.length
+    initialInbound.length + initialOutbound.length + initialInternalNotes.length + initialGuestNotes.length
   );
   const markReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-scroll to bottom when a new message or note is appended
   useEffect(() => {
-    const total = inbound.length + outbound.length + internalNotes.length;
+    const total = inbound.length + outbound.length + internalNotes.length + guestNotes.length;
     if (total > prevMessageCountRef.current) {
       prevMessageCountRef.current = total;
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [inbound.length, outbound.length, internalNotes.length]);
+  }, [inbound.length, outbound.length, internalNotes.length, guestNotes.length]);
 
   // Supabase Realtime: inbound_messages (filter conversation_id) → append to list; cleanup on unmount
   useEffect(() => {
@@ -324,8 +338,37 @@ export default function LiveThread({
             );
           });
         }
-      )
-      .subscribe((status) => {
+      );
+
+    if (guestId) {
+      channel.on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "guest_notes",
+          filter: `guest_id=eq.${guestId}`,
+        },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          if (!row?.id) return;
+          setGuestNotes((prev) => {
+            if (prev.some((n) => n.id === row.id)) return prev;
+            return [...prev, {
+              id: row.id as string,
+              body: (row.body ?? "") as string,
+              created_by: (row.created_by as string | null) ?? null,
+              created_at: (row.created_at as string) ?? new Date().toISOString(),
+            }].sort(
+              (a, b) =>
+                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+          });
+        }
+      );
+    }
+
+    channel.subscribe((status) => {
         if (status === "CHANNEL_ERROR") {
           console.error("Supabase realtime channel error:", conversationId);
         }
@@ -336,7 +379,7 @@ export default function LiveThread({
       channel.unsubscribe();
       sb.removeChannel(channel);
     };
-  }, [conversationId, propertyId]);
+  }, [conversationId, propertyId, guestId]);
 
   // Apply legacy filtering
   const legacyCount = useMemo(
@@ -402,18 +445,25 @@ export default function LiveThread({
       body: m.body,
     }));
 
-    const noteItems = internalNotes.map((n) => ({
+    const internalNoteItems = internalNotes.map((n) => ({
       kind: "internal" as const,
       id: n.id,
       created_at: n.created_at,
       body: n.body,
       created_by: n.created_by,
     }));
+    const guestNoteItems = guestNotes.map((n) => ({
+      kind: "internal" as const,
+      id: `guest-${n.id}`,
+      created_at: n.created_at,
+      body: n.body,
+      created_by: n.created_by,
+    }));
 
-    return [...inItems, ...outLatest, ...noteItems].sort(
+    return [...inItems, ...outLatest, ...internalNoteItems, ...guestNoteItems].sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
-  }, [inbound, collapsedOutbound, internalNotes]);
+  }, [inbound, collapsedOutbound, internalNotes, guestNotes]);
 
   return (
     <>

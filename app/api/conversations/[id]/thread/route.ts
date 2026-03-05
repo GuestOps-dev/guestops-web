@@ -42,7 +42,7 @@ export async function GET(
   const { data: conversation, error: convoErr } = await supabase
     .from("conversations")
     .select(
-      "id, property_id, guest_number, service_number, channel, provider, status, priority, assigned_to_user_id, updated_at, last_message_at, last_inbound_at, last_outbound_at, last_read_at"
+      "id, property_id, guest_number, guest_id, service_number, channel, provider, status, priority, assigned_to_user_id, updated_at, last_message_at, last_inbound_at, last_outbound_at, last_read_at"
     )
     .eq("id", id)
     .maybeSingle();

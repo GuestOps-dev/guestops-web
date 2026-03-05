@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import MarkRead from "./MarkRead";
 import LiveThread from "./LiveThread";
 import SendMessageBox from "./SendMessageBox";
-import InternalNotesSection from "./InternalNotesSection";
+import GuestProfilePanel from "./GuestProfilePanel";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 // Realtime (inbound_messages, outbound_messages filtered by conversation_id) is subscribed in LiveThread.
@@ -34,10 +34,10 @@ export default async function ConversationPage({
 
   if (!user) redirect("/login");
 
-  // RLS enforced conversation lookup (include guest_number, status for header)
+  // RLS enforced conversation lookup (include guest_number, status, guest_id for panel)
   const { data: convo, error: convoErr } = await (sb as any)
     .from("conversations")
-    .select("id, property_id, guest_number, status")
+    .select("id, property_id, guest_number, status, guest_id")
     .eq("id", conversationId)
     .maybeSingle();
 
@@ -50,6 +50,7 @@ export default async function ConversationPage({
   const propertyId = (convo as any).property_id as string;
   const guestNumber = (convo as any).guest_number as string | null;
   const status = (convo as any).status as string | null;
+  const guestId = (convo as any).guest_id as string | null;
 
   const { data: propertyRow } = await (sb as any)
     .from("properties")
@@ -125,24 +126,83 @@ export default async function ConversationPage({
     created_at: n.created_at,
   }));
 
+  let guest: {
+    id: string;
+    full_name: string | null;
+    phone: string | null;
+    email: string | null;
+    preferred_channel: string | null;
+    language_pref: string | null;
+    notes: string | null;
+    created_at: string;
+    property_id: string;
+    phone_e164: string | null;
+  } | null = null;
+  let initialGuestNotes: Array<{
+    id: string;
+    property_id: string;
+    guest_id: string;
+    body: string;
+    created_by: string | null;
+    created_at: string;
+  }> = [];
+
+  if (guestId) {
+    const { data: guestRow } = await (sb as any)
+      .from("guests")
+      .select("id, full_name, phone, email, preferred_channel, language_pref, notes, created_at, property_id, phone_e164")
+      .eq("id", guestId)
+      .eq("property_id", propertyId)
+      .maybeSingle();
+    if (guestRow) {
+      guest = {
+        id: guestRow.id,
+        full_name: guestRow.full_name ?? null,
+        phone: guestRow.phone ?? null,
+        email: guestRow.email ?? null,
+        preferred_channel: guestRow.preferred_channel ?? null,
+        language_pref: guestRow.language_pref ?? null,
+        notes: guestRow.notes ?? null,
+        created_at: guestRow.created_at,
+        property_id: guestRow.property_id,
+        phone_e164: guestRow.phone_e164 ?? null,
+      };
+      const { data: gn } = await (sb as any)
+        .from("guest_notes")
+        .select("id, property_id, guest_id, body, created_by, created_at")
+        .eq("guest_id", guestId)
+        .eq("property_id", propertyId)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      initialGuestNotes = ((gn as any) ?? []).map((n: any) => ({
+        id: n.id,
+        property_id: n.property_id,
+        guest_id: n.guest_id,
+        body: (n.body ?? "").toString(),
+        created_by: n.created_by ?? null,
+        created_at: n.created_at,
+      }));
+    }
+  }
+
   return (
-    <main style={{ padding: 16, maxWidth: 900, margin: "0 auto" }}>
+    <main style={{ padding: 16, maxWidth: 1200, margin: "0 auto", display: "flex" }}>
       <MarkRead conversationId={conversationId} propertyId={propertyId} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Link href="/dashboard">← Back</Link>
 
-      <Link href="/dashboard">← Back</Link>
-
-      <div
-        style={{
-          marginTop: 16,
-          marginBottom: 16,
-          paddingBottom: 12,
-          borderBottom: "1px solid #eee",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
+        <div
+          style={{
+            marginTop: 16,
+            marginBottom: 16,
+            paddingBottom: 12,
+            borderBottom: "1px solid #eee",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
         <span style={{ fontSize: 18, fontWeight: 600 }}>
           {propertyName}
           {guestNumber ? ` · ${guestNumber}` : ""}
@@ -192,21 +252,32 @@ export default async function ConversationPage({
             Manage Quick Replies
           </Link>
         )}
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <LiveThread
+            conversationId={conversationId}
+            propertyId={propertyId}
+            guestId={guestId ?? undefined}
+            initialInbound={initialInbound}
+            initialOutbound={initialOutbound}
+            initialInternalNotes={initialInternalNotes}
+            initialGuestNotes={initialGuestNotes}
+          />
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <SendMessageBox conversationId={conversationId} propertyId={propertyId} />
+        </div>
       </div>
 
-      <div style={{ marginTop: 12 }}>
-        <LiveThread
-          conversationId={conversationId}
+      {guest && (
+        <GuestProfilePanel
+          guest={guest}
           propertyId={propertyId}
-          initialInbound={initialInbound}
-          initialOutbound={initialOutbound}
-          initialInternalNotes={initialInternalNotes}
+          initialNotes={initialGuestNotes}
         />
-      </div>
-
-      <div style={{ marginTop: 12 }}>
-        <SendMessageBox conversationId={conversationId} propertyId={propertyId} />
-      </div>
+      )}
     </main>
   );
 }

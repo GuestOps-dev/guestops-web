@@ -50,16 +50,75 @@ export async function POST(req: NextRequest) {
     const propertyId = phoneRow?.property_id;
     if (!propertyId) return ok();
 
-    // Find/create guest
-    const { data: guest, error: guestErr } = await sb
+    // Find or create guest by (property_id, phone_e164) then fallback (property_id, phone)
+    let guest: { id: string } | null = null;
+    const { data: byE164 } = await sb
       .from("guests")
-      .upsert({ phone_e164: from }, { onConflict: "phone_e164" })
       .select("id")
-      .single();
+      .eq("property_id", propertyId)
+      .eq("phone_e164", from)
+      .maybeSingle();
+    if (byE164) guest = byE164;
+    if (!guest) {
+      const { data: byPhone } = await sb
+        .from("guests")
+        .select("id")
+        .eq("property_id", propertyId)
+        .eq("phone", from)
+        .maybeSingle();
+      if (byPhone) guest = byPhone;
+    }
+    if (!guest) {
+      const { data: inserted, error: insertErr } = await sb
+        .from("guests")
+        .insert({
+          property_id: propertyId,
+          phone_e164: from,
+          phone: from,
+          preferred_channel: "sms",
+        })
+        .select("id")
+        .single();
+      if (insertErr) {
+        console.error("guest insert error:", insertErr);
+        return ok();
+      }
+      guest = inserted;
+    } else {
+      // Update existing guest: set phone_e164/phone if missing, preferred_channel
+      await sb
+        .from("guests")
+        .update({
+          phone_e164: from,
+          phone: from,
+          preferred_channel: "sms",
+        })
+        .eq("id", guest.id);
+    }
 
-    if (guestErr) {
-      console.error("guest upsert error:", guestErr);
-      return ok();
+    if (!guest) return ok();
+
+    // Ensure guest_properties has (guest_id, property_id) and update last_seen_at
+    const nowGp = new Date().toISOString();
+    const { data: gpRow } = await sb
+      .from("guest_properties")
+      .select("guest_id")
+      .eq("guest_id", guest.id)
+      .eq("property_id", propertyId)
+      .maybeSingle();
+    if (gpRow) {
+      await sb
+        .from("guest_properties")
+        .update({ last_seen_at: nowGp })
+        .eq("guest_id", guest.id)
+        .eq("property_id", propertyId);
+    } else {
+      await sb.from("guest_properties").insert({
+        guest_id: guest.id,
+        property_id: propertyId,
+        first_seen_at: nowGp,
+        last_seen_at: nowGp,
+      });
     }
 
     // Placeholder booking
@@ -126,7 +185,7 @@ export async function POST(req: NextRequest) {
       return ok();
     }
 
-    // Update conversation state + timestamps
+    // Update conversation state + timestamps + link guest
     const { error: convoUpdateErr } = await sb
       .from("conversations")
       .update({
@@ -136,6 +195,7 @@ export async function POST(req: NextRequest) {
         last_inbound_at: now,
         from_e164: from,
         to_e164: to,
+        guest_id: guest.id,
       })
       .eq("id", convo.id);
 
