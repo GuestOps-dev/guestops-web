@@ -47,7 +47,7 @@ export async function GET(req: Request) {
   let q = supabase
     .from("conversations")
     .select(
-      "id, property_id, guest_number, guest_id, service_number, channel, provider, status, priority, assigned_to_user_id, updated_at, last_message_at, last_inbound_at, last_outbound_at, last_read_at, guests(full_name, phone_e164, phone)"
+      "id, property_id, guest_number, guest_id, service_number, channel, provider, status, priority, assigned_to_user_id, updated_at, last_message_at, last_inbound_at, last_outbound_at, last_read_at, guests(full_name, phone_e164, phone, tags)"
     )
     .order("updated_at", { ascending: false })
     .limit(200);

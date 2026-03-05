@@ -10,6 +10,7 @@ type GuestInfo = {
   full_name?: string | null;
   phone_e164?: string | null;
   phone?: string | null;
+  tags?: string[] | null;
 } | null;
 
 type ConversationRow = {
@@ -40,6 +41,7 @@ function getGuestDisplayName(c: ConversationRow): string {
 }
 
 type StatusTab = "awaiting_team" | "waiting_guest" | "closed";
+type AssignmentFilter = "all" | "assigned_to_me" | "unassigned";
 
 /** Unread: last_inbound_at is not null AND (last_read_at is null OR last_inbound_at > last_read_at) */
 function isUnread(c: ConversationRow) {
@@ -81,6 +83,8 @@ export default function InboxClient() {
   const [rawCount, setRawCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<StatusTab>("awaiting_team");
+  const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
+  const [tagFilter, setTagFilter] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -90,10 +94,34 @@ export default function InboxClient() {
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
 
-  const displayRows = useMemo(
-    () => allRows.filter((r) => r.status === status),
-    [allRows, status]
-  );
+  const displayRows = useMemo(() => {
+    let rows = allRows.filter((r) => r.status === status);
+    if (assignmentFilter === "assigned_to_me" && currentUserId) {
+      rows = rows.filter((r) => r.assigned_to_user_id === currentUserId);
+    } else if (assignmentFilter === "unassigned") {
+      rows = rows.filter((r) => r.assigned_to_user_id == null);
+    }
+    if (tagFilter) {
+      rows = rows.filter((r) => {
+        const tags = r.guests?.tags;
+        return Array.isArray(tags) && tags.includes(tagFilter);
+      });
+    }
+    return rows;
+  }, [allRows, status, assignmentFilter, currentUserId, tagFilter]);
+
+  const tagOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of allRows) {
+      const tags = r.guests?.tags;
+      if (Array.isArray(tags)) {
+        for (const t of tags) {
+          if (typeof t === "string" && t.trim()) set.add(t.trim().toLowerCase());
+        }
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [allRows]);
   const unreadCount = useMemo(
     () => displayRows.filter(isUnread).length,
     [displayRows]
@@ -118,11 +146,7 @@ export default function InboxClient() {
     waiting_guest: "Waiting on Guest",
     closed: "Closed",
   };
-  const emptyMessage: Record<StatusTab, string> = {
-    awaiting_team: "No conversations in Inbox.",
-    waiting_guest: "No conversations waiting on guest.",
-    closed: "No closed conversations.",
-  };
+  const hasActiveFilters = assignmentFilter !== "all" || tagFilter !== "";
 
   const propertyNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -512,6 +536,75 @@ export default function InboxClient() {
         </div>
       </div>
 
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          marginBottom: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <span style={{ fontSize: 12, color: "#666" }}>Assignment:</span>
+        <div
+          style={{
+            display: "inline-flex",
+            borderRadius: 8,
+            border: "1px solid #e5e5e5",
+            overflow: "hidden",
+            fontSize: 12,
+          }}
+        >
+          {(["all", "assigned_to_me", "unassigned"] as const).map((filter) => {
+            const active = assignmentFilter === filter;
+            const label =
+              filter === "all"
+                ? "All"
+                : filter === "assigned_to_me"
+                  ? "Assigned to me"
+                  : "Unassigned";
+            return (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setAssignmentFilter(filter)}
+                style={{
+                  padding: "6px 12px",
+                  border: "none",
+                  borderRight: filter !== "unassigned" ? "1px solid #e5e5e5" : "none",
+                  background: active ? "#374151" : "transparent",
+                  color: active ? "#fff" : "#444",
+                  cursor: "pointer",
+                  fontWeight: active ? 600 : 500,
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <span style={{ fontSize: 12, color: "#666" }}>Tag:</span>
+        <select
+          value={tagFilter}
+          onChange={(e) => setTagFilter(e.target.value)}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 8,
+            border: "1px solid #e5e5e5",
+            fontSize: 12,
+            minWidth: 120,
+            cursor: "pointer",
+          }}
+        >
+          <option value="">All tags</option>
+          {tagOptions.map((tag) => (
+            <option key={tag} value={tag}>
+              {tag}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {error ? (
         <div
           style={{
@@ -541,7 +634,9 @@ export default function InboxClient() {
             textAlign: "center",
           }}
         >
-          {emptyMessage[status]}
+          {hasActiveFilters
+            ? "No conversations match your filters."
+            : `No conversations in ${tabLabel[status]}.`}
         </div>
       ) : null}
 
