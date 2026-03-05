@@ -44,7 +44,11 @@ export default function GuestProfilePanel({
   const [savingName, setSavingName] = useState(false);
   const [noteBody, setNoteBody] = useState("");
   const [submittingNote, setSubmittingNote] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const [tagsBusy, setTagsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const tags = profile.tags ?? [];
 
   const refreshGuest = useCallback(async () => {
     const sb = getSupabaseBrowserClient();
