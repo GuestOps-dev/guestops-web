@@ -6,35 +6,40 @@ import { useRouter } from "next/navigation";
 import { usePropertyWorkspace } from "./PropertyWorkspaceProvider";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
+type GuestInfo = {
+  full_name?: string | null;
+  phone_e164?: string | null;
+  phone?: string | null;
+} | null;
+
 type ConversationRow = {
   id: string;
   property_id: string;
-
   guest_number: string;
+  guest_id?: string | null;
+  guests?: GuestInfo;
   service_number: string | null;
-
   channel: string;
   provider: string;
-
   status: string | null;
   priority: string | null;
   assigned_to_user_id?: string | null;
-
   updated_at: string;
   last_message_at: string | null;
   last_inbound_at: string | null;
   last_outbound_at: string | null;
   last_read_at: string | null;
-  /** From API: last_inbound_at > last_read_at */
   is_unread?: boolean;
 };
 
-type StatusFilter =
-  | "all"
-  | "awaiting_team"
-  | "waiting_guest"
-  | "active"
-  | "closed";
+function getGuestDisplayName(c: ConversationRow): string {
+  const name = c.guests?.full_name?.trim();
+  if (name) return name;
+  const phone = c.guests?.phone_e164 ?? c.guests?.phone ?? c.guest_number;
+  return phone || "—";
+}
+
+type StatusTab = "awaiting_team" | "waiting_guest" | "closed";
 
 /** Unread: last_inbound_at is not null AND (last_read_at is null OR last_inbound_at > last_read_at) */
 function isUnread(c: ConversationRow) {
@@ -75,7 +80,7 @@ export default function InboxClient() {
   const [allRows, setAllRows] = useState<ConversationRow[]>([]);
   const [rawCount, setRawCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<StatusFilter>("awaiting_team");
+  const [status, setStatus] = useState<StatusTab>("awaiting_team");
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -86,10 +91,7 @@ export default function InboxClient() {
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
 
   const displayRows = useMemo(
-    () =>
-      status === "all"
-        ? allRows
-        : allRows.filter((r) => r.status === status),
+    () => allRows.filter((r) => r.status === status),
     [allRows, status]
   );
   const unreadCount = useMemo(
@@ -110,6 +112,17 @@ export default function InboxClient() {
     () => allRows.filter((r) => r.status === "closed" && isUnread(r)).length,
     [allRows]
   );
+
+  const tabLabel: Record<StatusTab, string> = {
+    awaiting_team: "Inbox",
+    waiting_guest: "Waiting on Guest",
+    closed: "Closed",
+  };
+  const emptyMessage: Record<StatusTab, string> = {
+    awaiting_team: "No conversations in Inbox.",
+    waiting_guest: "No conversations waiting on guest.",
+    closed: "No closed conversations.",
+  };
 
   const propertyNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -424,40 +437,60 @@ export default function InboxClient() {
         </div>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-            <span style={{ color: "#666" }}>Status:</span>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as StatusFilter)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: 8,
-                border: "1px solid #e5e5e5",
-                fontSize: 12,
-                minWidth: 160,
-                cursor: "pointer",
-              }}
-            >
-              <option value="all">All</option>
-              <option value="awaiting_team">Inbox</option>
-              <option value="waiting_guest">Waiting on Guest</option>
-              <option value="active">Active</option>
-              <option value="closed">Closed</option>
-            </select>
-            {status !== "all" && unreadCount > 0 && (
-              <span
-                style={{
-                  fontSize: 11,
-                  padding: "2px 6px",
-                  borderRadius: 999,
-                  background: "#111",
-                  color: "#fff",
-                }}
-              >
-                {unreadCount}
-              </span>
-            )}
-          </label>
+          <div
+            style={{
+              display: "inline-flex",
+              borderRadius: 8,
+              border: "1px solid #e5e5e5",
+              overflow: "hidden",
+              fontSize: 12,
+            }}
+          >
+            {(["awaiting_team", "waiting_guest", "closed"] as const).map((tab) => {
+              const unread =
+                tab === "awaiting_team"
+                  ? unreadInbox
+                  : tab === "waiting_guest"
+                    ? unreadWaitingGuest
+                    : unreadClosed;
+              const active = status === tab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setStatus(tab)}
+                  style={{
+                    padding: "8px 14px",
+                    border: "none",
+                    borderRight: tab !== "closed" ? "1px solid #e5e5e5" : "none",
+                    background: active ? "#111" : "transparent",
+                    color: active ? "#fff" : "#444",
+                    cursor: "pointer",
+                    fontWeight: active ? 600 : 500,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  {tabLabel[tab]}
+                  {unread > 0 && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        minWidth: 18,
+                        padding: "2px 6px",
+                        borderRadius: 999,
+                        background: active ? "rgba(255,255,255,0.25)" : "#111",
+                        color: active ? "#fff" : "#fff",
+                      }}
+                    >
+                      {unread}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
           <select
             value={selectedPropertyId}
@@ -501,16 +534,18 @@ export default function InboxClient() {
           style={{
             border: "1px solid #eee",
             borderRadius: 12,
-            padding: 16,
+            padding: 24,
             background: "#fafafa",
             color: "#555",
-            fontSize: 13,
+            fontSize: 14,
+            textAlign: "center",
           }}
         >
-          No conversations visible for your assigned properties.
+          {emptyMessage[status]}
         </div>
       ) : null}
 
+      {displayRows.length > 0 ? (
       <div style={{ border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
         <div
           style={{
@@ -564,7 +599,7 @@ export default function InboxClient() {
             >
               <div style={{ fontWeight: unread ? 700 : 500 }}>
                 {unread ? "● " : ""}
-                {c.guest_number}
+                {getGuestDisplayName(c)}
               </div>
               <div>
                 <code>{c.service_number ?? "-"}</code>
@@ -648,6 +683,7 @@ export default function InboxClient() {
           );
         })}
       </div>
+      ) : null}
     </>
   );
 }
