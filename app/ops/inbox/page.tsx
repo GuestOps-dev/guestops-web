@@ -82,6 +82,7 @@ export default async function OpsInboxPage({
 
   let list: Array<{
     id: string;
+    property_id: string | null;
     guest_number: string | null;
     channel: string | null;
     status: string | null;
