@@ -153,11 +153,12 @@ export async function POST(req: NextRequest) {
       await admin
         .from("conversations")
         .update({
+          status: "waiting_guest",
           updated_at: now,
           last_message_at: now,
           last_outbound_at: now,
-          from_e164: toE164,
-          to_e164: fromE164,
+          from_e164: fromE164,
+          to_e164: toE164,
         })
         .eq("id", conversationId)
         .eq("property_id", propertyId);
