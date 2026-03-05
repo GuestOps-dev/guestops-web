@@ -6,6 +6,7 @@ import { useState } from "react";
 
 type Props = {
   id: string;
+  property_id: string;
   guest_number: string;
   channel: string;
   status: string;
@@ -30,6 +31,7 @@ function formatTime(iso: string | null): string {
 
 export function OpsInboxRow({
   id,
+  property_id,
   guest_number,
   channel,
   status,
@@ -43,9 +45,9 @@ export function OpsInboxRow({
     setBusy(true);
     try {
       const res = await fetch(`/api/conversations/${id}/status`, {
-        method: "POST",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ property_id, status: newStatus }),
       });
       if (res.ok) {
         router.refresh();

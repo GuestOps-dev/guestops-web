@@ -29,7 +29,13 @@ type ConversationRow = {
   is_unread?: boolean;
 };
 
-type StatusFilter = "open" | "waiting_guest" | "closed" | "all";
+type StatusFilter =
+  | "all"
+  | "open"
+  | "waiting_guest"
+  | "waiting_staff"
+  | "resolved"
+  | "closed";
 
 /** Unread: last_inbound_at is not null AND (last_read_at is null OR last_inbound_at > last_read_at) */
 function isUnread(c: ConversationRow) {
@@ -101,7 +107,11 @@ export default function InboxClient() {
     [allRows]
   );
   const unreadResolved = useMemo(
-    () => allRows.filter((r) => r.status === "closed" && isUnread(r)).length,
+    () =>
+      allRows.filter(
+        (r) =>
+          (r.status === "closed" || r.status === "resolved") && isUnread(r)
+      ).length,
     [allRows]
   );
 
@@ -160,7 +170,7 @@ export default function InboxClient() {
       const token = await getAccessToken();
 
       const res = await fetch(`/api/conversations/${row.id}/status`, {
-        method: "POST",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -418,106 +428,41 @@ export default function InboxClient() {
         </div>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              borderRadius: 999,
-              border: "1px solid #e5e5e5",
-              overflow: "hidden",
-              fontSize: 12,
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setStatus("open")}
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+            <span style={{ color: "#666" }}>Status:</span>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as StatusFilter)}
               style={{
                 padding: "6px 10px",
-                border: "none",
-                background: status === "open" ? "#111" : "transparent",
-                color: status === "open" ? "#fff" : "#444",
+                borderRadius: 8,
+                border: "1px solid #e5e5e5",
+                fontSize: 12,
+                minWidth: 160,
                 cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
               }}
             >
-              Inbox
-              {unreadInbox > 0 && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    minWidth: 18,
-                    padding: "2px 6px",
-                    borderRadius: 999,
-                    background: status === "open" ? "rgba(255,255,255,0.25)" : "#111",
-                    color: status === "open" ? "#fff" : "#fff",
-                  }}
-                >
-                  {unreadInbox}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatus("waiting_guest")}
-              style={{
-                padding: "6px 10px",
-                border: "none",
-                background: status === "waiting_guest" ? "#111" : "transparent",
-                color: status === "waiting_guest" ? "#fff" : "#444",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              Waiting on Guest
-              {unreadWaitingGuest > 0 && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    minWidth: 18,
-                    padding: "2px 6px",
-                    borderRadius: 999,
-                    background: status === "waiting_guest" ? "rgba(255,255,255,0.25)" : "#111",
-                    color: "#fff",
-                  }}
-                >
-                  {unreadWaitingGuest}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatus("closed")}
-              style={{
-                padding: "6px 10px",
-                border: "none",
-                background: status === "closed" ? "#111" : "transparent",
-                color: status === "closed" ? "#fff" : "#444",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              Resolved
-              {unreadResolved > 0 && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    minWidth: 18,
-                    padding: "2px 6px",
-                    borderRadius: 999,
-                    background: status === "closed" ? "rgba(255,255,255,0.25)" : "#111",
-                    color: "#fff",
-                  }}
-                >
-                  {unreadResolved}
-                </span>
-              )}
-            </button>
-          </div>
+              <option value="all">All</option>
+              <option value="open">Open</option>
+              <option value="waiting_guest">Waiting on Guest</option>
+              <option value="waiting_staff">Waiting on Staff</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
+            {status !== "all" && unreadCount > 0 && (
+              <span
+                style={{
+                  fontSize: 11,
+                  padding: "2px 6px",
+                  borderRadius: 999,
+                  background: "#111",
+                  color: "#fff",
+                }}
+              >
+                {unreadCount}
+              </span>
+            )}
+          </label>
 
           <select
             value={selectedPropertyId}
@@ -718,10 +663,14 @@ function StatusBadge({ status }: { status: string | null }) {
     s === "open"
       ? "Open"
       : s === "waiting_guest"
-        ? "Waiting on guest"
-        : s === "closed"
-          ? "Resolved"
-          : status ?? "-";
+        ? "Waiting on Guest"
+        : s === "waiting_staff"
+          ? "Waiting on Staff"
+          : s === "resolved"
+            ? "Resolved"
+            : s === "closed"
+              ? "Closed"
+              : status ?? "-";
 
   const style: React.CSSProperties =
     s === "open"
@@ -733,7 +682,7 @@ function StatusBadge({ status }: { status: string | null }) {
           fontSize: 11,
           fontWeight: 500,
         }
-      : s === "waiting_guest"
+      : s === "waiting_guest" || s === "waiting_staff"
       ? {
           background: "#dbeafe",
           color: "#1d4ed8",
@@ -742,7 +691,7 @@ function StatusBadge({ status }: { status: string | null }) {
           fontSize: 11,
           fontWeight: 500,
         }
-      : s === "closed"
+      : s === "resolved" || s === "closed"
       ? {
           background: "#fee2e2",
           color: "#7f1d1d",

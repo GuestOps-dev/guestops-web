@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 type TabValue = "inbox" | "waiting" | "resolved";
 
 const TAB_STATUS: Record<TabValue, string> = {
-  inbox: "awaiting_team",
+  inbox: "open",
   waiting: "waiting_guest",
   resolved: "closed",
 };
@@ -95,7 +95,7 @@ export default async function OpsInboxPage({
     const service = getSupabaseServiceClient();
     let q = service
       .from("conversations")
-      .select("id, guest_number, channel, status, last_message_at, priority")
+      .select("id, property_id, guest_number, channel, status, last_message_at, priority")
       .eq("status", status)
       .order("last_message_at", { ascending: false })
       .limit(50);
@@ -124,7 +124,7 @@ export default async function OpsInboxPage({
     } else {
       let q = supabase
         .from("conversations")
-        .select("id, guest_number, channel, status, last_message_at, priority")
+        .select("id, property_id, guest_number, channel, status, last_message_at, priority")
         .eq("status", status)
         .in("property_id", ids)
         .order("last_message_at", { ascending: false })
@@ -279,6 +279,7 @@ export default async function OpsInboxPage({
             <OpsInboxRow
               key={c.id}
               id={c.id}
+              property_id={c.property_id ?? ""}
               guest_number={c.guest_number ?? ""}
               channel={c.channel ?? ""}
               status={c.status ?? ""}

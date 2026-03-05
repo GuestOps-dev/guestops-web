@@ -4,6 +4,7 @@ import MarkRead from "./MarkRead";
 import LiveThread from "./LiveThread";
 import SendMessageBox from "./SendMessageBox";
 import GuestProfilePanel from "./GuestProfilePanel";
+import ConversationStatusSelect from "./ConversationStatusSelect";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 // Realtime (inbound_messages, outbound_messages filtered by conversation_id) is subscribed in LiveThread.
@@ -207,34 +208,11 @@ export default async function ConversationPage({
           {propertyName}
           {guestNumber ? ` · ${guestNumber}` : ""}
         </span>
-        <span
-          style={{
-            fontSize: 12,
-            padding: "4px 10px",
-            borderRadius: 999,
-            background:
-              status === "closed"
-                ? "#fee2e2"
-                : status === "waiting_guest"
-                  ? "#dbeafe"
-                  : "#dcfce7",
-            color:
-              status === "closed"
-                ? "#7f1d1d"
-                : status === "waiting_guest"
-                  ? "#1d4ed8"
-                  : "#166534",
-            fontWeight: 500,
-          }}
-        >
-          {status === "open"
-            ? "Open"
-            : status === "waiting_guest"
-              ? "Waiting on guest"
-              : status === "closed"
-                ? "Resolved"
-                : status ?? "—"}
-        </span>
+        <ConversationStatusSelect
+          conversationId={conversationId}
+          propertyId={propertyId}
+          initialStatus={status}
+        />
         {canManageQuickReplies && (
           <Link
             href={`/dashboard/properties/${propertyId}/quick-replies`}
