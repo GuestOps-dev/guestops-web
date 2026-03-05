@@ -146,9 +146,8 @@ export default function GuestProfilePanel({
         throw new Error((j as { error?: string }).error ?? res.statusText);
       }
       const data = (await res.json()) as { ok?: boolean; guest?: { id: string; tags: string[] } };
-      if (data.guest) {
-        setProfile((p) => ({ ...p, tags: data.guest.tags ?? [] }));
-      }
+      const nextTags = data.guest?.tags ?? [];
+      setProfile((p) => ({ ...p, tags: nextTags }));
       setTagInput("");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to add tag");
@@ -182,9 +181,8 @@ export default function GuestProfilePanel({
         throw new Error((j as { error?: string }).error ?? res.statusText);
       }
       const data = (await res.json()) as { ok?: boolean; guest?: { id: string; tags: string[] } };
-      if (data.guest) {
-        setProfile((p) => ({ ...p, tags: data.guest.tags ?? [] }));
-      }
+      const nextTags = data.guest?.tags ?? [];
+      setProfile((p) => ({ ...p, tags: nextTags }));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to remove tag");
     } finally {
