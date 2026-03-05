@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import twilio from "twilio";
 import { getSupabaseServiceClient } from "@/lib/supabaseServer";
 
@@ -11,87 +10,134 @@ function ok() {
   });
 }
 
-function normalizePhone(raw: string | null): string | null {
+/**
+ * Twilio may send:
+ *  - "+14155551212"
+ *  - "whatsapp:+14155551212"
+ * Keep both a "raw" and "e164" where needed.
+ */
+function normalizeTwilioAddress(raw: string | null): { raw: string; e164: string } | null {
   if (!raw) return null;
   const s = raw.trim();
-  return s ? s : null;
+  if (!s) return null;
+
+  const e164 = s.startsWith("whatsapp:") ? s.replace(/^whatsapp:/, "") : s;
+  return { raw: s, e164 };
 }
 
-export async function POST(req: NextRequest) {
+/**
+ * Build the public URL Twilio used, so validateRequest works behind proxies.
+ */
+function getPublicUrl(req: Request): string {
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  const reqUrl = new URL(req.url);
+
+  // Some proxies provide x-forwarded-uri (path + query). Prefer it if present.
+  const forwardedUri = req.headers.get("x-forwarded-uri");
+  const pathAndQuery = forwardedUri ?? (reqUrl.pathname + reqUrl.search);
+
+  if (!host) {
+    // Fallback: best effort. (Twilio sig validation may fail if host differs.)
+    return req.url;
+  }
+
+  return `${proto}://${host}${pathAndQuery}`;
+}
+
+export async function POST(req: Request) {
   try {
-    const authToken = process.env.TWILIO_AUTH_TOKEN!;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    if (!authToken) {
+      console.error("Missing TWILIO_AUTH_TOKEN");
+      return ok();
+    }
+
     const signature = req.headers.get("x-twilio-signature") || "";
 
-    const url = req.nextUrl.toString();
+    // Twilio sends application/x-www-form-urlencoded, so this is fine:
     const form = await req.formData();
     const params: Record<string, string> = {};
     form.forEach((value, key) => (params[key] = String(value)));
 
-    const valid = twilio.validateRequest(authToken, signature, url, params);
+    const publicUrl = getPublicUrl(req);
+    const valid = twilio.validateRequest(authToken, signature, publicUrl, params);
+
     if (!valid) return new Response("Invalid signature", { status: 401 });
 
-    const from = normalizePhone(params.From || null);
-    const to = normalizePhone(params.To || null);
+    const fromAddr = normalizeTwilioAddress(params.From || null);
+    const toAddr = normalizeTwilioAddress(params.To || null);
     const body = (params.Body || "").trim();
     const messageSid = params.MessageSid || null;
 
-    if (!from || !to || !body) return ok();
+    if (!fromAddr || !toAddr || !body) return ok();
 
-    const sb: any = getSupabaseServiceClient();
+    const sb = getSupabaseServiceClient();
 
-    // Route property_id by To number
-    const { data: phoneRow } = await sb
+    // Route property_id by "To" number (store phone_numbers.e164 as +E164, not whatsapp:)
+    const { data: phoneRow, error: phoneErr } = await sb
       .from("phone_numbers")
       .select("property_id")
-      .eq("e164", to)
+      .eq("e164", toAddr.e164)
       .eq("is_active", true)
       .maybeSingle();
+
+    if (phoneErr) console.error("phone_numbers lookup error:", phoneErr);
 
     const propertyId = phoneRow?.property_id;
     if (!propertyId) return ok();
 
     // Find or create guest by (property_id, phone_e164) then fallback (property_id, phone)
     let guest: { id: string } | null = null;
+
     const { data: byE164 } = await sb
       .from("guests")
       .select("id")
       .eq("property_id", propertyId)
-      .eq("phone_e164", from)
+      .eq("phone_e164", fromAddr.e164)
       .maybeSingle();
+
     if (byE164) guest = byE164;
+
     if (!guest) {
       const { data: byPhone } = await sb
         .from("guests")
         .select("id")
         .eq("property_id", propertyId)
-        .eq("phone", from)
+        .eq("phone", fromAddr.raw) // if you ever stored whatsapp:+... historically
         .maybeSingle();
+
       if (byPhone) guest = byPhone;
     }
+
     if (!guest) {
       const { data: inserted, error: insertErr } = await sb
         .from("guests")
         .insert({
           property_id: propertyId,
-          phone_e164: from,
-          phone: from,
-          preferred_channel: "sms",
+          phone_e164: fromAddr.e164,
+          phone: fromAddr.e164, // store normalized e164 in phone too, unless you need original formatting
+          preferred_channel: toAddr.raw.startsWith("whatsapp:") || fromAddr.raw.startsWith("whatsapp:")
+            ? "whatsapp"
+            : "sms",
         })
         .select("id")
         .single();
+
       if (insertErr) {
         console.error("guest insert error:", insertErr);
         return ok();
       }
       guest = inserted;
     } else {
-      // Update existing guest: set phone_e164/phone if missing, preferred_channel
       await sb
         .from("guests")
         .update({
-          phone_e164: from,
-          phone: from,
-          preferred_channel: "sms",
+          phone_e164: fromAddr.e164,
+          phone: fromAddr.e164,
+          preferred_channel: toAddr.raw.startsWith("whatsapp:") || fromAddr.raw.startsWith("whatsapp:")
+            ? "whatsapp"
+            : "sms",
         })
         .eq("id", guest.id);
     }
@@ -106,6 +152,7 @@ export async function POST(req: NextRequest) {
       .eq("guest_id", guest.id)
       .eq("property_id", propertyId)
       .maybeSingle();
+
     if (gpRow) {
       await sb
         .from("guest_properties")
@@ -129,7 +176,7 @@ export async function POST(req: NextRequest) {
           property_id: propertyId,
           guest_id: guest.id,
           source: "placeholder",
-          source_reservation_id: `placeholder:${from}`,
+          source_reservation_id: `placeholder:${fromAddr.e164}`,
         },
         { onConflict: "property_id,source,source_reservation_id" }
       )
@@ -142,7 +189,7 @@ export async function POST(req: NextRequest) {
     }
 
     const channel =
-      to.startsWith("whatsapp:") || from.startsWith("whatsapp:")
+      toAddr.raw.startsWith("whatsapp:") || fromAddr.raw.startsWith("whatsapp:")
         ? "whatsapp"
         : "sms";
 
@@ -153,8 +200,8 @@ export async function POST(req: NextRequest) {
         {
           property_id: propertyId,
           booking_id: booking.id,
-          guest_number: from,
-          service_number: to,
+          guest_number: fromAddr.raw,   // keep raw for provider context (may include whatsapp:)
+          service_number: toAddr.raw,
           channel,
           provider: "twilio",
           status: "awaiting_team",
@@ -171,7 +218,6 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
 
-    // Insert inbound into inbound_messages
     const { error: inErr } = await sb.from("inbound_messages").insert({
       conversation_id: convo.id,
       body,
@@ -185,7 +231,6 @@ export async function POST(req: NextRequest) {
       return ok();
     }
 
-    // Update conversation state + timestamps + link guest
     const { error: convoUpdateErr } = await sb
       .from("conversations")
       .update({
@@ -193,8 +238,8 @@ export async function POST(req: NextRequest) {
         updated_at: now,
         last_message_at: now,
         last_inbound_at: now,
-        from_e164: from,
-        to_e164: to,
+        from_e164: fromAddr.e164,
+        to_e164: toAddr.e164,
         guest_id: guest.id,
       })
       .eq("id", convo.id);
