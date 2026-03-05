@@ -36,7 +36,7 @@ export default async function OpsDashboardPage() {
       supabase
         .from("conversations")
         .select("*", { count: "exact", head: true })
-        .eq("status", "open")
+        .eq("status", "awaiting_team")
         .then((r) => ({ count: r.count ?? 0 })),
       supabase
         .from("inbound_messages")

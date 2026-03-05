@@ -31,10 +31,9 @@ type ConversationRow = {
 
 type StatusFilter =
   | "all"
-  | "open"
+  | "awaiting_team"
   | "waiting_guest"
-  | "waiting_staff"
-  | "resolved"
+  | "active"
   | "closed";
 
 /** Unread: last_inbound_at is not null AND (last_read_at is null OR last_inbound_at > last_read_at) */
@@ -76,7 +75,7 @@ export default function InboxClient() {
   const [allRows, setAllRows] = useState<ConversationRow[]>([]);
   const [rawCount, setRawCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<StatusFilter>("open");
+  const [status, setStatus] = useState<StatusFilter>("awaiting_team");
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -98,7 +97,8 @@ export default function InboxClient() {
     [displayRows]
   );
   const unreadInbox = useMemo(
-    () => allRows.filter((r) => r.status === "open" && isUnread(r)).length,
+    () =>
+      allRows.filter((r) => r.status === "awaiting_team" && isUnread(r)).length,
     [allRows]
   );
   const unreadWaitingGuest = useMemo(
@@ -106,12 +106,8 @@ export default function InboxClient() {
       allRows.filter((r) => r.status === "waiting_guest" && isUnread(r)).length,
     [allRows]
   );
-  const unreadResolved = useMemo(
-    () =>
-      allRows.filter(
-        (r) =>
-          (r.status === "closed" || r.status === "resolved") && isUnread(r)
-      ).length,
+  const unreadClosed = useMemo(
+    () => allRows.filter((r) => r.status === "closed" && isUnread(r)).length,
     [allRows]
   );
 
@@ -443,10 +439,9 @@ export default function InboxClient() {
               }}
             >
               <option value="all">All</option>
-              <option value="open">Open</option>
+              <option value="awaiting_team">Inbox</option>
               <option value="waiting_guest">Waiting on Guest</option>
-              <option value="waiting_staff">Waiting on Staff</option>
-              <option value="resolved">Resolved</option>
+              <option value="active">Active</option>
               <option value="closed">Closed</option>
             </select>
             {status !== "all" && unreadCount > 0 && (
@@ -609,7 +604,7 @@ export default function InboxClient() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void updateStatus(c, "open");
+                      void updateStatus(c, "awaiting_team");
                     }}
                     style={{
                       padding: "4px 8px",
@@ -638,7 +633,7 @@ export default function InboxClient() {
                       cursor: "pointer",
                     }}
                   >
-                    Mark Resolved
+                    Mark Closed
                   </button>
                 )}
                 <Link
@@ -660,20 +655,18 @@ export default function InboxClient() {
 function StatusBadge({ status }: { status: string | null }) {
   const s = (status || "").toLowerCase();
   const label =
-    s === "open"
-      ? "Open"
+    s === "awaiting_team"
+      ? "Inbox"
       : s === "waiting_guest"
         ? "Waiting on Guest"
-        : s === "waiting_staff"
-          ? "Waiting on Staff"
-          : s === "resolved"
-            ? "Resolved"
-            : s === "closed"
-              ? "Closed"
-              : status ?? "-";
+        : s === "active"
+          ? "Active"
+          : s === "closed"
+            ? "Closed"
+            : status ?? "-";
 
   const style: React.CSSProperties =
-    s === "open"
+    s === "awaiting_team"
       ? {
           background: "#dcfce7",
           color: "#166534",
@@ -682,7 +675,7 @@ function StatusBadge({ status }: { status: string | null }) {
           fontSize: 11,
           fontWeight: 500,
         }
-      : s === "waiting_guest" || s === "waiting_staff"
+      : s === "waiting_guest"
       ? {
           background: "#dbeafe",
           color: "#1d4ed8",
@@ -691,7 +684,16 @@ function StatusBadge({ status }: { status: string | null }) {
           fontSize: 11,
           fontWeight: 500,
         }
-      : s === "resolved" || s === "closed"
+      : s === "active"
+      ? {
+          background: "#e0e7ff",
+          color: "#3730a3",
+          borderRadius: 999,
+          padding: "2px 8px",
+          fontSize: 11,
+          fontWeight: 500,
+        }
+      : s === "closed"
       ? {
           background: "#fee2e2",
           color: "#7f1d1d",

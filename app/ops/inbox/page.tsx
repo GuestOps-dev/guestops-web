@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 type TabValue = "inbox" | "waiting" | "resolved";
 
 const TAB_STATUS: Record<TabValue, string> = {
-  inbox: "open",
+  inbox: "awaiting_team",
   waiting: "waiting_guest",
   resolved: "closed",
 };

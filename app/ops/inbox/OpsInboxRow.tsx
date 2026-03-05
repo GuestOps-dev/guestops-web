@@ -92,7 +92,9 @@ export function OpsInboxRow({
             ? "Inbox"
             : status === "waiting_guest"
               ? "Waiting"
-              : "Resolved"}
+              : status === "active"
+                ? "Active"
+                : "Closed"}
         </span>
         {priority ? (
           <span style={{ fontSize: 12, color: "#666" }}>Priority: {priority}</span>
@@ -146,7 +148,7 @@ export function OpsInboxRow({
               cursor: busy ? "not-allowed" : "pointer",
             }}
           >
-            {busy ? "…" : "Mark Resolved"}
+            {busy ? "…" : "Mark Closed"}
           </button>
         )}
       </div>

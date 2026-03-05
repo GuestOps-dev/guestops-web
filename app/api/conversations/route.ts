@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiAuth } from "@/lib/api/requireApiAuth";
 import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerClient";
 
-type StatusFilter = "open" | "waiting_guest" | "closed" | "all";
+type StatusFilter = "awaiting_team" | "waiting_guest" | "active" | "closed" | "all";
 
 async function getSupabaseFromReq(req: Request) {
   const authHeader =
@@ -34,7 +34,7 @@ async function getSupabaseFromReq(req: Request) {
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const status = (url.searchParams.get("status") ?? "open") as StatusFilter;
+  const status = (url.searchParams.get("status") ?? "awaiting_team") as StatusFilter;
   const propertyId = url.searchParams.get("propertyId"); // optional
 
   const auth = await getSupabaseFromReq(req);

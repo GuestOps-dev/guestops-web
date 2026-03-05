@@ -4,13 +4,12 @@ import { requireApiAuth } from "@/lib/api/requireApiAuth";
 import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerClient";
 import { assertCanAccessProperty, requirePropertyId } from "@/lib/supabaseApiAuth";
 
-type StatusFilter = "open" | "waiting_guest" | "closed" | "all";
+type StatusFilter = "awaiting_team" | "waiting_guest" | "active" | "closed" | "all";
 
 const CONVERSATION_STATUSES = [
-  "open",
+  "awaiting_team",
   "waiting_guest",
-  "waiting_staff",
-  "resolved",
+  "active",
   "closed",
 ] as const;
 export type ConversationStatus = (typeof CONVERSATION_STATUSES)[number];
@@ -57,7 +56,7 @@ async function getSupabaseFromReq(req: Request) {
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const status = (url.searchParams.get("status") ?? "open") as StatusFilter;
+  const status = (url.searchParams.get("status") ?? "awaiting_team") as StatusFilter;
   const propertyId = url.searchParams.get("propertyId"); // optional
 
   const auth = await getSupabaseFromReq(req);
@@ -119,7 +118,7 @@ export async function GET(req: Request) {
   return NextResponse.json(data ?? [], { status: 200 });
 }
 
-export async function PATCH(
+async function updateStatusHandler(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
@@ -156,7 +155,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           error:
-            "Invalid status. Allowed: open, waiting_guest, waiting_staff, resolved, closed",
+            "Invalid status. Allowed: awaiting_team, waiting_guest, active, closed",
         },
         { status: 400 }
       );
@@ -188,7 +187,7 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json(data, { status: 200 });
+    return NextResponse.json({ ok: true, status: data.status }, { status: 200 });
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string };
     const statusCode = typeof e?.status === "number" ? e.status : 500;
@@ -197,4 +196,18 @@ export async function PATCH(
     if (statusCode === 500) console.error("PATCH /api/conversations/[id]/status:", err);
     return NextResponse.json({ error: message }, { status: statusCode });
   }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return updateStatusHandler(req, context);
+}
+
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return updateStatusHandler(req, context);
 }

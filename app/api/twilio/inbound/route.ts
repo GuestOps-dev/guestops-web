@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
           service_number: to,
           channel,
           provider: "twilio",
-          status: "open",
+          status: "awaiting_team",
         },
         { onConflict: "booking_id,channel" }
       )
