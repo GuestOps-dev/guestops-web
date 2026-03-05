@@ -138,6 +138,7 @@ export default async function ConversationPage({
     created_at: string;
     property_id: string;
     phone_e164: string | null;
+    tags: string[];
   } | null = null;
   let initialGuestNotes: Array<{
     id: string;
@@ -151,7 +152,7 @@ export default async function ConversationPage({
   if (guestId) {
     const { data: guestRow } = await (sb as any)
       .from("guests")
-      .select("id, full_name, phone, email, preferred_channel, language_pref, notes, created_at, property_id, phone_e164")
+      .select("id, full_name, phone, email, preferred_channel, language_pref, notes, created_at, property_id, phone_e164, tags")
       .eq("id", guestId)
       .eq("property_id", propertyId)
       .maybeSingle();
@@ -167,6 +168,7 @@ export default async function ConversationPage({
         created_at: guestRow.created_at,
         property_id: guestRow.property_id,
         phone_e164: guestRow.phone_e164 ?? null,
+        tags: Array.isArray(guestRow.tags) ? guestRow.tags : [],
       };
       const { data: gn } = await (sb as any)
         .from("guest_notes")

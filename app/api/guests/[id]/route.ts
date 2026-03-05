@@ -50,7 +50,7 @@ export async function GET(
     const { data: guest, error } = await sb
       .from("guests")
       .select(
-        "id, full_name, phone, email, preferred_channel, language_pref, notes, created_at, property_id, phone_e164"
+        "id, full_name, phone, email, preferred_channel, language_pref, notes, created_at, property_id, phone_e164, tags"
       )
       .eq("id", id)
       .maybeSingle();

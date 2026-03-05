@@ -14,6 +14,7 @@ export type GuestRow = {
   created_at: string;
   property_id: string;
   phone_e164: string | null;
+  tags?: string[];
 };
 
 export type GuestNoteRow = {
@@ -68,6 +69,7 @@ export default function GuestProfilePanel({
           created_at: data.created_at,
           property_id: data.property_id,
           phone_e164: data.phone_e164 ?? null,
+          tags: Array.isArray(data.tags) ? data.tags : [],
         });
       }
     } catch (e) {
@@ -109,6 +111,82 @@ export default function GuestProfilePanel({
       setSavingName(false);
     }
   };
+
+  async function addTag(tagValue: string) {
+    const tag = tagValue.trim().toLowerCase();
+    if (!tag || tagsBusy) return;
+    if (tags.includes(tag)) {
+      setTagInput("");
+      return;
+    }
+    setTagsBusy(true);
+    setError(null);
+    try {
+      const sb = getSupabaseBrowserClient();
+      const { data: session } = await sb.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) {
+        setError("Not signed in");
+        return;
+      }
+      const res = await fetch(`/api/guests/${guest.id}/tags`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ add: tag }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error((j as { error?: string }).error ?? res.statusText);
+      }
+      const data = (await res.json()) as { ok?: boolean; guest?: { id: string; tags: string[] } };
+      if (data.guest) {
+        setProfile((p) => ({ ...p, tags: data.guest.tags ?? [] }));
+      }
+      setTagInput("");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to add tag");
+    } finally {
+      setTagsBusy(false);
+    }
+  }
+
+  async function removeTag(tag: string) {
+    if (tagsBusy) return;
+    setTagsBusy(true);
+    setError(null);
+    try {
+      const sb = getSupabaseBrowserClient();
+      const { data: session } = await sb.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) {
+        setError("Not signed in");
+        return;
+      }
+      const res = await fetch(`/api/guests/${guest.id}/tags`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ remove: tag }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error((j as { error?: string }).error ?? res.statusText);
+      }
+      const data = (await res.json()) as { ok?: boolean; guest?: { id: string; tags: string[] } };
+      if (data.guest) {
+        setProfile((p) => ({ ...p, tags: data.guest.tags ?? [] }));
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to remove tag");
+    } finally {
+      setTagsBusy(false);
+    }
+  }
 
   const addNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,11 +288,91 @@ export default function GuestProfilePanel({
         </div>
       )}
 
-      <div style={{ fontSize: 12, color: "#444", marginBottom: 8 }}>
+      <div style={{ fontSize: 12, color: "#444", marginBottom: 12 }}>
         <div>Phone: {profile.phone_e164 || profile.phone || "—"}</div>
         <div>Email: {profile.email || "—"}</div>
         <div>Channel: {profile.preferred_channel || "—"}</div>
         <div>Language: {profile.language_pref || "—"}</div>
+      </div>
+
+      <h4 style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Tags</h4>
+      <div style={{ marginBottom: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {tags.map((t) => (
+          <span
+            key={t}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 11,
+              padding: "2px 8px",
+              borderRadius: 999,
+              background: "#e0e7ff",
+              color: "#3730a3",
+            }}
+          >
+            {t}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                void removeTag(t);
+              }}
+              disabled={tagsBusy}
+              style={{
+                padding: 0,
+                margin: 0,
+                border: "none",
+                background: "none",
+                cursor: tagsBusy ? "not-allowed" : "pointer",
+                fontSize: 12,
+                lineHeight: 1,
+                color: "#3730a3",
+              }}
+              aria-label={`Remove ${t}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        <input
+          type="text"
+          value={tagInput}
+          onChange={(e) => setTagInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void addTag(tagInput);
+            }
+          }}
+          placeholder="Add tag…"
+          disabled={tagsBusy}
+          style={{
+            flex: 1,
+            padding: "6px 8px",
+            border: "1px solid #ddd",
+            borderRadius: 6,
+            fontSize: 12,
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => void addTag(tagInput)}
+          disabled={tagsBusy || !tagInput.trim()}
+          style={{
+            padding: "6px 10px",
+            fontSize: 12,
+            border: "none",
+            background: "#6366f1",
+            color: "#fff",
+            borderRadius: 6,
+            cursor: tagsBusy || !tagInput.trim() ? "not-allowed" : "pointer",
+          }}
+        >
+          Add
+        </button>
       </div>
 
       {error && (
