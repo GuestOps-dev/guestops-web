@@ -1,99 +1,152 @@
-﻿# GuestOpsHQ - Important Folder Structure
+# GuestOpsHQ — Filtered Repo Structure (Generated)
 
-Generated: 2026-03-04 19:52:37
+Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .yaml, .yml, .env
 
-This is a CURATED tree (only files that matter for architecture + day-to-day dev).
-
-
-## 
-App (Routes + UI)
-
-### .\app
----
-    api\admin\route.ts
-    api\conversations\[id]\assign\route.ts
-    api\conversations\[id]\internal-notes\route.ts
-    api\conversations\[id]\messages\route.ts
-    api\conversations\[id]\outbound\route.ts
-    api\conversations\[id]\read\route.ts
-    api\conversations\[id]\status\route.ts
-    api\conversations\[id]\thread\route.ts
-    api\conversations\route.ts
-    api\guests\[id]\notes\route.ts
-    api\guests\[id]\route.ts
-    api\me\memberships\route.ts
-    api\messages\send\route.ts
-    api\profiles\lookup\route.ts
-    api\properties\route.ts
-    api\quick-replies\[id]\route.ts
-    api\quick-replies\route.ts
-    api\twilio\inbound\route.ts
-    api\twilio\status\route.ts
-    dashboard\conversations\[id]\GuestProfilePanel.tsx
-    dashboard\conversations\[id]\InternalNotesSection.tsx
-    dashboard\conversations\[id]\LiveThread.tsx
-    dashboard\conversations\[id]\MarkRead.tsx
-    dashboard\conversations\[id]\OutboundBubble.tsx
-    dashboard\conversations\[id]\page.tsx
-    dashboard\conversations\[id]\QuickReplyPicker.tsx
-    dashboard\conversations\[id]\SendMessageBox.tsx
-    dashboard\InboxClient.tsx
-    dashboard\page.tsx
-    dashboard\properties\[propertyId]\quick-replies\page.tsx
-    dashboard\properties\[propertyId]\quick-replies\PropertyQuickRepliesManager.tsx
-    dashboard\PropertyWorkspaceProvider.tsx
-    dashboard\quick-replies\page.tsx
-    dashboard\quick-replies\QuickRepliesAdmin.tsx
-    layout.tsx
----
-
-
-## 
-Source (Libraries)
-
-### .\src
----
-    app\api\me\memberships\route.ts
-    app\api\profiles\lookup\route.ts
-    lib\access\fetchMembershipsClient.ts
-    lib\access\getMyMemberships.ts
-    lib\access\validateSelectedProperty.ts
-    lib\api\requireApiAuth.ts
-    lib\serverAuth.ts
-    lib\supabase\getSupabaseRlsServerClient.ts
-    lib\supabaseAdmin.ts
-    lib\supabaseApiAuth.ts
-    lib\supabaseBrowser.ts
-    lib\supabaseServer.ts
----
-
-
-## 
-Supabase (Migrations / Policies)
-
-### .\supabase
----
-    migrations\20260224_000001_orgs_property_roles_rls.sql
-    migrations\20260224_000002_canonical_can_access_property.sql
-    migrations\20260224_fix_rls_recursion.sql
-    migrations\20260305000001_quick_replies.sql
-    migrations\20260324000001_internal_notes.sql
----
-
-
-## 
-Docs
-
-### .\docs
----
-    CODE_INDEX.md
-    HANDOFF_README.md
-    M1_SMOKE_TESTS.md
-    PRODUCT_BRIEF.md
-    PRODUCT_VISION.md
-    QUICK_REPLIES_TEST_PLAN.md
-    ROADMAP.md
-    STRUCTURE.md
-    TECH_HANDOFF.md
----
-
+```
+├─ app
+│  ├─ api
+│  │  ├─ admin
+│  │  │  └─ route.ts
+│  │  ├─ conversations
+│  │  │  ├─ [id]
+│  │  │  │  ├─ assign
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ internal-notes
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ messages
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ outbound
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ priority
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ read
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ status
+│  │  │  │  │  └─ route.ts
+│  │  │  │  └─ thread
+│  │  │  │     └─ route.ts
+│  │  │  └─ route.ts
+│  │  ├─ guests
+│  │  │  └─ [id]
+│  │  │     ├─ notes
+│  │  │     │  └─ route.ts
+│  │  │     ├─ route.ts
+│  │  │     └─ tags
+│  │  │        └─ route.ts
+│  │  ├─ me
+│  │  │  └─ memberships
+│  │  │     └─ route.ts
+│  │  ├─ messages
+│  │  │  └─ send
+│  │  │     └─ route.ts
+│  │  ├─ profiles
+│  │  │  └─ lookup
+│  │  │     └─ route.ts
+│  │  ├─ properties
+│  │  │  └─ route.ts
+│  │  ├─ quick-replies
+│  │  │  ├─ [id]
+│  │  │  │  └─ route.ts
+│  │  │  └─ route.ts
+│  │  └─ twilio
+│  │     ├─ inbound
+│  │     │  └─ route.ts
+│  │     └─ status
+│  │        └─ route.ts
+│  ├─ dashboard
+│  │  ├─ conversations
+│  │  │  └─ [id]
+│  │  │     ├─ ConversationPrioritySelect.tsx
+│  │  │     ├─ ConversationStatusSelect.tsx
+│  │  │     ├─ GuestProfilePanel.tsx
+│  │  │     ├─ InternalNotesSection.tsx
+│  │  │     ├─ LiveThread.tsx
+│  │  │     ├─ MarkRead.tsx
+│  │  │     ├─ OutboundBubble.tsx
+│  │  │     ├─ page.tsx
+│  │  │     ├─ QuickReplyPicker.tsx
+│  │  │     └─ SendMessageBox.tsx
+│  │  ├─ InboxClient.tsx
+│  │  ├─ page.tsx
+│  │  ├─ properties
+│  │  │  └─ [propertyId]
+│  │  │     └─ quick-replies
+│  │  │        ├─ page.tsx
+│  │  │        └─ PropertyQuickRepliesManager.tsx
+│  │  ├─ PropertyWorkspaceProvider.tsx
+│  │  └─ quick-replies
+│  │     ├─ page.tsx
+│  │     └─ QuickRepliesAdmin.tsx
+│  ├─ layout.tsx
+│  ├─ login
+│  │  └─ page.tsx
+│  ├─ ops
+│  │  ├─ dashboard
+│  │  │  └─ page.tsx
+│  │  ├─ handoff
+│  │  │  └─ page.tsx
+│  │  └─ inbox
+│  │     ├─ OpsInboxRow.tsx
+│  │     ├─ page.tsx
+│  │     └─ PropertyFilter.tsx
+│  ├─ page.tsx
+│  ├─ privacy
+│  │  └─ page.tsx
+│  ├─ reset-password
+│  │  └─ page.tsx
+│  └─ sms-terms
+│     └─ page.tsx
+├─ docs
+│  ├─ CODE_INDEX.md
+│  ├─ HANDOFF_README.md
+│  ├─ M1_SMOKE_TESTS.md
+│  ├─ migrations
+│  │  ├─ 001_guest_profile.sql
+│  │  └─ 002_conversation_priority.sql
+│  ├─ PRODUCT_BRIEF.md
+│  ├─ PRODUCT_VISION.md
+│  ├─ QUICK_REPLIES_TEST_PLAN.md
+│  ├─ ROADMAP.md
+│  ├─ STRUCTURE.md
+│  └─ TECH_HANDOFF.md
+├─ eslint.config.mjs
+├─ middleware.ts
+├─ next-env.d.ts
+├─ next.config.ts
+├─ package.json
+├─ postcss.config.mjs
+├─ README.md
+├─ scripts
+│  └─ gen-handoff-index.mjs
+├─ src
+│  ├─ app
+│  │  └─ api
+│  │     ├─ me
+│  │     │  └─ memberships
+│  │     │     └─ route.ts
+│  │     └─ profiles
+│  │        └─ lookup
+│  │           └─ route.ts
+│  └─ lib
+│     ├─ access
+│     │  ├─ fetchMembershipsClient.ts
+│     │  ├─ getMyMemberships.ts
+│     │  └─ validateSelectedProperty.ts
+│     ├─ api
+│     │  └─ requireApiAuth.ts
+│     ├─ serverAuth.ts
+│     ├─ supabase
+│     │  └─ getSupabaseRlsServerClient.ts
+│     ├─ supabaseAdmin.ts
+│     ├─ supabaseApiAuth.ts
+│     ├─ supabaseBrowser.ts
+│     └─ supabaseServer.ts
+├─ supabase
+│  └─ migrations
+│     ├─ 20260224_000001_orgs_property_roles_rls.sql
+│     ├─ 20260224_000002_canonical_can_access_property.sql
+│     ├─ 20260224_fix_rls_recursion.sql
+│     ├─ 20260305000001_quick_replies.sql
+│     └─ 20260324000001_internal_notes.sql
+└─ tsconfig.json
+```

@@ -5,6 +5,7 @@ import LiveThread from "./LiveThread";
 import SendMessageBox from "./SendMessageBox";
 import GuestProfilePanel from "./GuestProfilePanel";
 import ConversationStatusSelect from "./ConversationStatusSelect";
+import ConversationPrioritySelect from "./ConversationPrioritySelect";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 // Realtime (inbound_messages, outbound_messages filtered by conversation_id) is subscribed in LiveThread.
@@ -35,10 +36,10 @@ export default async function ConversationPage({
 
   if (!user) redirect("/login");
 
-  // RLS enforced conversation lookup (include guest_number, status, guest_id for panel)
+  // RLS enforced conversation lookup (include guest_number, status, priority, guest_id for panel)
   const { data: convo, error: convoErr } = await (sb as any)
     .from("conversations")
-    .select("id, property_id, guest_number, status, guest_id")
+    .select("id, property_id, guest_number, status, priority, guest_id")
     .eq("id", conversationId)
     .maybeSingle();
 
@@ -51,6 +52,7 @@ export default async function ConversationPage({
   const propertyId = (convo as any).property_id as string;
   const guestNumber = (convo as any).guest_number as string | null;
   const status = (convo as any).status as string | null;
+  const priority = (convo as any).priority as string | null;
   const guestId = (convo as any).guest_id as string | null;
 
   const { data: propertyRow } = await (sb as any)
@@ -214,6 +216,11 @@ export default async function ConversationPage({
           conversationId={conversationId}
           propertyId={propertyId}
           initialStatus={status}
+        />
+        <ConversationPrioritySelect
+          conversationId={conversationId}
+          propertyId={propertyId}
+          initialPriority={priority}
         />
         {canManageQuickReplies && (
           <Link

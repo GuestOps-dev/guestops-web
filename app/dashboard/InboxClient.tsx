@@ -53,7 +53,21 @@ function isUnread(c: ConversationRow) {
   );
 }
 
-function sortByUpdatedDesc(a: ConversationRow, b: ConversationRow) {
+const PRIORITY_RANK: Record<string, number> = {
+  urgent: 3,
+  vip: 2,
+  normal: 1,
+};
+
+function priorityRank(c: ConversationRow): number {
+  const p = (c.priority ?? "normal").toLowerCase();
+  return PRIORITY_RANK[p] ?? 1;
+}
+
+function sortByPriorityThenUpdated(a: ConversationRow, b: ConversationRow) {
+  const rankA = priorityRank(a);
+  const rankB = priorityRank(b);
+  if (rankB !== rankA) return rankB - rankA;
   return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
 }
 
@@ -304,7 +318,7 @@ export default function InboxClient() {
           ? (data ?? []).filter((c) => allowedPropertyIds.includes(c.property_id))
           : (data ?? []);
 
-      const nextAllRows = [...filtered].sort(sortByUpdatedDesc);
+      const nextAllRows = [...filtered].sort(sortByPriorityThenUpdated);
       setAllRows(nextAllRows);
 
       const uniqueIds = Array.from(
@@ -692,9 +706,10 @@ export default function InboxClient() {
                 cursor: "pointer",
               }}
             >
-              <div style={{ fontWeight: unread ? 700 : 500 }}>
+              <div style={{ fontWeight: unread ? 700 : 500, display: "flex", alignItems: "center", gap: 6 }}>
                 {unread ? "● " : ""}
                 {getGuestDisplayName(c)}
+                <PriorityBadge priority={c.priority} />
               </div>
               <div>
                 <code>{c.service_number ?? "-"}</code>
@@ -780,6 +795,30 @@ export default function InboxClient() {
       </div>
       ) : null}
     </>
+  );
+}
+
+function PriorityBadge({ priority }: { priority: string | null }) {
+  const p = (priority ?? "normal").toLowerCase();
+  const style: React.CSSProperties =
+    p === "urgent"
+      ? { background: "#fee2e2", color: "#b91c1c" }
+      : p === "vip"
+        ? { background: "#ede9fe", color: "#5b21b6" }
+        : { background: "#f3f4f6", color: "#6b7280" };
+  const label = p === "urgent" ? "Urgent" : p === "vip" ? "VIP" : "Normal";
+  return (
+    <span
+      style={{
+        fontSize: 10,
+        fontWeight: 600,
+        padding: "2px 6px",
+        borderRadius: 999,
+        ...style,
+      }}
+    >
+      {label}
+    </span>
   );
 }
 
