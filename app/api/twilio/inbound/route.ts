@@ -199,12 +199,34 @@ export async function POST(req: Request) {
 
     const now = new Date().toISOString();
 
+    // Twilio can retry a webhook if a prior request times out. The persisted
+    // provider MessageSid is the stable idempotency key for an inbound SMS.
+    if (messageSid) {
+      const { data: existingInbound, error: existingInboundError } = await sb
+        .from("inbound_messages")
+        .select("id")
+        .eq("provider", "twilio")
+        .eq("provider_message_id", messageSid)
+        .maybeSingle();
+
+      if (existingInboundError) {
+        console.error("inbound idempotency lookup error:", existingInboundError);
+        return ok();
+      }
+      if (existingInbound) return ok();
+    }
+
     const { error: inErr } = await sb.from("inbound_messages").insert({
       conversation_id: convo.id,
       body,
       provider: "twilio",
+      provider_message_id: messageSid,
       created_at: now,
     });
+
+    if ((inErr as { code?: string } | null)?.code === "23505") {
+      return ok();
+    }
 
     if (inErr) {
       console.error("inbound_messages insert error:", inErr);
