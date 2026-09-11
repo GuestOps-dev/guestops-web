@@ -25,6 +25,9 @@ export default async function OpsDashboardPage() {
     notFound();
   }
 
+  // This dashboard is rendered per request, so the seven-day reporting window
+  // must be calculated at request time.
+  // eslint-disable-next-line react-hooks/purity
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [{ count: totalConversations }, { count: openConversations }, inboundRes, propsRes] =

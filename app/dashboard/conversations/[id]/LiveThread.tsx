@@ -168,7 +168,6 @@ export default function LiveThread({
   const [guestNotes, setGuestNotes] = useState<GuestNoteRow[]>(
     initialGuestNotes.map((n) => ({ id: n.id, body: n.body, created_by: n.created_by, created_at: n.created_at }))
   );
-  const [realtimeReady, setRealtimeReady] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(
     initialInbound.length + initialOutbound.length + initialInternalNotes.length + initialGuestNotes.length
@@ -187,16 +186,6 @@ export default function LiveThread({
   // Supabase Realtime: inbound_messages (filter conversation_id) → append to list; cleanup on unmount
   useEffect(() => {
     const sb = getSupabaseBrowserClient();
-
-    if (!sb) {
-      setRealtimeReady(false);
-      console.error(
-        "Realtime disabled: missing/empty NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
-      );
-      return;
-    }
-
-    setRealtimeReady(true);
 
     const scheduleMarkRead = () => {
       if (markReadTimerRef.current) clearTimeout(markReadTimerRef.current);
@@ -467,23 +456,6 @@ export default function LiveThread({
 
   return (
     <>
-      {!realtimeReady && (
-        <div
-          style={{
-            marginTop: 12,
-            padding: 12,
-            borderRadius: 12,
-            background: "#fee",
-            border: "1px solid #f99",
-            color: "#7f1d1d",
-            fontSize: 13,
-          }}
-        >
-          Realtime disabled: missing/empty NEXT_PUBLIC_SUPABASE_URL or
-          NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel env vars.
-        </div>
-      )}
-
       {legacyCount > 0 && (
         <div
           style={{

@@ -56,7 +56,6 @@ export default async function OpsInboxPage({
     last_message_at: string | null;
     priority: string | null;
   }> = [];
-  let conversationCount = 0;
   let propertiesForDropdown: Array<{ id: string; name: string }> = [];
 
   let q = supabase
@@ -79,7 +78,6 @@ export default async function OpsInboxPage({
     console.error("Ops inbox fetch error:", error);
   } else {
     list = (data ?? []) as typeof list;
-    conversationCount = list.length;
   }
   propertiesForDropdown = (props ?? []) as Array<{ id: string; name: string }>;
 
