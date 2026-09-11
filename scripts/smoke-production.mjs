@@ -26,6 +26,30 @@ const checks = [
     expectedStatus: 401,
   },
   {
+    name: "profile lookup rejects anonymous requests",
+    path: "/api/profiles/lookup",
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+    expectedStatus: 401,
+  },
+  {
+    name: "inbound webhook rejects an unsigned request",
+    path: "/api/twilio/inbound",
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: "From=%2B16095550123&To=%2B16095550456&Body=Unauthorized",
+    expectedStatus: 401,
+  },
+  {
+    name: "delivery-status webhook rejects an unsigned request",
+    path: "/api/twilio/status",
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: "MessageSid=SMnotarealmessage&MessageStatus=delivered",
+    expectedStatus: 403,
+  },
+  {
     name: "retired legacy send API remains unavailable",
     path: "/api/messages/send",
     method: "POST",
@@ -38,6 +62,8 @@ let failures = 0;
 for (const check of checks) {
   const response = await fetch(`${baseUrl}${check.path}`, {
     method: check.method || "GET",
+    headers: check.headers,
+    body: check.body,
     redirect: "manual",
   });
 
