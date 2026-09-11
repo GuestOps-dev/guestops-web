@@ -38,6 +38,14 @@ Both endpoints accept `POST` only and verify Twilio's signature before any
 database write. The status callback URL is added automatically to every new
 outbound message.
 
+### A2P campaign review
+
+US long-code SMS cannot be delivered until the linked A2P campaign is approved.
+While a campaign is under review, Twilio may return error `30034`. GuestOpsHQ
+shows this as a pending-campaign message and does not offer a retry for that
+specific condition. Once Twilio approves the campaign, normal sending and
+delivery-retry behavior resumes.
+
 ## 4. Production smoke check
 
 1. Open `/login` and sign in with a property member account.
