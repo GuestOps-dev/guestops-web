@@ -106,6 +106,8 @@ export async function POST(
     .insert({
       conversation_id: conversationId,
       property_id: propertyId,
+      to_e164: guestNumber,
+      from_e164: serviceNumber,
       body,
       created_by: user.id,
       created_at: now,
@@ -154,7 +156,6 @@ export async function POST(
     await sb
       .from("outbound_messages")
       .update({
-        provider_message_id: twilioMessage.sid,
         twilio_message_sid: twilioMessage.sid,
         status: "sent",
       })
