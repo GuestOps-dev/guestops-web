@@ -122,7 +122,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 ├─ proxy.ts
 ├─ README.md
 ├─ scripts
-│  └─ gen-handoff-index.mjs
+│  ├─ gen-handoff-index.mjs
+│  └─ smoke-production.mjs
 ├─ src
 │  ├─ app
 │  │  └─ api

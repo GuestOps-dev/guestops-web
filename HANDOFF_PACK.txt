@@ -1,6 +1,6 @@
 GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)
-Generated: 2026-09-11T18:56:44.919Z
-Git SHA: 09c70aa
+Generated: 2026-09-11T18:57:33.138Z
+Git SHA: 7ee1888
 
 RULES FOR NEW CHAT:
 - Prefer code snippets that can be pasted into Cursor.
@@ -135,7 +135,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 ├─ proxy.ts
 ├─ README.md
 ├─ scripts
-│  └─ gen-handoff-index.mjs
+│  ├─ gen-handoff-index.mjs
+│  └─ smoke-production.mjs
 ├─ src
 │  ├─ app
 │  │  └─ api
@@ -177,8 +178,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T18:56:44.863Z
-Git SHA: 09c70aa
+Generated: 2026-09-11T18:57:33.086Z
+Git SHA: 7ee1888
 
 ---
 
@@ -242,6 +243,7 @@ Git SHA: 09c70aa
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
+- `SMOKE_BASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_URL`
