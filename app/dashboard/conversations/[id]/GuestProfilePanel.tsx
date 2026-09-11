@@ -403,13 +403,16 @@ export default function GuestProfilePanel({
           </label>
           <label style={{ display: "block", marginBottom: 8 }}>
             <span style={{ display: "block", color: "#555", marginBottom: 3 }}>Language</span>
-            <input
+            <select
               value={languageValue}
               onChange={(e) => setLanguageValue(e.target.value)}
               disabled={savingDetails}
-              placeholder="e.g. English"
               style={{ width: "100%", boxSizing: "border-box", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 6, fontSize: 12 }}
-            />
+            >
+              <option value="">Not set</option>
+              <option value="English">English</option>
+              <option value="Spanish">Spanish</option>
+            </select>
           </label>
           <button
             type="button"

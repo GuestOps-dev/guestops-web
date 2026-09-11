@@ -184,6 +184,17 @@ export async function PATCH(
     if (invalidTextField(body.language_pref, 80)) {
       return NextResponse.json({ error: "Invalid language" }, { status: 400 });
     }
+    if (
+      typeof body.language_pref === "string" &&
+      !["", "english", "spanish"].includes(
+        body.language_pref.trim().toLowerCase()
+      )
+    ) {
+      return NextResponse.json(
+        { error: "Language must be English or Spanish" },
+        { status: 400 }
+      );
+    }
 
     const updatePayload: Record<string, unknown> = {};
     if (body.full_name !== undefined)
@@ -200,7 +211,11 @@ export async function PATCH(
     if (body.language_pref !== undefined)
       updatePayload.language_pref =
         typeof body.language_pref === "string"
-          ? body.language_pref.trim() || null
+          ? body.language_pref.trim()
+            ? body.language_pref.trim().toLowerCase() === "english"
+              ? "English"
+              : "Spanish"
+            : null
           : null;
 
     if (Object.keys(updatePayload).length === 0) {
