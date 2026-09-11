@@ -483,42 +483,7 @@ export default function InboxClient() {
   const refetchRef = useRef(refetch);
   refetchRef.current = refetch;
 
-  // Realtime: when conversations table changes (e.g. updated_at), refetch list
   useEffect(() => {
-    if (!allowedPropertyIds.length) return;
-
-    const channel = sb
-      .channel("conversations-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "conversations",
-        },
-        () => refetchRef.current()
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "inbound_messages",
-        },
-        () => refetchRef.current()
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-      sb.removeChannel(channel);
-    };
-  }, [sb, allowedPropertyIds]);
-
-  useEffect(() => {
-    const sbClient = getSupabaseBrowserClient();
-    if (!sbClient) return;
-
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const scheduleRefetch = () => {
       if (debounceTimer) clearTimeout(debounceTimer);
@@ -528,7 +493,7 @@ export default function InboxClient() {
       }, 400);
     };
 
-    const channel = sbClient
+    const channel = sb
       .channel("dashboard-inbox")
       .on(
         "postgres_changes",
@@ -550,9 +515,9 @@ export default function InboxClient() {
     return () => {
       if (debounceTimer) clearTimeout(debounceTimer);
       channel.unsubscribe();
-      sbClient.removeChannel(channel);
+      sb.removeChannel(channel);
     };
-  }, []);
+  }, [sb]);
 
   function displayPropertyName(propertyId: string) {
     return propertyNameById.get(propertyId) ?? propertyId;
