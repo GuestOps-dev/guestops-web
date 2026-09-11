@@ -224,6 +224,13 @@ export async function POST(req: Request) {
       created_at: now,
     });
 
+    // A unique provider MessageSid means a concurrent Twilio retry has
+    // already persisted this inbound message. Acknowledge it so Twilio does
+    // not continue retrying and no duplicate guest message is created.
+    if ((inErr as { code?: string } | null)?.code === "23505") {
+      return ok();
+    }
+
     if (inErr) {
       console.error("inbound_messages insert error:", inErr);
       return ok();

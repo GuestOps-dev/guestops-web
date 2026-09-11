@@ -11,6 +11,10 @@ function outboundErrorMessage(error: unknown): string {
   return twilioError?.message ?? "Twilio send failed";
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === "23505";
+}
+
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -110,6 +114,22 @@ export async function POST(
     })
     .select("id")
     .single();
+
+  // The database index is the final protection if two identical browser
+  // requests arrive at the same time. Treat its conflict just like the
+  // earlier idempotency lookup instead of surfacing a false send failure.
+  if (isUniqueViolation(insertError) && idempotencyKey) {
+    const { data: existing } = await sb
+      .from("outbound_messages")
+      .select("id")
+      .eq("conversation_id", conversationId)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ ok: true, duplicate: true }, { status: 200 });
+    }
+  }
 
   if (insertError || !inserted?.id) {
     console.error("outbound_messages insert error:", insertError);
