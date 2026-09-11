@@ -148,6 +148,7 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │     ├─ 20260224_fix_rls_recursion.sql
 │     ├─ 20260305000001_quick_replies.sql
 │     ├─ 20260324000001_internal_notes.sql
-│     └─ 20260911_000001_secure_guest_data.sql
+│     ├─ 20260911_000001_secure_guest_data.sql
+│     └─ 20260911_000002_remove_legacy_message_read_policies.sql
 └─ tsconfig.json
 ```
