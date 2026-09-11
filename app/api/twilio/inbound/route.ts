@@ -199,37 +199,12 @@ export async function POST(req: Request) {
 
     const now = new Date().toISOString();
 
-    // Twilio retries webhooks until it receives a response. Avoid creating a
-    // second message when a prior delivery was already persisted.
-    if (messageSid) {
-      const { data: existingInbound, error: existingInboundError } = await sb
-        .from("inbound_messages")
-        .select("id")
-        .eq("provider", "twilio")
-        .eq("provider_message_id", messageSid)
-        .maybeSingle();
-
-      if (existingInboundError) {
-        console.error("inbound idempotency lookup error:", existingInboundError);
-        return ok();
-      }
-      if (existingInbound) return ok();
-    }
-
     const { error: inErr } = await sb.from("inbound_messages").insert({
       conversation_id: convo.id,
       body,
       provider: "twilio",
-      provider_message_id: messageSid,
       created_at: now,
     });
-
-    // A unique provider MessageSid means a concurrent Twilio retry has
-    // already persisted this inbound message. Acknowledge it so Twilio does
-    // not continue retrying and no duplicate guest message is created.
-    if ((inErr as { code?: string } | null)?.code === "23505") {
-      return ok();
-    }
 
     if (inErr) {
       console.error("inbound_messages insert error:", inErr);
