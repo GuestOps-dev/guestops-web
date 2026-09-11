@@ -13,12 +13,18 @@ type GuestInfo = {
   tags?: string[] | null;
 } | null;
 
+type BookingInfo = {
+  check_in_date?: string | null;
+  check_out_date?: string | null;
+} | null;
+
 type ConversationRow = {
   id: string;
   property_id: string;
   guest_number: string;
   guest_id?: string | null;
   guests?: GuestInfo;
+  bookings?: BookingInfo | BookingInfo[];
   service_number: string | null;
   channel: string;
   provider: string;
@@ -103,6 +109,24 @@ function needsReply(c: ConversationRow) {
   );
 }
 
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function bookingFor(c: ConversationRow): BookingInfo {
+  return Array.isArray(c.bookings) ? c.bookings[0] ?? null : c.bookings ?? null;
+}
+
+/** The check-out date is inclusive so the thread stays prominent through departure day. */
+function isInHouse(c: ConversationRow, today = localDateKey()) {
+  const booking = bookingFor(c);
+  if (!booking?.check_in_date || !booking.check_out_date) return false;
+  return booking.check_in_date <= today && today <= booking.check_out_date;
+}
+
 const PRIORITY_RANK: Record<string, number> = {
   urgent: 3,
   vip: 2,
@@ -111,6 +135,8 @@ const PRIORITY_RANK: Record<string, number> = {
 
 function priorityRank(c: ConversationRow): number {
   const p = (c.priority ?? "normal").toLowerCase();
+  if (p === "urgent") return 4;
+  if (isInHouse(c)) return 3;
   return PRIORITY_RANK[p] ?? 1;
 }
 
@@ -149,6 +175,7 @@ export default function InboxClient() {
   const [tagFilter, setTagFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [replyNeededOnly, setReplyNeededOnly] = useState(false);
+  const [inHouseOnly, setInHouseOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [profileNameById, setProfileNameById] = useState<
@@ -173,6 +200,9 @@ export default function InboxClient() {
     }
     if (replyNeededOnly) {
       rows = rows.filter(needsReply);
+    }
+    if (inHouseOnly) {
+      rows = rows.filter((row) => isInHouse(row));
     }
     if (tagFilter) {
       rows = rows.filter((r) => {
@@ -203,7 +233,7 @@ export default function InboxClient() {
       });
     }
     return rows;
-  }, [allRows, status, assignmentFilter, currentUserId, replyNeededOnly, tagFilter, searchQuery, propertyNameById]);
+  }, [allRows, status, assignmentFilter, currentUserId, replyNeededOnly, inHouseOnly, tagFilter, searchQuery, propertyNameById]);
 
   const tagOptions = useMemo(() => {
     const set = new Set<string>();
@@ -223,6 +253,10 @@ export default function InboxClient() {
   );
   const replyNeededCount = useMemo(
     () => displayRows.filter(needsReply).length,
+    [displayRows]
+  );
+  const inHouseCount = useMemo(
+    () => displayRows.filter((row) => isInHouse(row)).length,
     [displayRows]
   );
   const unreadInbox = useMemo(
@@ -246,7 +280,7 @@ export default function InboxClient() {
     closed: "Closed",
   };
   const hasActiveFilters =
-    assignmentFilter !== "all" || replyNeededOnly || tagFilter !== "" || searchQuery.trim() !== "";
+    assignmentFilter !== "all" || replyNeededOnly || inHouseOnly || tagFilter !== "" || searchQuery.trim() !== "";
 
   useEffect(() => {
     let cancelled = false;
@@ -708,6 +742,23 @@ export default function InboxClient() {
         >
           Reply needed{replyNeededCount ? ` (${replyNeededCount})` : ""}
         </button>
+        <button
+          type="button"
+          aria-pressed={inHouseOnly}
+          onClick={() => setInHouseOnly((value) => !value)}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 8,
+            border: inHouseOnly ? "1px solid #7c3aed" : "1px solid #e5e5e5",
+            background: inHouseOnly ? "#f5f3ff" : "#fff",
+            color: inHouseOnly ? "#6d28d9" : "#444",
+            fontSize: 12,
+            fontWeight: inHouseOnly ? 600 : 500,
+            cursor: "pointer",
+          }}
+        >
+          In-house{inHouseCount ? ` (${inHouseCount})` : ""}
+        </button>
         <input
           ref={searchInputRef}
           type="search"
@@ -730,6 +781,7 @@ export default function InboxClient() {
             onClick={() => {
               setAssignmentFilter("all");
               setReplyNeededOnly(false);
+              setInHouseOnly(false);
               setTagFilter("");
               setSearchQuery("");
             }}
@@ -862,6 +914,7 @@ export default function InboxClient() {
                 {unread ? "● " : ""}
                 {getGuestDisplayName(c)}
                 <PriorityBadge priority={c.priority} />
+                {isInHouse(c) ? <InHouseBadge /> : null}
                 {replyNeeded ? (
                   <span
                     title="The guest's latest message has not received a property reply yet."
@@ -984,6 +1037,26 @@ function PriorityBadge({ priority }: { priority: string | null }) {
       }}
     >
       {label}
+    </span>
+  );
+}
+
+function InHouseBadge() {
+  return (
+    <span
+      title="This guest is currently in-house."
+      style={{
+        fontSize: 10,
+        fontWeight: 700,
+        padding: "2px 6px",
+        borderRadius: 999,
+        background: "#f5f3ff",
+        color: "#6d28d9",
+        border: "1px solid #ddd6fe",
+        whiteSpace: "nowrap",
+      }}
+    >
+      In-house
     </span>
   );
 }

@@ -39,7 +39,7 @@ export default async function ConversationPage({
   // RLS enforced conversation lookup (include guest_number, status, priority, guest_id for panel)
   const { data: convo, error: convoErr } = await (sb as any)
     .from("conversations")
-    .select("id, property_id, guest_number, status, priority, guest_id")
+    .select("id, property_id, booking_id, guest_number, status, priority, guest_id")
     .eq("id", conversationId)
     .maybeSingle();
 
@@ -54,6 +54,7 @@ export default async function ConversationPage({
   const status = (convo as any).status as string | null;
   const priority = (convo as any).priority as string | null;
   const guestId = (convo as any).guest_id as string | null;
+  const bookingId = (convo as any).booking_id as string | null;
 
   const { data: propertyRow } = await (sb as any)
     .from("properties")
@@ -61,6 +62,28 @@ export default async function ConversationPage({
     .eq("id", propertyId)
     .maybeSingle();
   const propertyName = (propertyRow as any)?.name ?? "Property";
+
+  let booking: {
+    id: string;
+    check_in_date: string | null;
+    check_out_date: string | null;
+  } | null = null;
+  if (bookingId) {
+    const { data: bookingRow, error: bookingError } = await (sb as any)
+      .from("bookings")
+      .select("id, check_in_date, check_out_date")
+      .eq("id", bookingId)
+      .eq("property_id", propertyId)
+      .maybeSingle();
+    if (bookingError) console.error("Booking load error:", bookingError);
+    if (bookingRow) {
+      booking = {
+        id: bookingRow.id,
+        check_in_date: bookingRow.check_in_date ?? null,
+        check_out_date: bookingRow.check_out_date ?? null,
+      };
+    }
+  }
 
   const { data: profile } = await (sb as any)
     .from("profiles")
@@ -268,6 +291,7 @@ export default async function ConversationPage({
           guest={guest}
           propertyId={propertyId}
           propertyName={propertyName}
+          booking={booking}
           initialNotes={initialGuestNotes}
         />
       )}

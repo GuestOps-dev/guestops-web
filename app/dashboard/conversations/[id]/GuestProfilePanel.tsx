@@ -26,20 +26,35 @@ export type GuestNoteRow = {
   created_at: string;
 };
 
+export type BookingStay = {
+  id: string;
+  check_in_date: string | null;
+  check_out_date: string | null;
+};
+
 type Props = {
   guest: GuestRow;
   propertyId: string;
   propertyName: string;
+  booking: BookingStay | null;
   initialNotes: GuestNoteRow[];
 };
+
+function formatStayDate(value: string | null) {
+  if (!value) return "Not set";
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+}
 
 export default function GuestProfilePanel({
   guest,
   propertyId,
   propertyName,
+  booking: initialBooking,
   initialNotes,
 }: Props) {
   const [profile, setProfile] = useState<GuestRow>(guest);
+  const [booking, setBooking] = useState<BookingStay | null>(initialBooking);
   const [notes, setNotes] = useState<GuestNoteRow[]>(initialNotes);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(profile.full_name ?? "");
@@ -49,6 +64,10 @@ export default function GuestProfilePanel({
   const [channelValue, setChannelValue] = useState(profile.preferred_channel ?? "");
   const [languageValue, setLanguageValue] = useState(profile.language_pref ?? "");
   const [savingDetails, setSavingDetails] = useState(false);
+  const [editingStay, setEditingStay] = useState(false);
+  const [checkInValue, setCheckInValue] = useState(initialBooking?.check_in_date ?? "");
+  const [checkOutValue, setCheckOutValue] = useState(initialBooking?.check_out_date ?? "");
+  const [savingStay, setSavingStay] = useState(false);
   const [noteBody, setNoteBody] = useState("");
   const [submittingNote, setSubmittingNote] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -139,6 +158,50 @@ export default function GuestProfilePanel({
       setError(e instanceof Error ? e.message : "Failed to save contact details");
     } finally {
       setSavingDetails(false);
+    }
+  };
+
+  const saveStay = async () => {
+    if (!booking || savingStay) return;
+    if (checkInValue && checkOutValue && checkOutValue < checkInValue) {
+      setError("Check-out must be on or after check-in");
+      return;
+    }
+    setSavingStay(true);
+    setError(null);
+    try {
+      const sb = getSupabaseBrowserClient();
+      const { data: session } = await sb.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) {
+        setError("Not signed in");
+        return;
+      }
+      const res = await fetch(`/api/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          property_id: propertyId,
+          check_in_date: checkInValue || null,
+          check_out_date: checkOutValue || null,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error((j as { error?: string }).error ?? res.statusText);
+      }
+      const data = (await res.json()) as BookingStay;
+      setBooking(data);
+      setCheckInValue(data.check_in_date ?? "");
+      setCheckOutValue(data.check_out_date ?? "");
+      setEditingStay(false);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save stay dates");
+    } finally {
+      setSavingStay(false);
     }
   };
 
@@ -283,6 +346,87 @@ export default function GuestProfilePanel({
         <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
           {propertyName}
         </div>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: "#6b7280",
+            fontWeight: 600,
+            letterSpacing: "0.03em",
+            textTransform: "uppercase",
+            marginBottom: 3,
+          }}
+        >
+          Stay
+        </div>
+        {booking ? (
+          editingStay ? (
+            <div style={{ fontSize: 12 }}>
+              <label style={{ display: "block", marginBottom: 8 }}>
+                <span style={{ display: "block", color: "#555", marginBottom: 3 }}>Check-in</span>
+                <input
+                  type="date"
+                  value={checkInValue}
+                  onChange={(e) => setCheckInValue(e.target.value)}
+                  disabled={savingStay}
+                  style={{ width: "100%", boxSizing: "border-box", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 6, fontSize: 12 }}
+                />
+              </label>
+              <label style={{ display: "block", marginBottom: 8 }}>
+                <span style={{ display: "block", color: "#555", marginBottom: 3 }}>Check-out</span>
+                <input
+                  type="date"
+                  value={checkOutValue}
+                  min={checkInValue || undefined}
+                  onChange={(e) => setCheckOutValue(e.target.value)}
+                  disabled={savingStay}
+                  style={{ width: "100%", boxSizing: "border-box", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 6, fontSize: 12 }}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => void saveStay()}
+                disabled={savingStay}
+                style={{ padding: "5px 9px", fontSize: 12, border: "1px solid #0ea5e9", background: "#0ea5e9", color: "#fff", borderRadius: 6, cursor: savingStay ? "not-allowed" : "pointer" }}
+              >
+                {savingStay ? "Saving…" : "Save stay"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCheckInValue(booking.check_in_date ?? "");
+                  setCheckOutValue(booking.check_out_date ?? "");
+                  setEditingStay(false);
+                  setError(null);
+                }}
+                disabled={savingStay}
+                style={{ marginLeft: 6, padding: "5px 9px", fontSize: 12, border: "1px solid #ccc", background: "#fff", color: "#333", borderRadius: 6, cursor: savingStay ? "not-allowed" : "pointer" }}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: "#444" }}>
+              <div>Check-in: {formatStayDate(booking.check_in_date)}</div>
+              <div>Check-out: {formatStayDate(booking.check_out_date)}</div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCheckInValue(booking.check_in_date ?? "");
+                  setCheckOutValue(booking.check_out_date ?? "");
+                  setEditingStay(true);
+                }}
+                style={{ marginTop: 6, padding: 0, border: "none", background: "transparent", color: "#2563eb", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+              >
+                Edit stay dates
+              </button>
+            </div>
+          )
+        ) : (
+          <div style={{ fontSize: 12, color: "#6b7280" }}>No booking is linked to this conversation.</div>
+        )}
       </div>
 
       {editingName ? (

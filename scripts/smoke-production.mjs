@@ -34,6 +34,14 @@ const checks = [
     expectedStatus: 401,
   },
   {
+    name: "booking stay updates reject anonymous requests",
+    path: "/api/bookings/not-a-booking",
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+    expectedStatus: 401,
+  },
+  {
     name: "inbound webhook rejects an unsigned request",
     path: "/api/twilio/inbound",
     method: "POST",

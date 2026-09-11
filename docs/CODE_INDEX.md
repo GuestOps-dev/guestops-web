@@ -1,7 +1,7 @@
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T19:54:59.473Z
-Git SHA: 7441bd7
+Generated: 2026-09-11T19:59:27.022Z
+Git SHA: fb919fa
 
 ---
 
@@ -9,6 +9,8 @@ Git SHA: 7441bd7
 
 - **/api/admin** (GET)  
   - file: `app/api/admin/route.ts`
+- **/api/bookings/[id]** (PATCH)  
+  - file: `app/api/bookings/[id]/route.ts`
 - **/api/conversations/[id]/assign** (POST)  
   - file: `app/api/conversations/[id]/assign/route.ts`
 - **/api/conversations/[id]/internal-notes** (GET, POST)  

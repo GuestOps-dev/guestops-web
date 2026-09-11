@@ -7,6 +7,9 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  ├─ api
 │  │  ├─ admin
 │  │  │  └─ route.ts
+│  │  ├─ bookings
+│  │  │  └─ [id]
+│  │  │     └─ route.ts
 │  │  ├─ conversations
 │  │  │  ├─ [id]
 │  │  │  │  ├─ assign
