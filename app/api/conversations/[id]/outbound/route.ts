@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
 import { requireApiAuth } from "@/lib/api/requireApiAuth";
+import { getPublicAppBaseUrl } from "@/lib/twilioWebhookUrl";
 
 function outboundErrorMessage(error: unknown): string {
   const twilioError = error as { code?: number; message?: string } | null;
@@ -120,10 +121,7 @@ export async function POST(
 
   const insertedMessageId = inserted.id;
   const client = twilio(accountSid, authToken);
-  const publicBaseUrl = (process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).replace(
-    /\/$/,
-    ""
-  );
+  const publicBaseUrl = getPublicAppBaseUrl();
 
   try {
     const twilioMessage = await client.messages.create({

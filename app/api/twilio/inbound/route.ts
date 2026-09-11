@@ -1,5 +1,6 @@
 import twilio from "twilio";
 import { getSupabaseServiceClient } from "@/lib/supabaseServer";
+import { getTrustedTwilioWebhookUrl } from "@/lib/twilioWebhookUrl";
 
 export const runtime = "nodejs";
 
@@ -25,26 +26,6 @@ function normalizeTwilioAddress(raw: string | null): { raw: string; e164: string
   return { raw: s, e164 };
 }
 
-/**
- * Build the public URL Twilio used, so validateRequest works behind proxies.
- */
-function getPublicUrl(req: Request): string {
-  const proto = req.headers.get("x-forwarded-proto") || "https";
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
-  const reqUrl = new URL(req.url);
-
-  // Some proxies provide x-forwarded-uri (path + query). Prefer it if present.
-  const forwardedUri = req.headers.get("x-forwarded-uri");
-  const pathAndQuery = forwardedUri ?? (reqUrl.pathname + reqUrl.search);
-
-  if (!host) {
-    // Fallback: best effort. (Twilio sig validation may fail if host differs.)
-    return req.url;
-  }
-
-  return `${proto}://${host}${pathAndQuery}`;
-}
-
 export async function POST(req: Request) {
   try {
     const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -60,7 +41,7 @@ export async function POST(req: Request) {
     const params: Record<string, string> = {};
     form.forEach((value, key) => (params[key] = String(value)));
 
-    const publicUrl = getPublicUrl(req);
+    const publicUrl = getTrustedTwilioWebhookUrl(req);
     const valid = twilio.validateRequest(authToken, signature, publicUrl, params);
 
     if (!valid) return new Response("Invalid signature", { status: 401 });

@@ -1,32 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
 import { getSupabaseServiceClient } from "@/lib/supabaseServer";
+import { getTrustedTwilioWebhookUrl } from "@/lib/twilioWebhookUrl";
 
 export const runtime = "nodejs";
-
-function getAbsoluteUrl(req: NextRequest) {
-  const url = new URL(req.url);
-
-  const proto = req.headers.get("x-forwarded-proto");
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
-
-  if (proto) url.protocol = `${proto}:`;
-  if (host) url.host = host;
-
-  return url.toString();
-}
 
 function validateTwilioSignature(req: NextRequest, rawBody: string) {
   const signature = req.headers.get("x-twilio-signature");
   if (!signature) return false;
 
-  const absoluteUrl = getAbsoluteUrl(req);
+  const absoluteUrl = getTrustedTwilioWebhookUrl(req);
 
   const params = new URLSearchParams(rawBody);
   const bodyObj: Record<string, string> = {};
   for (const [k, v] of params.entries()) bodyObj[k] = v;
 
-  const authToken = process.env.TWILIO_AUTH_TOKEN!;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!authToken) return false;
   return twilio.validateRequest(authToken, signature, absoluteUrl, bodyObj);
 }
 
