@@ -832,7 +832,9 @@ export default function InboxClient() {
           <div>Property</div>
           <div>Last Message</div>
           <div>Assigned</div>
-          <div>Status</div>
+          <div aria-label="Conversation status" title="Conversation status" style={{ textAlign: "center" }}>
+            ●
+          </div>
           <div>Actions</div>
         </div>
 
@@ -1012,51 +1014,30 @@ function StatusBadge({ status }: { status: string | null }) {
             ? "Closed"
             : status ?? "-";
 
-  const style: React.CSSProperties =
+  const color =
     s === "awaiting_team"
-      ? {
-          background: "#dcfce7",
-          color: "#166534",
-          borderRadius: 999,
-          padding: "2px 8px",
-          fontSize: 11,
-          fontWeight: 500,
-        }
+      ? "#d97706"
       : s === "waiting_guest"
-      ? {
-          background: "#dbeafe",
-          color: "#1d4ed8",
-          borderRadius: 999,
-          padding: "2px 8px",
-          fontSize: 11,
-          fontWeight: 500,
-        }
+      ? "#2563eb"
       : s === "active"
-      ? {
-          background: "#e0e7ff",
-          color: "#3730a3",
-          borderRadius: 999,
-          padding: "2px 8px",
-          fontSize: 11,
-          fontWeight: 500,
-        }
+      ? "#d97706"
       : s === "closed"
-      ? {
-          background: "#fee2e2",
-          color: "#7f1d1d",
-          borderRadius: 999,
-          padding: "2px 8px",
-          fontSize: 11,
-          fontWeight: 500,
-        }
-      : {
-          background: "#e5e7eb",
-          color: "#374151",
-          borderRadius: 999,
-          padding: "2px 8px",
-          fontSize: 11,
-          fontWeight: 500,
-        };
+      ? "#94a3b8"
+      : "#64748b";
 
-  return <span style={style}>{label}</span>;
+  return (
+    <span
+      role="img"
+      aria-label={`${label} status`}
+      title={label}
+      style={{
+        display: "inline-block",
+        width: 10,
+        height: 10,
+        borderRadius: "50%",
+        background: color,
+        boxShadow: "0 0 0 2px rgba(15, 23, 42, 0.08)",
+      }}
+    />
+  );
 }
