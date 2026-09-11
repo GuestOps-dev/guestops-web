@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
-import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerClient";
+import { requireApiAuth } from "@/lib/api/requireApiAuth";
 
 export async function POST(
   req: NextRequest,
@@ -19,54 +19,22 @@ export async function POST(
     return NextResponse.json({ error: "Body required" }, { status: 400 });
   }
 
-  const supabase = await getSupabaseRlsServerClient();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !authData?.user) {
+  const { supabase, user, error: authError } = await requireApiAuth(req);
+  if (authError || !user || !supabase) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const now = new Date().toISOString();
-
   const sb = supabase as any;
 
-  // Insert outbound message
-  const { data: inserted, error: insertError } = await sb
-    .from("outbound_messages")
-    .insert({
-      conversation_id: conversationId,
-      body,
-      created_by: authData.user.id,
-      created_at: now,
-    })
-    .select("id")
-    .single();
-
-  if (insertError) {
-    console.error("outbound_messages insert error:", insertError);
-    return NextResponse.json(
-      { error: (insertError as any).message ?? "Insert failed" },
-      { status: 500 }
-    );
-  }
-
-  const insertedMessageId = inserted?.id;
-  if (!insertedMessageId) {
-    return NextResponse.json({ error: "Insert failed" }, { status: 500 });
-  }
-
-  // Fetch conversation for routing
+  // Load the conversation before creating a message. RLS on outbound_messages
+  // is property-scoped, so every user-initiated row must carry property_id.
   const { data: convo, error: convoErr } = await sb
     .from("conversations")
-    .select("service_number, guest_number, channel")
+    .select("property_id, service_number, guest_number, channel")
     .eq("id", conversationId)
     .maybeSingle();
 
   if (convoErr || !convo) {
-    await sb
-      .from("outbound_messages")
-      .update({ status: "failed", error: "Conversation not found or inaccessible" })
-      .eq("id", insertedMessageId);
     return NextResponse.json(
       { error: "Conversation not found" },
       { status: 404 }
@@ -75,11 +43,8 @@ export async function POST(
 
   const serviceNumber = convo.service_number ?? "";
   const guestNumber = convo.guest_number ?? "";
-  if (!serviceNumber || !guestNumber) {
-    await sb
-      .from("outbound_messages")
-      .update({ status: "failed", error: "Missing service_number or guest_number" })
-      .eq("id", insertedMessageId);
+  const propertyId = convo.property_id ?? "";
+  if (!serviceNumber || !guestNumber || !propertyId) {
     return NextResponse.json(
       { error: "Conversation missing routing numbers" },
       { status: 400 }
@@ -89,16 +54,35 @@ export async function POST(
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   if (!accountSid || !authToken) {
-    await sb
-      .from("outbound_messages")
-      .update({ status: "failed", error: "Twilio not configured" })
-      .eq("id", insertedMessageId);
     return NextResponse.json(
       { error: "Twilio not configured" },
       { status: 503 }
     );
   }
 
+  const now = new Date().toISOString();
+  const { data: inserted, error: insertError } = await sb
+    .from("outbound_messages")
+    .insert({
+      conversation_id: conversationId,
+      property_id: propertyId,
+      body,
+      created_by: user.id,
+      created_at: now,
+      status: "queued",
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !inserted?.id) {
+    console.error("outbound_messages insert error:", insertError);
+    return NextResponse.json(
+      { error: "Unable to create outbound message" },
+      { status: 500 }
+    );
+  }
+
+  const insertedMessageId = inserted.id;
   const client = twilio(accountSid, authToken);
 
   try {

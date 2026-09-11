@@ -1,6 +1,6 @@
 GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)
-Generated: 2026-03-05T16:41:05.904Z
-Git SHA: e0aa913
+Generated: 2026-09-11T13:17:19.428Z
+Git SHA: e50f703
 
 RULES FOR NEW CHAT:
 - Prefer code snippets that can be pasted into Cursor.
@@ -160,7 +160,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │     ├─ 20260224_000002_canonical_can_access_property.sql
 │     ├─ 20260224_fix_rls_recursion.sql
 │     ├─ 20260305000001_quick_replies.sql
-│     └─ 20260324000001_internal_notes.sql
+│     ├─ 20260324000001_internal_notes.sql
+│     └─ 20260911_000001_secure_guest_data.sql
 └─ tsconfig.json
 ```
 
@@ -169,8 +170,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-03-05T16:41:05.837Z
-Git SHA: e0aa913
+Generated: 2026-09-11T13:17:19.376Z
+Git SHA: e50f703
 
 ---
 

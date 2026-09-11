@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type OlderAttempt = {
   id: string;
@@ -52,17 +53,20 @@ export default function OutboundBubble({
     setLocalErr(null);
 
     try {
-      // Prevent double-tap duplicates for the same outbound attempt
-      const idempotencyKey = `retry:${outboundId}`;
+      const { data: sessionData, error: sessionError } =
+        await getSupabaseBrowserClient().auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (sessionError || !accessToken) {
+        throw new Error("Your session has expired. Please sign in again.");
+      }
 
-      const res = await fetch("/api/messages/send", {
+      const res = await fetch(`/api/conversations/${conversationId}/outbound`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-idempotency-key": idempotencyKey,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          conversation_id: conversationId,
           body,
         }),
       });
