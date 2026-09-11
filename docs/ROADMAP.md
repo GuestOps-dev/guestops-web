@@ -234,6 +234,14 @@ Store contacts for operational vendors:
 
 Eventually allow messaging directly to vendors.
 
+### Current foundation
+
+The property-scoped vendor directory is live at `/dashboard/vendors`. Teams can
+add, edit, prioritize, and deactivate trusted providers without exposing them
+outside their assigned property. The live database already includes the later
+`experiences`, `vendor_requests`, and `reminders` tables; their first use needs
+real service-type and vendor data rather than another schema migration.
+
 ---
 
 ## 10. Stay / Reservation Records
