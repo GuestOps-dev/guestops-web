@@ -202,6 +202,7 @@ export default function GuestProfilePanel({
 
   return (
     <div
+      className="guest-profile-panel"
       style={{
         width: 280,
         flexShrink: 0,

@@ -70,4 +70,23 @@ body {
     font-size: 12px;
     overflow-wrap: anywhere;
   }
+
+  .conversation-page {
+    flex-direction: column;
+  }
+
+  .conversation-page-main {
+    width: 100%;
+  }
+
+  .guest-profile-panel {
+    width: 100% !important;
+    box-sizing: border-box;
+    border-left: none !important;
+    border-top: 1px solid #eee;
+    padding-left: 0 !important;
+    padding-top: 16px;
+    margin-left: 0 !important;
+    margin-top: 16px;
+  }
 }

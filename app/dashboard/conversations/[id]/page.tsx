@@ -191,9 +191,12 @@ export default async function ConversationPage({
   }
 
   return (
-    <main style={{ padding: 16, maxWidth: 1200, margin: "0 auto", display: "flex" }}>
+    <main
+      className="conversation-page"
+      style={{ padding: 16, maxWidth: 1200, margin: "0 auto", display: "flex" }}
+    >
       <MarkRead conversationId={conversationId} propertyId={propertyId} />
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="conversation-page-main" style={{ flex: 1, minWidth: 0 }}>
         <Link href="/dashboard">← Back</Link>
 
         <div
