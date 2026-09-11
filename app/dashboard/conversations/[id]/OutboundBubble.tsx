@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type OlderAttempt = {
@@ -35,6 +36,7 @@ export default function OutboundBubble({
   error,
   olderAttempts = [],
 }: Props) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [localErr, setLocalErr] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -79,6 +81,7 @@ export default function OutboundBubble({
 
       // Refresh to show the new outbound row and any subsequent status updates
       setExpanded(false);
+      router.refresh();
     } catch (e: any) {
       setLocalErr(e?.message || "Retry failed");
     } finally {
