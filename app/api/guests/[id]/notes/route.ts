@@ -119,6 +119,28 @@ export async function POST(
     }
 
     const sb = auth.supabase as any;
+    const { data: guest, error: guestError } = await sb
+      .from("guests")
+      .select("id, property_id")
+      .eq("id", guestId)
+      .eq("property_id", propertyId)
+      .maybeSingle();
+
+    if (guestError) {
+      console.error("Guest note parent lookup error:", guestError);
+      const code = (guestError as { code?: string }).code === "42501" ? 403 : 500;
+      return NextResponse.json(
+        { error: "Unable to verify guest" },
+        { status: code }
+      );
+    }
+    if (!guest) {
+      return NextResponse.json(
+        { error: "Guest not found for this property" },
+        { status: 404 }
+      );
+    }
+
     const { data: inserted, error } = await sb
       .from("guest_notes")
       .insert({

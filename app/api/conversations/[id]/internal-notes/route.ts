@@ -109,6 +109,28 @@ export async function POST(
 
   const sb = auth.supabase as any;
 
+  const { data: conversation, error: conversationError } = await sb
+    .from("conversations")
+    .select("id, property_id")
+    .eq("id", conversationId)
+    .eq("property_id", propertyId)
+    .maybeSingle();
+
+  if (conversationError) {
+    console.error("Internal note parent lookup error:", conversationError);
+    const code = (conversationError as { code?: string }).code === "42501" ? 403 : 500;
+    return NextResponse.json(
+      { error: "Unable to verify conversation" },
+      { status: code }
+    );
+  }
+  if (!conversation) {
+    return NextResponse.json(
+      { error: "Conversation not found for this property" },
+      { status: 404 }
+    );
+  }
+
   const { data: inserted, error } = await sb
     .from("internal_notes")
     .insert({
