@@ -42,6 +42,14 @@ const checks = [
     expectedStatus: 401,
   },
   {
+    name: "conversation stay updates reject anonymous requests",
+    path: "/api/conversations/not-a-conversation/stay",
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+    expectedStatus: 401,
+  },
+  {
     name: "inbound webhook rejects an unsigned request",
     path: "/api/twilio/inbound",
     method: "POST",

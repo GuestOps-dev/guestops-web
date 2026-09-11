@@ -1,7 +1,7 @@
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T19:59:27.022Z
-Git SHA: fb919fa
+Generated: 2026-09-11T20:03:29.821Z
+Git SHA: 22500fc
 
 ---
 
@@ -25,6 +25,8 @@ Git SHA: fb919fa
   - file: `app/api/conversations/[id]/read/route.ts`
 - **/api/conversations/[id]/status** (GET, POST, PATCH)  
   - file: `app/api/conversations/[id]/status/route.ts`
+- **/api/conversations/[id]/stay** (PATCH)  
+  - file: `app/api/conversations/[id]/stay/route.ts`
 - **/api/conversations/[id]/thread** (GET)  
   - file: `app/api/conversations/[id]/thread/route.ts`
 - **/api/conversations** (GET)  

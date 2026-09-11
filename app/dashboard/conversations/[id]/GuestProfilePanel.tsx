@@ -34,6 +34,7 @@ export type BookingStay = {
 
 type Props = {
   guest: GuestRow;
+  conversationId: string;
   propertyId: string;
   propertyName: string;
   booking: BookingStay | null;
@@ -48,6 +49,7 @@ function formatStayDate(value: string | null) {
 
 export default function GuestProfilePanel({
   guest,
+  conversationId,
   propertyId,
   propertyName,
   booking: initialBooking,
@@ -162,7 +164,7 @@ export default function GuestProfilePanel({
   };
 
   const saveStay = async () => {
-    if (!booking || savingStay) return;
+    if (savingStay) return;
     if (checkInValue && checkOutValue && checkOutValue < checkInValue) {
       setError("Check-out must be on or after check-in");
       return;
@@ -177,7 +179,7 @@ export default function GuestProfilePanel({
         setError("Not signed in");
         return;
       }
-      const res = await fetch(`/api/bookings/${booking.id}`, {
+      const res = await fetch(`/api/conversations/${conversationId}/stay`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -361,8 +363,7 @@ export default function GuestProfilePanel({
         >
           Stay
         </div>
-        {booking ? (
-          editingStay ? (
+        {editingStay ? (
             <div style={{ fontSize: 12 }}>
               <label style={{ display: "block", marginBottom: 8 }}>
                 <span style={{ display: "block", color: "#555", marginBottom: 3 }}>Check-in</span>
@@ -396,8 +397,8 @@ export default function GuestProfilePanel({
               <button
                 type="button"
                 onClick={() => {
-                  setCheckInValue(booking.check_in_date ?? "");
-                  setCheckOutValue(booking.check_out_date ?? "");
+                  setCheckInValue(booking?.check_in_date ?? "");
+                  setCheckOutValue(booking?.check_out_date ?? "");
                   setEditingStay(false);
                   setError(null);
                 }}
@@ -407,7 +408,7 @@ export default function GuestProfilePanel({
                 Cancel
               </button>
             </div>
-          ) : (
+          ) : booking ? (
             <div style={{ fontSize: 12, color: "#444" }}>
               <div>Check-in: {formatStayDate(booking.check_in_date)}</div>
               <div>Check-out: {formatStayDate(booking.check_out_date)}</div>
@@ -423,9 +424,21 @@ export default function GuestProfilePanel({
                 Edit stay dates
               </button>
             </div>
-          )
-        ) : (
-          <div style={{ fontSize: 12, color: "#6b7280" }}>No booking is linked to this conversation.</div>
+          ) : (
+          <div style={{ fontSize: 12, color: "#6b7280" }}>
+            <div>No stay dates added yet.</div>
+            <button
+              type="button"
+              onClick={() => {
+                setCheckInValue("");
+                setCheckOutValue("");
+                setEditingStay(true);
+              }}
+              style={{ marginTop: 6, padding: 0, border: "none", background: "transparent", color: "#2563eb", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+            >
+              Add stay dates
+            </button>
+          </div>
         )}
       </div>
 

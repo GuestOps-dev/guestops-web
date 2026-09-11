@@ -26,6 +26,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  │  │  └─ route.ts
 │  │  │  │  ├─ status
 │  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ stay
+│  │  │  │  │  └─ route.ts
 │  │  │  │  └─ thread
 │  │  │  │     └─ route.ts
 │  │  │  └─ route.ts

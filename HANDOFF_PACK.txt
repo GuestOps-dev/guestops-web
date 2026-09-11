@@ -1,6 +1,6 @@
 GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)
-Generated: 2026-09-11T19:59:27.079Z
-Git SHA: fb919fa
+Generated: 2026-09-11T20:03:29.888Z
+Git SHA: 22500fc
 
 RULES FOR NEW CHAT:
 - Prefer code snippets that can be pasted into Cursor.
@@ -38,6 +38,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  │  ├─ read
 │  │  │  │  │  └─ route.ts
 │  │  │  │  ├─ status
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ stay
 │  │  │  │  │  └─ route.ts
 │  │  │  │  └─ thread
 │  │  │  │     └─ route.ts
@@ -183,8 +185,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T19:59:27.022Z
-Git SHA: fb919fa
+Generated: 2026-09-11T20:03:29.821Z
+Git SHA: 22500fc
 
 ---
 
@@ -208,6 +210,8 @@ Git SHA: fb919fa
   - file: `app/api/conversations/[id]/read/route.ts`
 - **/api/conversations/[id]/status** (GET, POST, PATCH)  
   - file: `app/api/conversations/[id]/status/route.ts`
+- **/api/conversations/[id]/stay** (PATCH)  
+  - file: `app/api/conversations/[id]/stay/route.ts`
 - **/api/conversations/[id]/thread** (GET)  
   - file: `app/api/conversations/[id]/thread/route.ts`
 - **/api/conversations** (GET)  

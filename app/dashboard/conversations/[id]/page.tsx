@@ -289,6 +289,7 @@ export default async function ConversationPage({
       {guest && (
         <GuestProfilePanel
           guest={guest}
+          conversationId={conversationId}
           propertyId={propertyId}
           propertyName={propertyName}
           booking={booking}
