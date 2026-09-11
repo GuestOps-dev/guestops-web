@@ -106,7 +106,6 @@ export default function InboxClient() {
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
   const [tagFilter, setTagFilter] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [profileNameById, setProfileNameById] = useState<
     Record<string, string>
@@ -189,17 +188,6 @@ export default function InboxClient() {
       if (cancelled) return;
       if (!userError && userData?.user) {
         setCurrentUserId(userData.user.id);
-
-        const { data: profile, error: profileError } = await sb
-          .from("profiles")
-          .select("role")
-          .eq("id", userData.user.id)
-          .maybeSingle();
-
-        if (cancelled) return;
-        if (!profileError && profile?.role === "admin") {
-          setIsAdmin(true);
-        }
       }
     }
 
@@ -776,7 +764,7 @@ export default function InboxClient() {
               </div>
               <div>
                 <div style={{ fontSize: 12 }}>{assignedLabel(c)}</div>
-                {isAdmin ? (
+                {currentUserId && c.assigned_to_user_id !== currentUserId ? (
                   <button
                     type="button"
                     onClick={() => claimConversation(c)}
@@ -790,7 +778,7 @@ export default function InboxClient() {
                       cursor: "pointer",
                     }}
                   >
-                    Claim
+                    {c.assigned_to_user_id ? "Assign to me" : "Claim"}
                   </button>
                 ) : null}
               </div>
