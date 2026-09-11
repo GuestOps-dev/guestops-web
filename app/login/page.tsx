@@ -5,6 +5,16 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
+function getSafeRedirectPath(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  // Login is only a gateway to operator pages. Keeping this narrow avoids an
+  // open redirect while preserving the dashboard route the user requested.
+  return value.startsWith("/dashboard") ? value : "/dashboard";
+}
+
 function LoginInner() {
   const router = useRouter();
   const search = useSearchParams();
@@ -33,9 +43,9 @@ function LoginInner() {
       return;
     }
 
-    const redirectTo = search.get("redirectTo") || "/dashboard";
+    const redirectTo = getSafeRedirectPath(search.get("redirectTo"));
     router.replace(redirectTo);
-	router.refresh();
+    router.refresh();
   }
 
   return (
@@ -44,6 +54,7 @@ function LoginInner() {
 
       {error && (
         <div
+          role="alert"
           style={{
             padding: 12,
             background: "#fee",
