@@ -59,7 +59,6 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │     ├─ ConversationPrioritySelect.tsx
 │  │  │     ├─ ConversationStatusSelect.tsx
 │  │  │     ├─ GuestProfilePanel.tsx
-│  │  │     ├─ InternalNotesSection.tsx
 │  │  │     ├─ LiveThread.tsx
 │  │  │     ├─ MarkRead.tsx
 │  │  │     ├─ OutboundBubble.tsx
