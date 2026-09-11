@@ -49,6 +49,32 @@ function belongsToStatusTab(rowStatus: string | null, tab: StatusTab) {
   return rowStatus === tab || (tab === "awaiting_team" && rowStatus === "active");
 }
 
+function getGuestPhone(c: ConversationRow): string {
+  return c.guests?.phone_e164 ?? c.guests?.phone ?? c.guest_number ?? "—";
+}
+
+function formatLastMessageAt(value: string | null): { label: string; exact: string } {
+  if (!value) return { label: "No messages yet", exact: "" };
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return { label: "—", exact: "" };
+
+  const differenceMs = Date.now() - date.getTime();
+  const minutes = Math.max(0, Math.floor(differenceMs / 60_000));
+  const exact = date.toLocaleString();
+
+  if (minutes < 1) return { label: "Just now", exact };
+  if (minutes < 60) return { label: `${minutes}m ago`, exact };
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { label: `${hours}h ago`, exact };
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return { label: `${days}d ago`, exact };
+
+  return { label: date.toLocaleDateString(), exact };
+}
+
 /** Unread: last_inbound_at is not null AND (last_read_at is null OR last_inbound_at > last_read_at) */
 function isUnread(c: ConversationRow) {
   if (c.last_inbound_at == null) return false;
@@ -510,9 +536,11 @@ export default function InboxClient() {
       <div className="inbox-summarybar" style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
         <div style={{ fontSize: 14, opacity: 0.75 }}>
           {loading ? "Refreshing…" : `${displayRows.length} threads • ${unreadCount} unread`}
-          <span style={{ marginLeft: 10, fontSize: 12, opacity: 0.65 }}>
-            {`(${rawCount} from API)`}
-          </span>
+          {hasActiveFilters && rawCount !== displayRows.length ? (
+            <span style={{ marginLeft: 10, fontSize: 12, opacity: 0.65 }}>
+              {`${rawCount} total`}
+            </span>
+          ) : null}
         </div>
 
         <div className="inbox-primary-controls" style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
@@ -766,7 +794,7 @@ export default function InboxClient() {
           }}
         >
           <div>Guest</div>
-          <div>Twilio #</div>
+          <div>Guest phone</div>
           <div>Property</div>
           <div>Last Message</div>
           <div>Assigned</div>
@@ -811,14 +839,14 @@ export default function InboxClient() {
                 {getGuestDisplayName(c)}
                 <PriorityBadge priority={c.priority} />
               </div>
-              <div>
-                <code>{c.service_number ?? "-"}</code>
+              <div style={{ fontVariantNumeric: "tabular-nums" }}>
+                {getGuestPhone(c)}
               </div>
               <div>
                 <code>{displayPropertyName(c.property_id)}</code>
               </div>
-              <div>
-                {c.last_message_at ? new Date(c.last_message_at).toLocaleString() : "-"}
+              <div title={formatLastMessageAt(c.last_message_at).exact}>
+                {formatLastMessageAt(c.last_message_at).label}
               </div>
               <div>
                 <div style={{ fontSize: 12 }}>{assignedLabel(c)}</div>
