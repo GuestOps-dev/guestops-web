@@ -44,6 +44,11 @@ export default function GuestProfilePanel({
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(profile.full_name ?? "");
   const [savingName, setSavingName] = useState(false);
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [emailValue, setEmailValue] = useState(profile.email ?? "");
+  const [channelValue, setChannelValue] = useState(profile.preferred_channel ?? "");
+  const [languageValue, setLanguageValue] = useState(profile.language_pref ?? "");
+  const [savingDetails, setSavingDetails] = useState(false);
   const [noteBody, setNoteBody] = useState("");
   const [submittingNote, setSubmittingNote] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -87,6 +92,53 @@ export default function GuestProfilePanel({
       setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setSavingName(false);
+    }
+  };
+
+  const saveDetails = async () => {
+    if (savingDetails) return;
+    setSavingDetails(true);
+    setError(null);
+    try {
+      const sb = getSupabaseBrowserClient();
+      const { data: session } = await sb.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) {
+        setError("Not signed in");
+        return;
+      }
+      const email = emailValue.trim();
+      const preferredChannel = channelValue.trim();
+      const language = languageValue.trim();
+      const res = await fetch(`/api/guests/${guest.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          property_id: propertyId,
+          email: email || null,
+          preferred_channel: preferredChannel || null,
+          language_pref: language || null,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error((j as { error?: string }).error ?? res.statusText);
+      }
+      const data = (await res.json()) as Partial<GuestRow>;
+      setProfile((p) => ({
+        ...p,
+        email: data.email ?? null,
+        preferred_channel: data.preferred_channel ?? null,
+        language_pref: data.language_pref ?? null,
+      }));
+      setEditingDetails(false);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save contact details");
+    } finally {
+      setSavingDetails(false);
     }
   };
 
@@ -320,12 +372,88 @@ export default function GuestProfilePanel({
         </button>
       )}
 
-      <div style={{ fontSize: 12, color: "#444", marginBottom: 12 }}>
-        <div>Phone: {profile.phone_e164 || profile.phone || "—"}</div>
-        <div>Email: {profile.email || "—"}</div>
-        <div>Channel: {profile.preferred_channel || "—"}</div>
-        <div>Language: {profile.language_pref || "—"}</div>
-      </div>
+      {editingDetails ? (
+        <div style={{ marginBottom: 14, fontSize: 12 }}>
+          <div style={{ color: "#444", marginBottom: 8 }}>
+            Phone: {profile.phone_e164 || profile.phone || "—"}
+          </div>
+          <label style={{ display: "block", marginBottom: 8 }}>
+            <span style={{ display: "block", color: "#555", marginBottom: 3 }}>Email</span>
+            <input
+              type="email"
+              value={emailValue}
+              onChange={(e) => setEmailValue(e.target.value)}
+              disabled={savingDetails}
+              style={{ width: "100%", boxSizing: "border-box", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 6, fontSize: 12 }}
+            />
+          </label>
+          <label style={{ display: "block", marginBottom: 8 }}>
+            <span style={{ display: "block", color: "#555", marginBottom: 3 }}>Preferred channel</span>
+            <select
+              value={channelValue}
+              onChange={(e) => setChannelValue(e.target.value)}
+              disabled={savingDetails}
+              style={{ width: "100%", boxSizing: "border-box", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 6, fontSize: 12 }}
+            >
+              <option value="">Not set</option>
+              <option value="sms">SMS</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="email">Email</option>
+            </select>
+          </label>
+          <label style={{ display: "block", marginBottom: 8 }}>
+            <span style={{ display: "block", color: "#555", marginBottom: 3 }}>Language</span>
+            <input
+              value={languageValue}
+              onChange={(e) => setLanguageValue(e.target.value)}
+              disabled={savingDetails}
+              placeholder="e.g. English"
+              style={{ width: "100%", boxSizing: "border-box", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 6, fontSize: 12 }}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => void saveDetails()}
+            disabled={savingDetails}
+            style={{ padding: "5px 9px", fontSize: 12, border: "1px solid #0ea5e9", background: "#0ea5e9", color: "#fff", borderRadius: 6, cursor: savingDetails ? "not-allowed" : "pointer" }}
+          >
+            {savingDetails ? "Saving…" : "Save details"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEmailValue(profile.email ?? "");
+              setChannelValue(profile.preferred_channel ?? "");
+              setLanguageValue(profile.language_pref ?? "");
+              setEditingDetails(false);
+              setError(null);
+            }}
+            disabled={savingDetails}
+            style={{ marginLeft: 6, padding: "5px 9px", fontSize: 12, border: "1px solid #ccc", background: "#fff", color: "#333", borderRadius: 6, cursor: savingDetails ? "not-allowed" : "pointer" }}
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div style={{ fontSize: 12, color: "#444", marginBottom: 14 }}>
+          <div>Phone: {profile.phone_e164 || profile.phone || "—"}</div>
+          <div>Email: {profile.email || "—"}</div>
+          <div>Channel: {profile.preferred_channel || "—"}</div>
+          <div>Language: {profile.language_pref || "—"}</div>
+          <button
+            type="button"
+            onClick={() => {
+              setEmailValue(profile.email ?? "");
+              setChannelValue(profile.preferred_channel ?? "");
+              setLanguageValue(profile.language_pref ?? "");
+              setEditingDetails(true);
+            }}
+            style={{ marginTop: 6, padding: 0, border: "none", background: "transparent", color: "#2563eb", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+          >
+            Edit contact details
+          </button>
+        </div>
+      )}
 
       <h4 style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Tags</h4>
       <div style={{ marginBottom: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
