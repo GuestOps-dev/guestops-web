@@ -148,6 +148,7 @@ export default function InboxClient() {
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
   const [tagFilter, setTagFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [replyNeededOnly, setReplyNeededOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [profileNameById, setProfileNameById] = useState<
@@ -169,6 +170,9 @@ export default function InboxClient() {
       rows = rows.filter((r) => r.assigned_to_user_id === currentUserId);
     } else if (assignmentFilter === "unassigned") {
       rows = rows.filter((r) => r.assigned_to_user_id == null);
+    }
+    if (replyNeededOnly) {
+      rows = rows.filter(needsReply);
     }
     if (tagFilter) {
       rows = rows.filter((r) => {
@@ -199,7 +203,7 @@ export default function InboxClient() {
       });
     }
     return rows;
-  }, [allRows, status, assignmentFilter, currentUserId, tagFilter, searchQuery, propertyNameById]);
+  }, [allRows, status, assignmentFilter, currentUserId, replyNeededOnly, tagFilter, searchQuery, propertyNameById]);
 
   const tagOptions = useMemo(() => {
     const set = new Set<string>();
@@ -242,7 +246,7 @@ export default function InboxClient() {
     closed: "Closed",
   };
   const hasActiveFilters =
-    assignmentFilter !== "all" || tagFilter !== "" || searchQuery.trim() !== "";
+    assignmentFilter !== "all" || replyNeededOnly || tagFilter !== "" || searchQuery.trim() !== "";
 
   useEffect(() => {
     let cancelled = false;
@@ -722,6 +726,23 @@ export default function InboxClient() {
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          aria-pressed={replyNeededOnly}
+          onClick={() => setReplyNeededOnly((value) => !value)}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 8,
+            border: replyNeededOnly ? "1px solid #c2410c" : "1px solid #e5e5e5",
+            background: replyNeededOnly ? "#fff7ed" : "#fff",
+            color: replyNeededOnly ? "#9a3412" : "#444",
+            fontSize: 12,
+            fontWeight: replyNeededOnly ? 600 : 500,
+            cursor: "pointer",
+          }}
+        >
+          Reply needed{replyNeededCount ? ` (${replyNeededCount})` : ""}
+        </button>
         <input
           ref={searchInputRef}
           type="search"
@@ -743,6 +764,7 @@ export default function InboxClient() {
             type="button"
             onClick={() => {
               setAssignmentFilter("all");
+              setReplyNeededOnly(false);
               setTagFilter("");
               setSearchQuery("");
             }}
