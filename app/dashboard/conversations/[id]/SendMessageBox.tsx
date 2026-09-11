@@ -16,6 +16,7 @@ export default function SendMessageBox({
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [a2pPending, setA2pPending] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const pendingSendKey = useRef<string | null>(null);
 
@@ -61,7 +62,13 @@ export default function SendMessageBox({
       pendingSendKey.current = null;
       router.refresh();
     } catch (e: any) {
-      setError(e?.message || "Send failed");
+      const message = e?.message || "Send failed";
+      if (message.toLowerCase().includes("a2p campaign approval")) {
+        setA2pPending(true);
+        setError("SMS delivery is pending A2P campaign approval.");
+      } else {
+        setError(message);
+      }
     } finally {
       setSending(false);
     }
@@ -89,19 +96,21 @@ export default function SendMessageBox({
               resize: "vertical",
               minHeight: 44,
             }}
-            disabled={sending}
+            disabled={sending || a2pPending}
           />
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
+              disabled={a2pPending}
               style={{
                 padding: "6px 10px",
                 borderRadius: 8,
                 border: "1px solid #ddd",
                 background: "#f9f9f9",
                 fontSize: 12,
-                cursor: "pointer",
+                cursor: a2pPending ? "not-allowed" : "pointer",
+                opacity: a2pPending ? 0.6 : 1,
               }}
             >
               ⚡ Quick Replies
@@ -115,17 +124,17 @@ export default function SendMessageBox({
         </div>
         <button
           onClick={handleSend}
-          disabled={sending}
+          disabled={sending || a2pPending}
           style={{
             padding: "10px 12px",
             borderRadius: 10,
             border: "1px solid #111",
             background: "#111",
             color: "white",
-            cursor: sending ? "not-allowed" : "pointer",
+            cursor: sending || a2pPending ? "not-allowed" : "pointer",
           }}
         >
-          {sending ? "Sending…" : "Send"}
+          {a2pPending ? "Pending A2P approval" : sending ? "Sending…" : "Send"}
         </button>
       </div>
       <QuickReplyPicker
