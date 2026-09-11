@@ -61,11 +61,10 @@ export async function POST(
       .from("conversations")
       .update({
         last_read_at: now,
-        updated_at: now,
       })
       .eq("id", id)
       .eq("property_id", propertyId)
-      .select("id, property_id, last_read_at, updated_at")
+      .select("id, property_id, last_read_at")
       .maybeSingle();
 
     if (error) {
