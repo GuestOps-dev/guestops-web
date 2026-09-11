@@ -111,11 +111,11 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  ├─ STRUCTURE.md
 │  └─ TECH_HANDOFF.md
 ├─ eslint.config.mjs
-├─ middleware.ts
 ├─ next-env.d.ts
 ├─ next.config.ts
 ├─ package.json
 ├─ postcss.config.mjs
+├─ proxy.ts
 ├─ README.md
 ├─ scripts
 │  └─ gen-handoff-index.mjs
