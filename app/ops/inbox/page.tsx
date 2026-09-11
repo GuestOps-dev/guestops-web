@@ -138,7 +138,7 @@ export default async function OpsInboxPage({
             fontWeight: 500,
           }}
         >
-          Resolved
+          Closed
         </Link>
       </div>
 

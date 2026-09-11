@@ -40,9 +40,11 @@ export function OpsInboxRow({
 }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function setStatus(newStatus: string) {
     setBusy(true);
+    setError(null);
     try {
       const res = await fetch(`/api/conversations/${id}/status`, {
         method: "PATCH",
@@ -51,7 +53,11 @@ export function OpsInboxRow({
       });
       if (res.ok) {
         router.refresh();
+      } else {
+        setError("The conversation status could not be updated. Please try again.");
       }
+    } catch {
+      setError("The conversation status could not be updated. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -91,9 +97,9 @@ export function OpsInboxRow({
           {status === "awaiting_team"
             ? "Inbox"
             : status === "waiting_guest"
-              ? "Waiting"
+              ? "Waiting on Guest"
               : status === "active"
-                ? "Active"
+                ? "Inbox"
                 : "Closed"}
         </span>
         {priority ? (
@@ -152,6 +158,11 @@ export function OpsInboxRow({
           </button>
         )}
       </div>
+      {error ? (
+        <div role="alert" style={{ color: "#b91c1c", fontSize: 12 }}>
+          {error}
+        </div>
+      ) : null}
     </div>
   );
 }
