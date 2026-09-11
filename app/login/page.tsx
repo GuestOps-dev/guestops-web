@@ -110,7 +110,8 @@ function LoginInner() {
         <div style={{ color: "#555", lineHeight: 1.5 }}>
           GuestOpsHQ is operated by Majestic Monkeys LLC.{" "}
           <Link href="/privacy">Privacy Policy</Link>{" · "}
-          <Link href="/sms-terms">SMS Terms</Link>
+          <Link href="/sms-terms">SMS Terms</Link>{" · "}
+          <Link href="/sms-consent">SMS Consent</Link>
         </div>
       </div>
     </main>
