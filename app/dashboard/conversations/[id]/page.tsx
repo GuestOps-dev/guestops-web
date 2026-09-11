@@ -190,6 +190,8 @@ export default async function ConversationPage({
     }
   }
 
+  const guestTitle = guest?.full_name?.trim() || guestNumber;
+
   return (
     <main
       className="conversation-page"
@@ -213,7 +215,7 @@ export default async function ConversationPage({
         >
         <span style={{ fontSize: 18, fontWeight: 600 }}>
           {propertyName}
-          {guestNumber ? ` · ${guestNumber}` : ""}
+          {guestTitle ? ` · ${guestTitle}` : ""}
         </span>
         <ConversationStatusSelect
           conversationId={conversationId}
