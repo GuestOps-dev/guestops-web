@@ -40,8 +40,8 @@ export default function PrivacyPolicy() {
 
       <h2>SMS Communications</h2>
       <p>
-        By providing your mobile phone number and affirmatively agreeing to receive messages during
-        the reservation booking process, you consent to receive <strong>transactional SMS messages
+        By providing your mobile phone number and affirmatively agreeing through the GuestOpsHQ SMS
+        consent form, you consent to receive <strong>transactional SMS messages
         related to your reservation</strong>.
       </p>
 
