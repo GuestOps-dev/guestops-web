@@ -57,6 +57,17 @@ Displays:
 - Past Stays
 - Past Conversations
 
+### Active-stay attention
+
+Show the property (house) name and the current booking's check-in and
+check-out dates in the profile. While the current date falls within that
+stay, label the conversation **In-house** and keep it prominent in the
+inbox. This is derived from the booking dates, so it ends automatically at
+checkout and does not overwrite a manually selected VIP or urgent priority.
+
+Stay dates belong to a booking rather than the guest, since a returning guest
+can have different dates on a later visit.
+
 This connects messaging to the Guest CRM.
 
 Example layout:
