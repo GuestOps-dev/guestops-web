@@ -233,6 +233,7 @@ export default function InboxClient() {
         const text = await res.text().catch(() => "");
         console.error("Status update failed:", res.status, text);
         setAllRows(previousAllRows);
+        setError("The conversation status could not be updated. Please try again.");
       } else {
         // Best-effort refresh so tabs stay accurate
         void refetch();
@@ -240,6 +241,7 @@ export default function InboxClient() {
     } catch (e) {
       console.error("Unexpected status update error:", e);
       setAllRows(previousAllRows);
+      setError("The conversation status could not be updated. Please try again.");
     }
   }
 
@@ -275,12 +277,14 @@ export default function InboxClient() {
         const text = await res.text().catch(() => "");
         console.error("Assign failed:", res.status, text);
         setAllRows(previousAllRows);
+        setError("The conversation could not be assigned to you. Please try again.");
       } else {
         void refetch();
       }
     } catch (e) {
       console.error("Unexpected assign error:", e);
       setAllRows(previousAllRows);
+      setError("The conversation could not be assigned to you. Please try again.");
     }
   }
 
@@ -643,6 +647,7 @@ export default function InboxClient() {
 
       {error ? (
         <div
+          role="alert"
           style={{
             border: "1px solid #f5c2c7",
             background: "#f8d7da",
