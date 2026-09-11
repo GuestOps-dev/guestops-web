@@ -82,9 +82,11 @@ export default function GuestProfilePanel({
   }, [guest.id]);
 
   const saveName = async () => {
-    setEditingName(false);
     const trimmed = nameValue.trim();
-    if (trimmed === (profile.full_name ?? "")) return;
+    if (trimmed === (profile.full_name ?? "")) {
+      setEditingName(false);
+      return;
+    }
     setSavingName(true);
     setError(null);
     try {
@@ -109,6 +111,7 @@ export default function GuestProfilePanel({
       }
       const data = await res.json();
       setProfile((p) => ({ ...p, full_name: data.full_name ?? trimmed }));
+      setEditingName(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -245,8 +248,13 @@ export default function GuestProfilePanel({
           <input
             value={nameValue}
             onChange={(e) => setNameValue(e.target.value)}
-            onBlur={saveName}
-            onKeyDown={(e) => e.key === "Enter" && saveName()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void saveName();
+              if (e.key === "Escape") {
+                setNameValue(profile.full_name ?? "");
+                setEditingName(false);
+              }
+            }}
             autoFocus
             style={{
               width: "100%",
@@ -272,6 +280,28 @@ export default function GuestProfilePanel({
             }}
           >
             {savingName ? "…" : "Save"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setNameValue(profile.full_name ?? "");
+              setEditingName(false);
+              setError(null);
+            }}
+            disabled={savingName}
+            style={{
+              marginTop: 4,
+              marginLeft: 6,
+              padding: "4px 8px",
+              fontSize: 12,
+              border: "1px solid #ccc",
+              background: "#fff",
+              color: "#333",
+              borderRadius: 6,
+              cursor: savingName ? "not-allowed" : "pointer",
+            }}
+          >
+            Cancel
           </button>
         </div>
       ) : (
@@ -388,7 +418,7 @@ export default function GuestProfilePanel({
       </div>
 
       {error && (
-        <div style={{ fontSize: 12, color: "#b91c1c", marginBottom: 8 }}>
+        <div role="alert" style={{ fontSize: 12, color: "#b91c1c", marginBottom: 8 }}>
           {error}
         </div>
       )}
