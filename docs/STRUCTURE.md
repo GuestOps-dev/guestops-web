@@ -48,6 +48,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  └─ lookup
 │  │  │     └─ route.ts
 │  │  ├─ properties
+│  │  │  ├─ [id]
+│  │  │  │  └─ route.ts
 │  │  │  └─ route.ts
 │  │  ├─ quick-replies
 │  │  │  ├─ [id]
@@ -77,10 +79,12 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  ├─ InboxClient.tsx
 │  │  ├─ page.tsx
 │  │  ├─ properties
-│  │  │  └─ [propertyId]
-│  │  │     └─ quick-replies
-│  │  │        ├─ page.tsx
-│  │  │        └─ PropertyQuickRepliesManager.tsx
+│  │  │  ├─ [propertyId]
+│  │  │  │  └─ quick-replies
+│  │  │  │     ├─ page.tsx
+│  │  │  │     └─ PropertyQuickRepliesManager.tsx
+│  │  │  ├─ page.tsx
+│  │  │  └─ PropertyGuideManager.tsx
 │  │  ├─ PropertyWorkspaceProvider.tsx
 │  │  ├─ quick-replies
 │  │  │  ├─ page.tsx

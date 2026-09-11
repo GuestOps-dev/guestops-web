@@ -1,7 +1,7 @@
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T23:47:18.403Z
-Git SHA: 1102a03
+Generated: 2026-09-11T23:53:18.364Z
+Git SHA: 8bca71b
 
 ---
 
@@ -43,6 +43,8 @@ Git SHA: 1102a03
   - file: `app/api/messages/send/route.ts`
 - **/api/profiles/lookup** (POST)  
   - file: `app/api/profiles/lookup/route.ts`
+- **/api/properties/[id]** (GET, PATCH)  
+  - file: `app/api/properties/[id]/route.ts`
 - **/api/properties** (GET)  
   - file: `app/api/properties/route.ts`
 - **/api/quick-replies/[id]** (PATCH, DELETE)  

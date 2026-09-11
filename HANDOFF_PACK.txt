@@ -1,6 +1,6 @@
 GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)
-Generated: 2026-09-11T23:47:18.459Z
-Git SHA: 1102a03
+Generated: 2026-09-11T23:53:18.421Z
+Git SHA: 8bca71b
 
 RULES FOR NEW CHAT:
 - Prefer code snippets that can be pasted into Cursor.
@@ -61,6 +61,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  └─ lookup
 │  │  │     └─ route.ts
 │  │  ├─ properties
+│  │  │  ├─ [id]
+│  │  │  │  └─ route.ts
 │  │  │  └─ route.ts
 │  │  ├─ quick-replies
 │  │  │  ├─ [id]
@@ -90,10 +92,12 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  ├─ InboxClient.tsx
 │  │  ├─ page.tsx
 │  │  ├─ properties
-│  │  │  └─ [propertyId]
-│  │  │     └─ quick-replies
-│  │  │        ├─ page.tsx
-│  │  │        └─ PropertyQuickRepliesManager.tsx
+│  │  │  ├─ [propertyId]
+│  │  │  │  └─ quick-replies
+│  │  │  │     ├─ page.tsx
+│  │  │  │     └─ PropertyQuickRepliesManager.tsx
+│  │  │  ├─ page.tsx
+│  │  │  └─ PropertyGuideManager.tsx
 │  │  ├─ PropertyWorkspaceProvider.tsx
 │  │  ├─ quick-replies
 │  │  │  ├─ page.tsx
@@ -192,8 +196,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T23:47:18.403Z
-Git SHA: 1102a03
+Generated: 2026-09-11T23:53:18.364Z
+Git SHA: 8bca71b
 
 ---
 
@@ -235,6 +239,8 @@ Git SHA: 1102a03
   - file: `app/api/messages/send/route.ts`
 - **/api/profiles/lookup** (POST)  
   - file: `app/api/profiles/lookup/route.ts`
+- **/api/properties/[id]** (GET, PATCH)  
+  - file: `app/api/properties/[id]/route.ts`
 - **/api/properties** (GET)  
   - file: `app/api/properties/route.ts`
 - **/api/quick-replies/[id]** (PATCH, DELETE)  

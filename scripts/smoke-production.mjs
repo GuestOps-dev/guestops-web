@@ -46,6 +46,11 @@ const checks = [
     expectedStatus: 401,
   },
   {
+    name: "property guide rejects anonymous requests",
+    path: "/api/properties/not-a-property",
+    expectedStatus: 401,
+  },
+  {
     name: "quick replies reject anonymous requests",
     path: "/api/quick-replies",
     expectedStatus: 401,

@@ -598,6 +598,12 @@ export default function InboxClient() {
           >
             Vendors
           </Link>
+          <Link
+            href="/dashboard/properties"
+            style={{ fontSize: 13, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}
+          >
+            Property Guide
+          </Link>
           <div
             style={{
               display: "inline-flex",
