@@ -1,7 +1,7 @@
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T13:17:19.376Z
-Git SHA: e50f703
+Generated: 2026-09-11T16:56:15.978Z
+Git SHA: f1a8d4a
 
 ---
 
@@ -62,7 +62,6 @@ Git SHA: e50f703
 
 ## Environment Variables Referenced in Code
 
-- `HANDOFF_KEY`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_ANON_KEY`

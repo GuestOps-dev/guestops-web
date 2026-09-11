@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getSupabaseServiceClient } from "@/lib/supabaseServer";
 import { OpsInboxRow } from "./OpsInboxRow";
 import { PropertyFilter } from "./PropertyFilter";
 
@@ -48,38 +47,6 @@ export default async function OpsInboxPage({
     redirect("/login");
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profileError || !profile) {
-    notFound();
-  }
-
-  const role = (profile.role as string) ?? "user";
-  const isAdmin = role === "admin";
-
-  // Admin: no property restriction (use service client to bypass RLS and see all).
-  // Non-admin: restrict to assigned properties via property_users.
-  let allowedPropertyIds: string[] | null = null;
-
-  if (!isAdmin) {
-    const { data: memberships } = await supabase
-      .from("property_users")
-      .select("property_id")
-      .eq("user_id", user.id);
-    const ids = [
-      ...new Set(
-        (memberships ?? [])
-          .map((r: { property_id: string }) => r.property_id)
-          .filter(Boolean)
-      ),
-    ];
-    allowedPropertyIds = ids;
-  }
-
   let list: Array<{
     id: string;
     property_id: string | null;
@@ -92,61 +59,29 @@ export default async function OpsInboxPage({
   let conversationCount = 0;
   let propertiesForDropdown: Array<{ id: string; name: string }> = [];
 
-  if (isAdmin) {
-    const service = getSupabaseServiceClient();
-    let q = service
-      .from("conversations")
-      .select("id, property_id, guest_number, channel, status, last_message_at, priority")
-      .eq("status", status)
-      .order("last_message_at", { ascending: false })
-      .limit(50);
+  let q = supabase
+    .from("conversations")
+    .select("id, property_id, guest_number, channel, status, last_message_at, priority")
+    .eq("status", status)
+    .order("last_message_at", { ascending: false })
+    .limit(50);
 
-    if (selectedPropertyId) {
-      q = q.eq("property_id", selectedPropertyId);
-    }
-
-    const { data, error } = await q;
-    if (error) {
-      console.error("Ops inbox fetch error (admin):", error);
-    } else {
-      list = (data ?? []) as typeof list;
-      conversationCount = list.length;
-    }
-
-    const { data: props } = await service
-      .from("properties")
-      .select("id, name")
-      .order("name", { ascending: true });
-    propertiesForDropdown = (props ?? []) as Array<{ id: string; name: string }>;
-  } else {
-    const ids = allowedPropertyIds ?? [];
-    if (ids.length === 0) {
-      conversationCount = 0;
-    } else {
-      let q = supabase
-        .from("conversations")
-        .select("id, property_id, guest_number, channel, status, last_message_at, priority")
-        .eq("status", status)
-        .in("property_id", ids)
-        .order("last_message_at", { ascending: false })
-        .limit(50);
-
-      if (selectedPropertyId && ids.includes(selectedPropertyId)) {
-        q = q.eq("property_id", selectedPropertyId);
-      }
-
-      const { data, error } = await q;
-      if (error) {
-        console.error("Ops inbox fetch error (non-admin):", error);
-      } else {
-        list = (data ?? []) as typeof list;
-        conversationCount = list.length;
-      }
-    }
+  if (selectedPropertyId) {
+    q = q.eq("property_id", selectedPropertyId);
   }
 
-  const noAssignmentsMessage =
-    !isAdmin && allowedPropertyIds && allowedPropertyIds.length === 0;
+  const [{ data, error }, { data: props }] = await Promise.all([
+    q,
+    supabase.from("properties").select("id, name").order("name", { ascending: true }),
+  ]);
+
+  if (error) {
+    console.error("Ops inbox fetch error:", error);
+  } else {
+    list = (data ?? []) as typeof list;
+    conversationCount = list.length;
+  }
+  propertiesForDropdown = (props ?? []) as Array<{ id: string; name: string }>;
 
   return (
     <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
@@ -209,8 +144,7 @@ export default async function OpsInboxPage({
         </Link>
       </div>
 
-      {/* Property filter (admin only) */}
-      {isAdmin && (
+      {propertiesForDropdown.length > 0 && (
         <Suspense fallback={null}>
           <PropertyFilter
             tab={tab}
@@ -220,50 +154,9 @@ export default async function OpsInboxPage({
         </Suspense>
       )}
 
-      {/* Debug (admin only) */}
-      {isAdmin && (
-        <div
-          style={{
-            marginBottom: 20,
-            padding: 12,
-            background: "#f5f5f5",
-            borderRadius: 8,
-            fontSize: 12,
-            fontFamily: "monospace",
-            color: "#333",
-          }}
-        >
-          <div>user_id: {user.id}</div>
-          <div>role: {role}</div>
-          <div>tab: {tab} → status filter: {status}</div>
-          <div>propertyId filter: {selectedPropertyId ?? "(none)"}</div>
-          <div>allowedPropertyIds: {isAdmin ? "all (admin)" : (allowedPropertyIds?.length ?? 0)}</div>
-          <div>conversations returned: {conversationCount}</div>
-        </div>
-      )}
-
-      {/* No assignments message (non-admin, zero properties) */}
-      {noAssignmentsMessage && (
-        <div
-          style={{
-            padding: 24,
-            background: "#fff8e6",
-            border: "1px solid #e6d68a",
-            borderRadius: 12,
-            color: "#5c4a00",
-            fontSize: 14,
-            marginBottom: 20,
-          }}
-        >
-          <strong>No properties assigned.</strong> You have no property assignments yet, so
-          no conversations are visible. Ask an admin to add you to a property (e.g. via
-          property_users), or use the Handoff / admin tools to configure assignments.
-        </div>
-      )}
-
       {/* Conversation list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-        {list.length === 0 && !noAssignmentsMessage ? (
+        {list.length === 0 ? (
           <div
             style={{
               padding: 24,
