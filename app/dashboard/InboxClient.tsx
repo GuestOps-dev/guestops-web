@@ -564,7 +564,7 @@ export default function InboxClient() {
     const name = profileNameById[id];
     if (name && name.trim()) return name;
 
-    return id.slice(0, 8);
+    return "Assigned";
   }
 
   return (

@@ -755,7 +755,7 @@ export default function GuestProfilePanel({
               }}
             >
               <div style={{ color: "#92400e", marginBottom: 4 }}>
-                {n.created_by ? `${n.created_by.slice(0, 8)} • ` : ""}
+                {n.created_by ? "Team member • " : ""}
                 {new Date(n.created_at).toLocaleString()}
               </div>
               <div style={{ whiteSpace: "pre-wrap" }}>{n.body}</div>

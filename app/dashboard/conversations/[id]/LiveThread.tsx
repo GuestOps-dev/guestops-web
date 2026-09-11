@@ -515,7 +515,7 @@ export default function LiveThread({
                   INTERNAL
                 </span>
                 <span style={{ fontSize: 11, color: "#78350f" }}>
-                  {m.created_by ? `${m.created_by.slice(0, 8)} • ` : ""}
+                  {m.created_by ? "Team member • " : ""}
                   {new Date(m.created_at).toLocaleString()}
                 </span>
                 <div style={{ marginTop: 4, whiteSpace: "pre-wrap", fontSize: 13 }}>
