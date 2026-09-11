@@ -87,6 +87,16 @@ function isUnread(c: ConversationRow) {
   );
 }
 
+/** A guest has sent something more recently than the property has replied. */
+function needsReply(c: ConversationRow) {
+  if (c.status === "closed" || c.last_inbound_at == null) return false;
+  if (c.last_outbound_at == null) return true;
+  return (
+    new Date(c.last_inbound_at).getTime() >
+    new Date(c.last_outbound_at).getTime()
+  );
+}
+
 const PRIORITY_RANK: Record<string, number> = {
   urgent: 3,
   vip: 2,
@@ -199,6 +209,10 @@ export default function InboxClient() {
   }, [allRows]);
   const unreadCount = useMemo(
     () => displayRows.filter(isUnread).length,
+    [displayRows]
+  );
+  const replyNeededCount = useMemo(
+    () => displayRows.filter(needsReply).length,
     [displayRows]
   );
   const unreadInbox = useMemo(
@@ -548,7 +562,9 @@ export default function InboxClient() {
     <>
       <div className="inbox-summarybar" style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
         <div style={{ fontSize: 14, opacity: 0.75 }}>
-          {loading ? "Refreshing…" : `${displayRows.length} threads • ${unreadCount} unread`}
+          {loading
+            ? "Refreshing…"
+            : `${displayRows.length} threads • ${unreadCount} unread${replyNeededCount ? ` • ${replyNeededCount} need${replyNeededCount === 1 ? "s" : ""} reply` : ""}`}
           {hasActiveFilters && rawCount !== displayRows.length ? (
             <span style={{ marginLeft: 10, fontSize: 12, opacity: 0.65 }}>
               {`${rawCount} total`}
@@ -816,6 +832,7 @@ export default function InboxClient() {
 
         {displayRows.map((c) => {
           const unread = c.is_unread ?? isUnread(c);
+          const replyNeeded = needsReply(c);
 
           return (
             <div
@@ -850,6 +867,23 @@ export default function InboxClient() {
                 {unread ? "● " : ""}
                 {getGuestDisplayName(c)}
                 <PriorityBadge priority={c.priority} />
+                {replyNeeded ? (
+                  <span
+                    title="The guest's latest message has not received a property reply yet."
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#9a3412",
+                      background: "#ffedd5",
+                      border: "1px solid #fdba74",
+                      borderRadius: 999,
+                      padding: "2px 7px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Reply needed
+                  </span>
+                ) : null}
               </div>
               <div>
                 <code>{displayPropertyName(c.property_id)}</code>
