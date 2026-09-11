@@ -53,11 +53,15 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  ├─ [id]
 │  │  │  │  └─ route.ts
 │  │  │  └─ route.ts
-│  │  └─ twilio
-│  │     ├─ inbound
+│  │  ├─ twilio
+│  │  │  ├─ inbound
+│  │  │  │  └─ route.ts
+│  │  │  └─ status
+│  │  │     └─ route.ts
+│  │  └─ vendors
+│  │     ├─ [id]
 │  │     │  └─ route.ts
-│  │     └─ status
-│  │        └─ route.ts
+│  │     └─ route.ts
 │  ├─ dashboard
 │  │  ├─ conversations
 │  │  │  └─ [id]
@@ -78,9 +82,12 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │        ├─ page.tsx
 │  │  │        └─ PropertyQuickRepliesManager.tsx
 │  │  ├─ PropertyWorkspaceProvider.tsx
-│  │  └─ quick-replies
+│  │  ├─ quick-replies
+│  │  │  ├─ page.tsx
+│  │  │  └─ QuickRepliesAdmin.tsx
+│  │  └─ vendors
 │  │     ├─ page.tsx
-│  │     └─ QuickRepliesAdmin.tsx
+│  │     └─ VendorsManager.tsx
 │  ├─ forgot-password
 │  │  └─ page.tsx
 │  ├─ layout.tsx

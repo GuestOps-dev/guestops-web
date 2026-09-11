@@ -592,6 +592,12 @@ export default function InboxClient() {
         </div>
 
         <div className="inbox-primary-controls" style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
+          <Link
+            href="/dashboard/vendors"
+            style={{ fontSize: 13, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}
+          >
+            Vendors
+          </Link>
           <div
             style={{
               display: "inline-flex",

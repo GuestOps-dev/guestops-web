@@ -51,6 +51,11 @@ const checks = [
     expectedStatus: 401,
   },
   {
+    name: "vendor directory rejects anonymous requests",
+    path: "/api/vendors",
+    expectedStatus: 401,
+  },
+  {
     name: "profile lookup rejects anonymous requests",
     path: "/api/profiles/lookup",
     method: "POST",

@@ -1,6 +1,6 @@
 GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)
-Generated: 2026-09-11T23:42:12.590Z
-Git SHA: e826b3d
+Generated: 2026-09-11T23:47:18.459Z
+Git SHA: 1102a03
 
 RULES FOR NEW CHAT:
 - Prefer code snippets that can be pasted into Cursor.
@@ -66,11 +66,15 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  ├─ [id]
 │  │  │  │  └─ route.ts
 │  │  │  └─ route.ts
-│  │  └─ twilio
-│  │     ├─ inbound
+│  │  ├─ twilio
+│  │  │  ├─ inbound
+│  │  │  │  └─ route.ts
+│  │  │  └─ status
+│  │  │     └─ route.ts
+│  │  └─ vendors
+│  │     ├─ [id]
 │  │     │  └─ route.ts
-│  │     └─ status
-│  │        └─ route.ts
+│  │     └─ route.ts
 │  ├─ dashboard
 │  │  ├─ conversations
 │  │  │  └─ [id]
@@ -91,9 +95,12 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │        ├─ page.tsx
 │  │  │        └─ PropertyQuickRepliesManager.tsx
 │  │  ├─ PropertyWorkspaceProvider.tsx
-│  │  └─ quick-replies
+│  │  ├─ quick-replies
+│  │  │  ├─ page.tsx
+│  │  │  └─ QuickRepliesAdmin.tsx
+│  │  └─ vendors
 │  │     ├─ page.tsx
-│  │     └─ QuickRepliesAdmin.tsx
+│  │     └─ VendorsManager.tsx
 │  ├─ forgot-password
 │  │  └─ page.tsx
 │  ├─ layout.tsx
@@ -185,8 +192,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T23:42:12.535Z
-Git SHA: e826b3d
+Generated: 2026-09-11T23:47:18.403Z
+Git SHA: 1102a03
 
 ---
 
@@ -238,6 +245,10 @@ Git SHA: e826b3d
   - file: `app/api/twilio/inbound/route.ts`
 - **/api/twilio/status** (POST)  
   - file: `app/api/twilio/status/route.ts`
+- **/api/vendors/[id]** (PATCH)  
+  - file: `app/api/vendors/[id]/route.ts`
+- **/api/vendors** (GET, POST)  
+  - file: `app/api/vendors/route.ts`
 - **/api/me/memberships** (GET)  
   - file: `src/app/api/me/memberships/route.ts`
 - **/api/profiles/lookup** (POST)  

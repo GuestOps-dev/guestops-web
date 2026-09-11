@@ -1,7 +1,7 @@
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T23:42:12.535Z
-Git SHA: e826b3d
+Generated: 2026-09-11T23:47:18.403Z
+Git SHA: 1102a03
 
 ---
 
@@ -53,6 +53,10 @@ Git SHA: e826b3d
   - file: `app/api/twilio/inbound/route.ts`
 - **/api/twilio/status** (POST)  
   - file: `app/api/twilio/status/route.ts`
+- **/api/vendors/[id]** (PATCH)  
+  - file: `app/api/vendors/[id]/route.ts`
+- **/api/vendors** (GET, POST)  
+  - file: `app/api/vendors/route.ts`
 - **/api/me/memberships** (GET)  
   - file: `src/app/api/me/memberships/route.ts`
 - **/api/profiles/lookup** (POST)  
