@@ -4,9 +4,9 @@ export default function SMSTerms() {
       <h1>SMS Terms & Conditions</h1>
 
       <p>
-        By providing your mobile phone number during the reservation booking process or by
-        initiating communication with GuestOpsHQ, you consent to receive SMS messages related to
-        your reservation and guest services.
+        Majestic Monkeys LLC operates GuestOpsHQ. By providing your mobile phone number and
+        affirmatively agreeing to receive messages during the reservation booking process, you
+        consent to receive SMS messages related to your reservation and guest services.
       </p>
 
       <p>These messages are <strong>transactional and operational in nature</strong> and may include:</p>
@@ -20,7 +20,8 @@ export default function SMSTerms() {
       </ul>
 
       <p>
-        GuestOpsHQ <strong>does not send marketing or promotional text messages.</strong>
+        Majestic Monkeys LLC and GuestOpsHQ <strong>do not send marketing or promotional text
+        messages.</strong>
       </p>
 
       <h2>Message Frequency</h2>

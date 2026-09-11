@@ -2,11 +2,11 @@ export default function PrivacyPolicy() {
   return (
     <main style={{ maxWidth: 800, margin: "0 auto", padding: "40px 20px", lineHeight: 1.6 }}>
       <h1>Privacy Policy</h1>
-      <p><strong>Last updated:</strong> February 23, 2026</p>
+      <p><strong>Last updated:</strong> September 11, 2026</p>
 
       <p>
-        GuestOpsHQ respects your privacy. This Privacy Policy explains what information we collect,
-        how we use it, and how we protect it.
+        Majestic Monkeys LLC operates GuestOpsHQ. This Privacy Policy explains what information we
+        collect, how we use it, and how we protect it.
       </p>
 
       <h2>Information We Collect</h2>
@@ -40,9 +40,9 @@ export default function PrivacyPolicy() {
 
       <h2>SMS Communications</h2>
       <p>
-        By providing your mobile phone number during the reservation booking process, or by
-        initiating communication with us via SMS, you consent to receive <strong>transactional SMS
-        messages related to your reservation</strong>.
+        By providing your mobile phone number and affirmatively agreeing to receive messages during
+        the reservation booking process, you consent to receive <strong>transactional SMS messages
+        related to your reservation</strong>.
       </p>
 
       <p>These messages may include:</p>
@@ -71,8 +71,8 @@ export default function PrivacyPolicy() {
 
       <h2>Data Sharing</h2>
       <p>
-        We do not sell, rent, or share personal information with third parties for marketing
-        purposes.
+        We do not sell, rent, or share personal information, including mobile phone numbers, with
+        third parties for their marketing or promotional purposes.
       </p>
 
       <p>
