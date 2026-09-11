@@ -12,18 +12,23 @@ easier to operate.
 
 ---
 
-# Dashboard Usability Pass (Planned MVP Enhancement)
+# Dashboard Usability Pass (MVP Enhancement)
 
 Goal: Reduce the time and attention needed to work an active inbox.
 
-- Make urgency, unread activity, assignment, and conversation state easier to
-  scan from the inbox.
+- Completed foundation: inbox search, status/assignment/tag filters, a clear
+  filters action, keyboard focus for search, responsive small-screen layout,
+  self-assignment, and visible action failures with retry.
+- Next: make urgency, unread activity, assignment, and conversation state even
+  easier to scan from the inbox.
 - Keep frequent actions—assigning, changing status, applying a quick reply,
   and adding a private note—easy to find and confirm.
-- Improve empty, loading, and error states so operators know what happened and
-  what to do next.
-- Improve small-screen and keyboard usability without sacrificing the desktop
-  workflow.
+- Continue refining empty, loading, and error states so operators know what
+  happened and what to do next.
+- Continue testing small-screen and keyboard usability without sacrificing the
+  desktop workflow.
+- Consider a compact at-a-glance dashboard summary only after the working
+  inbox remains the fastest route to an active guest conversation.
 - Validate the flow with realistic operator smoke checks before adding larger
   features such as automation or reporting.
 
