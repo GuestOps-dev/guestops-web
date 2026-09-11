@@ -262,6 +262,7 @@ export default async function ConversationPage({
         <GuestProfilePanel
           guest={guest}
           propertyId={propertyId}
+          propertyName={propertyName}
           initialNotes={initialGuestNotes}
         />
       )}

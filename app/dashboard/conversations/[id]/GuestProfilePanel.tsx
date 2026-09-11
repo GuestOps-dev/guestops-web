@@ -29,12 +29,14 @@ export type GuestNoteRow = {
 type Props = {
   guest: GuestRow;
   propertyId: string;
+  propertyName: string;
   initialNotes: GuestNoteRow[];
 };
 
 export default function GuestProfilePanel({
   guest,
   propertyId,
+  propertyName,
   initialNotes,
 }: Props) {
   const [profile, setProfile] = useState<GuestRow>(guest);
@@ -211,6 +213,24 @@ export default function GuestProfilePanel({
       <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
         Guest profile
       </h3>
+
+      <div style={{ marginBottom: 14 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: "#6b7280",
+            fontWeight: 600,
+            letterSpacing: "0.03em",
+            textTransform: "uppercase",
+            marginBottom: 3,
+          }}
+        >
+          House
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+          {propertyName}
+        </div>
+      </div>
 
       {editingName ? (
         <div style={{ marginBottom: 12 }}>
