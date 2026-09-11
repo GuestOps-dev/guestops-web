@@ -24,7 +24,7 @@
 
 \## 4) Conversations API must work (RLS)
 
-\- GET /api/conversations?status=open -> 200 and array
+\- GET /api/conversations?status=awaiting_team -> 200 and array
 
 \- No 500 errors like "infinite recursion detected in policy"
 
@@ -46,5 +46,13 @@ If /api/conversations returns 500:
 
 \- **Send outbound:** On the same thread page, send a reply. POST /api/conversations/[id]/outbound with body { body } must create an outbound_messages row and update conversation last_outbound_at + last_message_at. After send, thread refreshes (e.g. router.refresh() or refetch).
 
+\- **Retry a failed outbound:** Create or locate an outbound message with a failed/undelivered status, then click Retry once. A single replacement outbound_messages row must be created. Repeating the same browser request must return success without creating another row.
+
 \- **Mark read:** When the thread page loads, POST /api/conversations/[id]/read is called (with property_id in body). conversations.last_read_at is set to now. Unread = last_inbound_at > last_read_at; after viewing the thread, unread count in inbox should drop.
+
+\## 7) RLS access regression guard
+
+\- As an unauthenticated visitor, requests for conversations, inbound_messages, and outbound_messages must return no records.
+
+\- As an authenticated property member, the same views must return only records for that member's property or properties.
 
