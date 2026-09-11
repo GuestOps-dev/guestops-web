@@ -26,6 +26,31 @@ const checks = [
     expectedStatus: 401,
   },
   {
+    name: "conversation message history rejects anonymous requests",
+    path: "/api/conversations/not-a-conversation/messages",
+    expectedStatus: 401,
+  },
+  {
+    name: "conversation thread rejects anonymous requests",
+    path: "/api/conversations/not-a-conversation/thread",
+    expectedStatus: 401,
+  },
+  {
+    name: "internal notes reject anonymous requests",
+    path: "/api/conversations/not-a-conversation/internal-notes",
+    expectedStatus: 401,
+  },
+  {
+    name: "property list rejects anonymous requests",
+    path: "/api/properties",
+    expectedStatus: 401,
+  },
+  {
+    name: "quick replies reject anonymous requests",
+    path: "/api/quick-replies",
+    expectedStatus: 401,
+  },
+  {
     name: "profile lookup rejects anonymous requests",
     path: "/api/profiles/lookup",
     method: "POST",
