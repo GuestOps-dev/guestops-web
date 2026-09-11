@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import MarkRead from "./MarkRead";
 import LiveThread from "./LiveThread";
 import SendMessageBox from "./SendMessageBox";
-import GuestProfilePanel from "./GuestProfilePanel";
+import GuestProfilePanel, { type PropertyGuideSummary } from "./GuestProfilePanel";
 import ConversationStatusSelect from "./ConversationStatusSelect";
 import ConversationPrioritySelect from "./ConversationPrioritySelect";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -58,10 +58,19 @@ export default async function ConversationPage({
 
   const { data: propertyRow } = await (sb as any)
     .from("properties")
-    .select("name")
+    .select("name, check_in_time, check_out_time, wifi_ssid, wifi_password, check_in_instructions_guest")
     .eq("id", propertyId)
     .maybeSingle();
   const propertyName = (propertyRow as any)?.name ?? "Property";
+  const propertyGuide: PropertyGuideSummary | null = propertyRow
+    ? {
+        check_in_time: propertyRow.check_in_time ?? null,
+        check_out_time: propertyRow.check_out_time ?? null,
+        wifi_ssid: propertyRow.wifi_ssid ?? null,
+        wifi_password: propertyRow.wifi_password ?? null,
+        check_in_instructions_guest: propertyRow.check_in_instructions_guest ?? null,
+      }
+    : null;
 
   let booking: {
     id: string;
@@ -335,6 +344,7 @@ export default async function ConversationPage({
           stayHistory={stayHistory}
           conversationHistory={conversationHistory}
           initialNotes={initialGuestNotes}
+          propertyGuide={propertyGuide}
         />
       )}
     </main>

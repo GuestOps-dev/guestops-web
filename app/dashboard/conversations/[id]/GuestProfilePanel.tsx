@@ -42,6 +42,14 @@ export type ConversationHistoryRow = {
   updated_at: string | null;
 };
 
+export type PropertyGuideSummary = {
+  check_in_time: string | null;
+  check_out_time: string | null;
+  wifi_ssid: string | null;
+  wifi_password: string | null;
+  check_in_instructions_guest: string | null;
+};
+
 type Props = {
   guest: GuestRow;
   conversationId: string;
@@ -51,6 +59,7 @@ type Props = {
   stayHistory: StayHistoryRow[];
   conversationHistory: ConversationHistoryRow[];
   initialNotes: GuestNoteRow[];
+  propertyGuide: PropertyGuideSummary | null;
 };
 
 function formatStayDate(value: string | null) {
@@ -81,6 +90,7 @@ export default function GuestProfilePanel({
   stayHistory,
   conversationHistory,
   initialNotes,
+  propertyGuide,
 }: Props) {
   const [profile, setProfile] = useState<GuestRow>(guest);
   const [booking, setBooking] = useState<BookingStay | null>(initialBooking);
@@ -376,6 +386,48 @@ export default function GuestProfilePanel({
           {propertyName}
         </div>
       </div>
+
+      {propertyGuide && (
+        <details style={{ marginBottom: 14 }}>
+          <summary style={{ fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+            Property quick reference
+          </summary>
+          <div
+            style={{
+              marginTop: 7,
+              padding: "8px 9px",
+              borderRadius: 7,
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              fontSize: 12,
+              color: "#334155",
+              display: "grid",
+              gap: 5,
+            }}
+          >
+            {(propertyGuide.check_in_time || propertyGuide.check_out_time) && (
+              <div>
+                <strong>Arrival / departure:</strong>{" "}
+                {propertyGuide.check_in_time || "—"} / {propertyGuide.check_out_time || "—"}
+              </div>
+            )}
+            {propertyGuide.wifi_ssid && (
+              <div><strong>Wi-Fi:</strong> {propertyGuide.wifi_ssid}</div>
+            )}
+            {propertyGuide.wifi_password && (
+              <div><strong>Password:</strong> {propertyGuide.wifi_password}</div>
+            )}
+            {propertyGuide.check_in_instructions_guest && (
+              <div style={{ whiteSpace: "pre-wrap" }}>
+                <strong>Arrival notes:</strong>{"\n"}{propertyGuide.check_in_instructions_guest}
+              </div>
+            )}
+            {!propertyGuide.check_in_time && !propertyGuide.check_out_time && !propertyGuide.wifi_ssid && !propertyGuide.wifi_password && !propertyGuide.check_in_instructions_guest && (
+              <div style={{ color: "#64748b" }}>No quick-reference details saved yet.</div>
+            )}
+          </div>
+        </details>
+      )}
 
       <div style={{ marginBottom: 14 }}>
         <div
