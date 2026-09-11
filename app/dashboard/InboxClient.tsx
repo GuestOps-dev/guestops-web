@@ -479,7 +479,7 @@ export default function InboxClient() {
 
   return (
     <>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
+      <div className="inbox-summarybar" style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
         <div style={{ fontSize: 14, opacity: 0.75 }}>
           {loading ? "Refreshing…" : `${displayRows.length} threads • ${unreadCount} unread`}
           <span style={{ marginLeft: 10, fontSize: 12, opacity: 0.65 }}>
@@ -487,7 +487,7 @@ export default function InboxClient() {
           </span>
         </div>
 
-        <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
+        <div className="inbox-primary-controls" style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
           <div
             style={{
               display: "inline-flex",
@@ -564,6 +564,7 @@ export default function InboxClient() {
       </div>
 
       <div
+        className="inbox-filterbar"
         style={{
           display: "flex",
           gap: 12,
@@ -706,8 +707,9 @@ export default function InboxClient() {
       ) : null}
 
       {displayRows.length > 0 ? (
-      <div style={{ border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
+      <div className="inbox-table" style={{ border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
         <div
+          className="inbox-table-header"
           style={{
             display: "grid",
             gridTemplateColumns: "2.1fr 1.8fr 2fr 1.4fr 1.4fr 1fr 0.8fr",
@@ -732,6 +734,7 @@ export default function InboxClient() {
           return (
             <div
               key={c.id}
+              className="inbox-table-row"
               role="button"
               tabIndex={0}
               onClick={(e) => {

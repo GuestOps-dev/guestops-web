@@ -26,3 +26,49 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media (max-width: 760px) {
+  .inbox-summarybar {
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+
+  .inbox-primary-controls {
+    margin-left: 0 !important;
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+
+  .inbox-primary-controls > select {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .inbox-filterbar {
+    align-items: flex-start !important;
+  }
+
+  .inbox-table-header {
+    display: none !important;
+  }
+
+  .inbox-table-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .inbox-table-row > div:first-child,
+  .inbox-table-row > div:nth-child(3),
+  .inbox-table-row > div:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .inbox-table-row > div:nth-child(2),
+  .inbox-table-row > div:nth-child(4),
+  .inbox-table-row > div:nth-child(5),
+  .inbox-table-row > div:nth-child(6) {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+}
