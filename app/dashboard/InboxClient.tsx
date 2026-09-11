@@ -105,6 +105,7 @@ export default function InboxClient() {
   const [status, setStatus] = useState<StatusTab>("awaiting_team");
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
   const [tagFilter, setTagFilter] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [profileNameById, setProfileNameById] = useState<
@@ -112,6 +113,12 @@ export default function InboxClient() {
   >({});
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
+
+  const propertyNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of propertyOptions) map.set(p.id, p.name);
+    return map;
+  }, [propertyOptions]);
 
   const displayRows = useMemo(() => {
     let rows = allRows.filter((r) => belongsToStatusTab(r.status, status));
@@ -133,8 +140,23 @@ export default function InboxClient() {
         );
       });
     }
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      rows = rows.filter((row) => {
+        const searchable = [
+          getGuestDisplayName(row),
+          row.guests?.phone_e164,
+          row.guests?.phone,
+          row.guest_number,
+          propertyNameById.get(row.property_id),
+        ];
+        return searchable.some(
+          (value) => typeof value === "string" && value.toLowerCase().includes(query)
+        );
+      });
+    }
     return rows;
-  }, [allRows, status, assignmentFilter, currentUserId, tagFilter]);
+  }, [allRows, status, assignmentFilter, currentUserId, tagFilter, searchQuery, propertyNameById]);
 
   const tagOptions = useMemo(() => {
     const set = new Set<string>();
@@ -172,13 +194,8 @@ export default function InboxClient() {
     waiting_guest: "Waiting on Guest",
     closed: "Closed",
   };
-  const hasActiveFilters = assignmentFilter !== "all" || tagFilter !== "";
-
-  const propertyNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const p of propertyOptions) map.set(p.id, p.name);
-    return map;
-  }, [propertyOptions]);
+  const hasActiveFilters =
+    assignmentFilter !== "all" || tagFilter !== "" || searchQuery.trim() !== "";
 
   useEffect(() => {
     let cancelled = false;
@@ -623,12 +640,27 @@ export default function InboxClient() {
             </option>
           ))}
         </select>
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search guest, phone, or property"
+          aria-label="Search inbox"
+          style={{
+            padding: "6px 10px",
+            borderRadius: 8,
+            border: "1px solid #e5e5e5",
+            fontSize: 12,
+            minWidth: 220,
+          }}
+        />
         {hasActiveFilters ? (
           <button
             type="button"
             onClick={() => {
               setAssignmentFilter("all");
               setTagFilter("");
+              setSearchQuery("");
             }}
             style={{
               padding: "6px 10px",
