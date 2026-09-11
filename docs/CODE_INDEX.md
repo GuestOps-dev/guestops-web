@@ -1,7 +1,7 @@
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T17:04:13.692Z
-Git SHA: 94c339d
+Generated: 2026-09-11T17:05:35.226Z
+Git SHA: 0e979d8
 
 ---
 
@@ -62,6 +62,7 @@ Git SHA: 94c339d
 
 ## Environment Variables Referenced in Code
 
+- `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_ANON_KEY`

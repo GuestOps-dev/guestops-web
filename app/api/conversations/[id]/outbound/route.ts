@@ -106,12 +106,17 @@ export async function POST(
 
   const insertedMessageId = inserted.id;
   const client = twilio(accountSid, authToken);
+  const publicBaseUrl = (process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).replace(
+    /\/$/,
+    ""
+  );
 
   try {
     const twilioMessage = await client.messages.create({
       from: serviceNumber,
       to: guestNumber,
       body,
+      statusCallback: `${publicBaseUrl}/api/twilio/status`,
     });
 
     await sb

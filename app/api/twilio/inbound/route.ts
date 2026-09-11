@@ -218,6 +218,23 @@ export async function POST(req: Request) {
 
     const now = new Date().toISOString();
 
+    // Twilio retries webhooks until it receives a response. Avoid creating a
+    // second message when a prior delivery was already persisted.
+    if (messageSid) {
+      const { data: existingInbound, error: existingInboundError } = await sb
+        .from("inbound_messages")
+        .select("id")
+        .eq("provider", "twilio")
+        .eq("provider_message_id", messageSid)
+        .maybeSingle();
+
+      if (existingInboundError) {
+        console.error("inbound idempotency lookup error:", existingInboundError);
+        return ok();
+      }
+      if (existingInbound) return ok();
+    }
+
     const { error: inErr } = await sb.from("inbound_messages").insert({
       conversation_id: convo.id,
       body,
