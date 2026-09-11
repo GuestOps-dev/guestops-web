@@ -275,19 +275,29 @@ export default function GuestProfilePanel({
           </button>
         </div>
       ) : (
-        <div
-          style={{ marginBottom: 12, cursor: "pointer" }}
+        <button
+          type="button"
           onClick={() => {
             setEditingName(true);
             setNameValue(profile.full_name ?? "");
           }}
-          title="Click to edit"
+          style={{
+            display: "block",
+            marginBottom: 12,
+            padding: 0,
+            border: "none",
+            background: "transparent",
+            color: "inherit",
+            cursor: "pointer",
+            textAlign: "left",
+          }}
+          aria-label="Edit guest name"
         >
           <span style={{ fontSize: 15, fontWeight: 600 }}>
             {profile.full_name || "— No name —"}
           </span>
           <span style={{ fontSize: 11, color: "#666", marginLeft: 6 }}>Edit</span>
-        </div>
+        </button>
       )}
 
       <div style={{ fontSize: 12, color: "#444", marginBottom: 12 }}>
