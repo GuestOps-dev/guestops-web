@@ -15,6 +15,21 @@ const checks = [
     },
   },
   {
+    name: "public privacy policy page",
+    path: "/privacy",
+    expectedStatus: 200,
+  },
+  {
+    name: "public SMS terms page",
+    path: "/sms-terms",
+    expectedStatus: 200,
+  },
+  {
+    name: "public SMS consent page",
+    path: "/sms-consent",
+    expectedStatus: 200,
+  },
+  {
     name: "protected dashboard redirects anonymous visitors",
     path: "/dashboard",
     expectedStatus: 307,
