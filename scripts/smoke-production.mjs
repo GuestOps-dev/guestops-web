@@ -11,6 +11,7 @@ const checks = [
     expectedHeaders: {
       "x-content-type-options": "nosniff",
       "x-frame-options": "DENY",
+      "content-security-policy": "required",
     },
   },
   {
@@ -56,8 +57,14 @@ for (const check of checks) {
     check.expectedHeaders || {}
   )) {
     const actualValue = response.headers.get(header);
-    if (actualValue?.toLowerCase() !== expectedValue.toLowerCase()) {
+    if (
+      expectedValue !== "required" &&
+      actualValue?.toLowerCase() !== expectedValue.toLowerCase()
+    ) {
       problems.push(`expected ${header}: ${expectedValue}, got ${actualValue || "missing"}`);
+    }
+    if (expectedValue === "required" && !actualValue) {
+      problems.push(`expected ${header}, got missing`);
     }
   }
 
