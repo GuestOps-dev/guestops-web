@@ -105,8 +105,13 @@ function LoginInner() {
         </button>
       </form>
 
-      <div style={{ marginTop: 16, fontSize: 13 }}>
+      <div style={{ marginTop: 16, fontSize: 13, display: "grid", gap: 10 }}>
         <Link href="/forgot-password">Forgot your password?</Link>
+        <div style={{ color: "#555", lineHeight: 1.5 }}>
+          GuestOpsHQ is operated by Majestic Monkeys LLC.{" "}
+          <Link href="/privacy">Privacy Policy</Link>{" · "}
+          <Link href="/sms-terms">SMS Terms</Link>
+        </div>
       </div>
     </main>
   );
