@@ -24,6 +24,7 @@ export default function QuickReplyPicker({
 }: Props) {
   const [list, setList] = useState<QuickReplyRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const cacheRef = useRef<Record<string, QuickReplyRow[]>>({});
 
@@ -35,12 +36,14 @@ export default function QuickReplyPicker({
       return;
     }
     setLoading(true);
+    setError(null);
     try {
       const sb = getSupabaseBrowserClient();
       const { data } = await sb.auth.getSession();
       const token = data.session?.access_token;
       if (!token) {
         setList([]);
+        setError("Your session has expired. Please sign in again.");
         return;
       }
       const res = await fetch(
@@ -49,6 +52,7 @@ export default function QuickReplyPicker({
       );
       if (!res.ok) {
         setList([]);
+        setError("Quick replies could not be loaded. Please try again.");
         return;
       }
       const data2 = (await res.json()) as QuickReplyRow[];
@@ -56,6 +60,7 @@ export default function QuickReplyPicker({
       setList(data2 ?? []);
     } catch {
       setList([]);
+      setError("Quick replies could not be loaded. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -96,7 +101,8 @@ export default function QuickReplyPicker({
       }}
       onClick={onClose}
       role="dialog"
-      aria-label="Quick replies"
+      aria-modal="true"
+      aria-labelledby="quick-replies-title"
     >
       <div
         style={{
@@ -113,7 +119,7 @@ export default function QuickReplyPicker({
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ padding: 16, borderBottom: "1px solid #eee" }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
+          <h3 id="quick-replies-title" style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
             Quick Replies
           </h3>
           <input
@@ -139,6 +145,14 @@ export default function QuickReplyPicker({
             minHeight: 120,
           }}
         >
+          {error ? (
+            <div
+              role="alert"
+              style={{ padding: 12, color: "#b91c1c", fontSize: 13 }}
+            >
+              {error}
+            </div>
+          ) : null}
           {loading ? (
             <div style={{ padding: 24, textAlign: "center", color: "#666" }}>
               Loading…
