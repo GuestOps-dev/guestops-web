@@ -49,10 +49,6 @@ function belongsToStatusTab(rowStatus: string | null, tab: StatusTab) {
   return rowStatus === tab || (tab === "awaiting_team" && rowStatus === "active");
 }
 
-function getGuestPhone(c: ConversationRow): string {
-  return c.guests?.phone_e164 ?? c.guests?.phone ?? c.guest_number ?? "—";
-}
-
 function formatLastMessageAt(value: string | null): { label: string; exact: string } {
   if (!value) return { label: "No messages yet", exact: "" };
 
@@ -64,13 +60,19 @@ function formatLastMessageAt(value: string | null): { label: string; exact: stri
   const exact = date.toLocaleString();
 
   if (minutes < 1) return { label: "Just now", exact };
-  if (minutes < 60) return { label: `${minutes}m ago`, exact };
+  if (minutes < 60) {
+    return { label: `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`, exact };
+  }
 
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return { label: `${hours}h ago`, exact };
+  if (hours < 24) {
+    return { label: `${hours} ${hours === 1 ? "hour" : "hours"} ago`, exact };
+  }
 
   const days = Math.floor(hours / 24);
-  if (days < 7) return { label: `${days}d ago`, exact };
+  if (days < 7) {
+    return { label: `${days} ${days === 1 ? "day" : "days"} ago`, exact };
+  }
 
   return { label: date.toLocaleDateString(), exact };
 }
@@ -797,7 +799,7 @@ export default function InboxClient() {
           className="inbox-table-header"
           style={{
             display: "grid",
-            gridTemplateColumns: "2.1fr 1.8fr 2fr 1.4fr 1.4fr 1fr 0.8fr",
+            gridTemplateColumns: "2.1fr 2fr 1.4fr 1.4fr 1fr 0.8fr",
             gap: 12,
             padding: 12,
             background: "#fafafa",
@@ -805,7 +807,6 @@ export default function InboxClient() {
           }}
         >
           <div>Guest</div>
-          <div>Guest phone</div>
           <div>Property</div>
           <div>Last Message</div>
           <div>Assigned</div>
@@ -837,7 +838,7 @@ export default function InboxClient() {
               }}
               style={{
                 display: "grid",
-                gridTemplateColumns: "2.1fr 1.8fr 2fr 1.4fr 1.4fr 1fr 0.8fr",
+                gridTemplateColumns: "2.1fr 2fr 1.4fr 1.4fr 1fr 0.8fr",
                 gap: 12,
                 padding: 12,
                 borderTop: "1px solid #eee",
@@ -849,9 +850,6 @@ export default function InboxClient() {
                 {unread ? "● " : ""}
                 {getGuestDisplayName(c)}
                 <PriorityBadge priority={c.priority} />
-              </div>
-              <div style={{ fontVariantNumeric: "tabular-nums" }}>
-                {getGuestPhone(c)}
               </div>
               <div>
                 <code>{displayPropertyName(c.property_id)}</code>

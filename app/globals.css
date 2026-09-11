@@ -59,15 +59,14 @@ body {
   }
 
   .inbox-table-row > div:first-child,
-  .inbox-table-row > div:nth-child(3),
   .inbox-table-row > div:last-child {
     grid-column: 1 / -1;
   }
 
   .inbox-table-row > div:nth-child(2),
+  .inbox-table-row > div:nth-child(3),
   .inbox-table-row > div:nth-child(4),
-  .inbox-table-row > div:nth-child(5),
-  .inbox-table-row > div:nth-child(6) {
+  .inbox-table-row > div:nth-child(5) {
     font-size: 12px;
     overflow-wrap: anywhere;
   }
