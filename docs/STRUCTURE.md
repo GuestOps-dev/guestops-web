@@ -156,6 +156,7 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │     ├─ 20260324000001_internal_notes.sql
 │     ├─ 20260911_000001_secure_guest_data.sql
 │     ├─ 20260911_000002_remove_legacy_message_read_policies.sql
-│     └─ 20260911_000003_create_sms_opt_in_consents.sql
+│     ├─ 20260911_000003_create_sms_opt_in_consents.sql
+│     └─ 20260911_000004_message_idempotency_indexes.sql
 └─ tsconfig.json
 ```
