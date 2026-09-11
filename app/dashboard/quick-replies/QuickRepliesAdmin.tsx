@@ -18,7 +18,6 @@ export default function QuickRepliesAdmin() {
     selectedPropertyId,
     setSelectedPropertyId,
     propertyOptions,
-    allowedPropertyIds,
   } = usePropertyWorkspace();
 
   const [list, setList] = useState<QuickReplyRow[]>([]);
