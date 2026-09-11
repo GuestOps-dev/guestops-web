@@ -35,7 +35,7 @@ function displayDeliveryError(error?: string | null) {
 }
 
 function isA2pPendingError(error?: string | null) {
-  const normalized = error?.toLowerCase() ?? "";
+  const normalized = error?.trim().toLowerCase() ?? "";
   return normalized === "30034" || normalized.includes("a2p campaign approval");
 }
 
