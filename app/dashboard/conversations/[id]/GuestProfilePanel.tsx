@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 export type GuestRow = {
@@ -49,37 +49,6 @@ export default function GuestProfilePanel({
   const [error, setError] = useState<string | null>(null);
 
   const tags = profile.tags ?? [];
-
-  const refreshGuest = useCallback(async () => {
-    const sb = getSupabaseBrowserClient();
-    if (!sb) return;
-    const { data: session } = await sb.auth.getSession();
-    const token = session.session?.access_token;
-    if (!token) return;
-    try {
-      const res = await fetch(`/api/guests/${guest.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setProfile({
-          id: data.id,
-          full_name: data.full_name ?? null,
-          phone: data.phone ?? null,
-          email: data.email ?? null,
-          preferred_channel: data.preferred_channel ?? null,
-          language_pref: data.language_pref ?? null,
-          notes: data.notes ?? null,
-          created_at: data.created_at,
-          property_id: data.property_id,
-          phone_e164: data.phone_e164 ?? null,
-          tags: Array.isArray(data.tags) ? data.tags : [],
-        });
-      }
-    } catch (e) {
-      console.error("Refresh guest error:", e);
-    }
-  }, [guest.id]);
 
   const saveName = async () => {
     const trimmed = nameValue.trim();

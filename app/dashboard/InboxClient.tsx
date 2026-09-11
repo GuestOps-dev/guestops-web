@@ -95,8 +95,6 @@ export default function InboxClient() {
     setSelectedPropertyId,
     allowedPropertyIds,
     propertyOptions,
-    loadingMemberships,
-    membershipsError,
   } = usePropertyWorkspace();
 
   const [allRows, setAllRows] = useState<ConversationRow[]>([]);
