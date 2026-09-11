@@ -77,6 +77,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  └─ quick-replies
 │  │     ├─ page.tsx
 │  │     └─ QuickRepliesAdmin.tsx
+│  ├─ forgot-password
+│  │  └─ page.tsx
 │  ├─ layout.tsx
 │  ├─ login
 │  │  └─ page.tsx

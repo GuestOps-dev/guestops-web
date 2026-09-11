@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -103,6 +104,10 @@ function LoginInner() {
           {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
+
+      <div style={{ marginTop: 16, fontSize: 13 }}>
+        <Link href="/forgot-password">Forgot your password?</Link>
+      </div>
     </main>
   );
 }
