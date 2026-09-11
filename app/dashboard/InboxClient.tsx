@@ -43,6 +43,12 @@ function getGuestDisplayName(c: ConversationRow): string {
 type StatusTab = "awaiting_team" | "waiting_guest" | "closed";
 type AssignmentFilter = "all" | "assigned_to_me" | "unassigned";
 
+function belongsToStatusTab(rowStatus: string | null, tab: StatusTab) {
+  // `active` is a legacy pre-MVP status. Keep existing rows visible in Inbox
+  // while all new operator actions use the three canonical statuses.
+  return rowStatus === tab || (tab === "awaiting_team" && rowStatus === "active");
+}
+
 /** Unread: last_inbound_at is not null AND (last_read_at is null OR last_inbound_at > last_read_at) */
 function isUnread(c: ConversationRow) {
   if (c.last_inbound_at == null) return false;
@@ -109,7 +115,7 @@ export default function InboxClient() {
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
 
   const displayRows = useMemo(() => {
-    let rows = allRows.filter((r) => r.status === status);
+    let rows = allRows.filter((r) => belongsToStatusTab(r.status, status));
     if (assignmentFilter === "assigned_to_me" && currentUserId) {
       rows = rows.filter((r) => r.assigned_to_user_id === currentUserId);
     } else if (assignmentFilter === "unassigned") {
@@ -142,7 +148,7 @@ export default function InboxClient() {
   );
   const unreadInbox = useMemo(
     () =>
-      allRows.filter((r) => r.status === "awaiting_team" && isUnread(r)).length,
+      allRows.filter((r) => belongsToStatusTab(r.status, "awaiting_team") && isUnread(r)).length,
     [allRows]
   );
   const unreadWaitingGuest = useMemo(

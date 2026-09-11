@@ -6,7 +6,6 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "awaiting_team", label: "Inbox" },
   { value: "waiting_guest", label: "Waiting on Guest" },
-  { value: "active", label: "Active" },
   { value: "closed", label: "Closed" },
 ];
 
@@ -14,7 +13,6 @@ function statusBadgeStyle(status: string): React.CSSProperties {
   const s = status.toLowerCase();
   if (s === "awaiting_team") return { background: "#dcfce7", color: "#166534" };
   if (s === "waiting_guest") return { background: "#dbeafe", color: "#1d4ed8" };
-  if (s === "active") return { background: "#e0e7ff", color: "#3730a3" };
   if (s === "closed") return { background: "#fee2e2", color: "#7f1d1d" };
   return { background: "#f3f4f6", color: "#374151" };
 }
@@ -30,7 +28,9 @@ export default function ConversationStatusSelect({
   propertyId,
   initialStatus,
 }: Props) {
-  const [status, setStatus] = useState<string>(initialStatus ?? "awaiting_team");
+  const [status, setStatus] = useState<string>(
+    initialStatus === "active" ? "awaiting_team" : initialStatus ?? "awaiting_team"
+  );
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
