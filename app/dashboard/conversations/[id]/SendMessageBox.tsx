@@ -73,7 +73,11 @@ export default function SendMessageBox({
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
           <textarea
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              // A modified draft is a new message, not a retry of the old one.
+              pendingSendKey.current = null;
+            }}
             placeholder="Type a reply…"
             rows={2}
             style={{
@@ -103,7 +107,9 @@ export default function SendMessageBox({
               ⚡ Quick Replies
             </button>
             {error ? (
-              <span style={{ color: "crimson", fontSize: 12 }}>{error}</span>
+              <span role="alert" style={{ color: "crimson", fontSize: 12 }}>
+                {error}
+              </span>
             ) : null}
           </div>
         </div>
