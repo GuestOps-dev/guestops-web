@@ -173,6 +173,17 @@ export default async function ConversationPage({
     created_by: string | null;
     created_at: string;
   }> = [];
+  let stayHistory: Array<{
+    id: string;
+    check_in_date: string | null;
+    check_out_date: string | null;
+  }> = [];
+  let conversationHistory: Array<{
+    id: string;
+    status: string | null;
+    last_message_at: string | null;
+    updated_at: string | null;
+  }> = [];
 
   if (guestId) {
     const { data: guestRow } = await (sb as any)
@@ -209,6 +220,34 @@ export default async function ConversationPage({
         body: (n.body ?? "").toString(),
         created_by: n.created_by ?? null,
         created_at: n.created_at,
+      }));
+
+      const { data: stays } = await (sb as any)
+        .from("bookings")
+        .select("id, check_in_date, check_out_date")
+        .eq("guest_id", guestId)
+        .eq("property_id", propertyId)
+        .order("check_in_date", { ascending: false })
+        .limit(8);
+      stayHistory = ((stays as any) ?? []).map((stay: any) => ({
+        id: stay.id,
+        check_in_date: stay.check_in_date ?? null,
+        check_out_date: stay.check_out_date ?? null,
+      }));
+
+      const { data: conversations } = await (sb as any)
+        .from("conversations")
+        .select("id, status, last_message_at, updated_at")
+        .eq("guest_id", guestId)
+        .eq("property_id", propertyId)
+        .neq("id", conversationId)
+        .order("updated_at", { ascending: false })
+        .limit(6);
+      conversationHistory = ((conversations as any) ?? []).map((item: any) => ({
+        id: item.id,
+        status: item.status ?? null,
+        last_message_at: item.last_message_at ?? null,
+        updated_at: item.updated_at ?? null,
       }));
     }
   }
@@ -293,6 +332,8 @@ export default async function ConversationPage({
           propertyId={propertyId}
           propertyName={propertyName}
           booking={booking}
+          stayHistory={stayHistory}
+          conversationHistory={conversationHistory}
           initialNotes={initialGuestNotes}
         />
       )}

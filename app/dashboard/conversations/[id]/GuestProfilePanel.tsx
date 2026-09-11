@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -32,12 +33,23 @@ export type BookingStay = {
   check_out_date: string | null;
 };
 
+export type StayHistoryRow = BookingStay;
+
+export type ConversationHistoryRow = {
+  id: string;
+  status: string | null;
+  last_message_at: string | null;
+  updated_at: string | null;
+};
+
 type Props = {
   guest: GuestRow;
   conversationId: string;
   propertyId: string;
   propertyName: string;
   booking: BookingStay | null;
+  stayHistory: StayHistoryRow[];
+  conversationHistory: ConversationHistoryRow[];
   initialNotes: GuestNoteRow[];
 };
 
@@ -47,12 +59,27 @@ function formatStayDate(value: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
 }
 
+function formatHistoryDate(value: string | null) {
+  if (!value) return "No messages";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Unknown date" : date.toLocaleDateString();
+}
+
+function conversationStatusLabel(status: string | null) {
+  if (status === "awaiting_team" || status === "active") return "Inbox";
+  if (status === "waiting_guest") return "Waiting on guest";
+  if (status === "closed") return "Closed";
+  return status ?? "Unknown";
+}
+
 export default function GuestProfilePanel({
   guest,
   conversationId,
   propertyId,
   propertyName,
   booking: initialBooking,
+  stayHistory,
+  conversationHistory,
   initialNotes,
 }: Props) {
   const [profile, setProfile] = useState<GuestRow>(guest);
@@ -438,6 +465,47 @@ export default function GuestProfilePanel({
             >
               Add stay dates
             </button>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <h4 style={{ fontSize: 12, fontWeight: 600, margin: "0 0 6px" }}>
+          Stay history
+        </h4>
+        {stayHistory.length === 0 ? (
+          <div style={{ fontSize: 12, color: "#6b7280" }}>No stays recorded yet.</div>
+        ) : (
+          <div style={{ display: "grid", gap: 5 }}>
+            {stayHistory.map((stay) => (
+              <div
+                key={stay.id}
+                style={{ fontSize: 12, color: "#444", padding: "5px 7px", borderRadius: 6, background: "#f9fafb" }}
+              >
+                {formatStayDate(stay.check_in_date)} – {formatStayDate(stay.check_out_date)}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <h4 style={{ fontSize: 12, fontWeight: 600, margin: "0 0 6px" }}>
+          Other conversations
+        </h4>
+        {conversationHistory.length === 0 ? (
+          <div style={{ fontSize: 12, color: "#6b7280" }}>No other conversations.</div>
+        ) : (
+          <div style={{ display: "grid", gap: 5 }}>
+            {conversationHistory.map((conversation) => (
+              <Link
+                key={conversation.id}
+                href={`/dashboard/conversations/${conversation.id}`}
+                style={{ fontSize: 12, color: "#2563eb", padding: "5px 7px", borderRadius: 6, background: "#eff6ff", textDecoration: "none" }}
+              >
+                {formatHistoryDate(conversation.last_message_at ?? conversation.updated_at)} · {conversationStatusLabel(conversation.status)}
+              </Link>
+            ))}
           </div>
         )}
       </div>
