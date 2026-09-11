@@ -996,7 +996,7 @@ function StatusBadge({ status }: { status: string | null }) {
       : s === "waiting_guest"
         ? "Waiting on Guest"
         : s === "active"
-          ? "Active"
+          ? "Inbox"
           : s === "closed"
             ? "Closed"
             : status ?? "-";

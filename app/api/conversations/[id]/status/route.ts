@@ -9,7 +9,6 @@ type StatusFilter = "awaiting_team" | "waiting_guest" | "active" | "closed" | "a
 const CONVERSATION_STATUSES = [
   "awaiting_team",
   "waiting_guest",
-  "active",
   "closed",
 ] as const;
 export type ConversationStatus = (typeof CONVERSATION_STATUSES)[number];
@@ -17,6 +16,9 @@ export type ConversationStatus = (typeof CONVERSATION_STATUSES)[number];
 function parseConversationStatus(v: unknown): ConversationStatus | null {
   if (typeof v !== "string") return null;
   const s = v.trim();
+  // `active` was the pre-MVP name for Inbox. Accept it from an older client,
+  // but persist the canonical value so new rows and operators share one model.
+  if (s === "active") return "awaiting_team";
   return CONVERSATION_STATUSES.includes(s as ConversationStatus)
     ? (s as ConversationStatus)
     : null;
@@ -155,7 +157,7 @@ async function updateStatusHandler(
       return NextResponse.json(
         {
           error:
-            "Invalid status. Allowed: awaiting_team, waiting_guest, active, closed",
+            "Invalid status. Allowed: awaiting_team, waiting_guest, closed",
         },
         { status: 400 }
       );
