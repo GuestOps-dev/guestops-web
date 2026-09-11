@@ -1,45 +1,62 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerClient";
+import { requireApiAuth } from "@/lib/api/requireApiAuth";
+import {
+  assertCanAccessProperty,
+  requirePropertyId,
+} from "@/lib/supabaseApiAuth";
 
 export const runtime = "nodejs";
 
-function parseUserIds(v: unknown): string[] {
-  if (!Array.isArray(v)) return [];
+function parseProfileIds(v: unknown): string[] {
+  if (!Array.isArray(v)) {
+    const error = new Error("profile_ids must be an array");
+    Object.assign(error, { status: 400 });
+    throw error;
+  }
+
   const ids = v
     .filter((x) => typeof x === "string")
     .map((s) => (s as string).trim())
     .filter(Boolean);
-  const valid = ids.filter((id) =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
-  );
-  return Array.from(new Set(valid));
+
+  for (const id of ids) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      const error = new Error("profile_ids must contain valid UUIDs");
+      Object.assign(error, { status: 400 });
+      throw error;
+    }
+  }
+
+  return Array.from(new Set(ids));
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await getSupabaseRlsServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "unauthorized" },
-        { status: 401 }
-      );
+    const auth = await requireApiAuth(req);
+    if (auth.error || !auth.supabase || !auth.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const json = await req.json().catch(() => null);
-    const userIds = parseUserIds(json?.user_ids ?? json?.profile_ids ?? []);
+    const propertyId = requirePropertyId(json?.property_id);
+    const profileIds = parseProfileIds(json?.profile_ids);
 
-    if (userIds.length === 0) {
-      return NextResponse.json({ profiles: {} }, { status: 200 });
+    await assertCanAccessProperty(auth.supabase, propertyId);
+
+    if (profileIds.length === 0) {
+      return NextResponse.json({ profiles: [] }, { status: 200 });
     }
 
-    const sb = supabase as any;
+    // Resolve through the selected property's memberships instead of querying
+    // profiles directly. This keeps assignment labels property-scoped even if
+    // profiles RLS is later relaxed for another feature.
+    const sb = auth.supabase as any;
     const { data: rows, error } = await sb
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", userIds);
+      .from("property_users")
+      .select("profile_id, profiles:profile_id ( id, full_name )")
+      .eq("property_id", propertyId)
+      .in("profile_id", profileIds);
 
     if (error) {
       console.error("POST /api/profiles/lookup error:", error);
@@ -49,28 +66,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const profiles: Record<
-      string,
-      { id: string; display_name: string | null; full_name: string | null; email: string | null }
-    > = {};
-
-    for (const row of rows ?? []) {
-      const id = row.id as string;
-      const full_name = (row.full_name as string | null) ?? null;
-      profiles[id] = {
-        id,
-        display_name: full_name,
-        full_name,
-        email: null,
-      };
-    }
+    const profiles = (rows ?? [])
+      .map((row: any) => row.profiles)
+      .filter(Boolean)
+      .map((profile: any) => ({
+        id: profile.id as string,
+        full_name: (profile.full_name as string | null) ?? null,
+      }));
 
     return NextResponse.json({ profiles }, { status: 200 });
   } catch (err: any) {
-    console.error("POST /api/profiles/lookup unexpected:", err);
+    const status = typeof err?.status === "number" ? err.status : 500;
+    if (status === 500) console.error("POST /api/profiles/lookup unexpected:", err);
     return NextResponse.json(
-      { error: err?.message ?? "Internal error" },
-      { status: 500 }
+      { error: status === 500 ? "Internal error" : err?.message ?? "Error" },
+      { status }
     );
   }
 }

@@ -368,41 +368,52 @@ export default function InboxClient() {
       const nextAllRows = [...filtered].sort(sortByPriorityThenUpdated);
       setAllRows(nextAllRows);
 
-      const uniqueIds = Array.from(
-        new Set(
-          nextAllRows
-            .map((r) => r.assigned_to_user_id)
-            .filter((id): id is string => Boolean(id))
-        )
-      ).filter((id) => !profileNameById[id]);
+      const profileIdsByProperty = new Map<string, Set<string>>();
+      for (const row of nextAllRows) {
+        const profileId = row.assigned_to_user_id;
+        if (!profileId || profileNameById[profileId]) continue;
+        const ids = profileIdsByProperty.get(row.property_id) ?? new Set<string>();
+        ids.add(profileId);
+        profileIdsByProperty.set(row.property_id, ids);
+      }
 
-      if (uniqueIds.length > 0) {
+      if (profileIdsByProperty.size > 0) {
         try {
-          const res = await fetch("/api/profiles/lookup", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ user_ids: uniqueIds }),
-          });
+          const lookupResults = await Promise.all(
+            Array.from(profileIdsByProperty, async ([propertyId, profileIds]) => {
+              const res = await fetch("/api/profiles/lookup", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  property_id: propertyId,
+                  profile_ids: Array.from(profileIds),
+                }),
+              });
 
-          if (!res.ok) {
-            const text = await res.text().catch(() => "");
-            console.error("profiles lookup failed", res.status, text);
-          } else {
-            const json = (await res.json().catch(() => null)) as
-              | { profiles?: Record<string, { id: string; full_name?: string | null; display_name?: string | null }> }
-              | null;
-            const map = json?.profiles ?? {};
-            const merged: Record<string, string> = {};
-            for (const [id, p] of Object.entries(map)) {
-              const name = p?.display_name ?? p?.full_name ?? null;
-              if (name && name.trim()) merged[id] = name.trim();
+              if (!res.ok) {
+                const text = await res.text().catch(() => "");
+                console.error("profiles lookup failed", res.status, text);
+                return [] as Array<{ id: string; full_name?: string | null }>;
+              }
+
+              const json = (await res.json().catch(() => null)) as
+                | { profiles?: Array<{ id: string; full_name?: string | null }> }
+                | null;
+              return json?.profiles ?? [];
+            })
+          );
+
+          const merged: Record<string, string> = {};
+          for (const profiles of lookupResults) {
+            for (const profile of profiles) {
+              if (profile.full_name?.trim()) merged[profile.id] = profile.full_name.trim();
             }
-            if (Object.keys(merged).length > 0) {
-              setProfileNameById((prev) => ({ ...prev, ...merged }));
-            }
+          }
+          if (Object.keys(merged).length > 0) {
+            setProfileNameById((prev) => ({ ...prev, ...merged }));
           }
         } catch (e) {
           console.error("profiles lookup error", e);
