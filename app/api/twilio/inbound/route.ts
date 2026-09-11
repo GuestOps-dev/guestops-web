@@ -181,6 +181,7 @@ export async function POST(req: Request) {
         {
           property_id: propertyId,
           booking_id: booking.id,
+          guest_id: guest.id,
           guest_number: fromAddr.raw,   // keep raw for provider context (may include whatsapp:)
           service_number: toAddr.raw,
           channel,
