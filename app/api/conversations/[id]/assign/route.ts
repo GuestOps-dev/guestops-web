@@ -78,6 +78,16 @@ export async function POST(
 
     await assertCanAccessProperty(auth.supabase, propertyId);
 
+    // The operator UI supports claiming a conversation for the signed-in user.
+    // Enforce the same boundary on the API so a forged request cannot assign it
+    // to an unrelated account.
+    if (assignedUserId && assignedUserId !== auth.user.id) {
+      return NextResponse.json(
+        { error: "You can only assign a conversation to yourself" },
+        { status: 403 }
+      );
+    }
+
     const now = new Date().toISOString();
 
     const { data, error } = await (auth.supabase as any)
