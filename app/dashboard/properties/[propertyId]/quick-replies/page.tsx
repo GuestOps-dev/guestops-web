@@ -56,7 +56,7 @@ export default async function PropertyQuickRepliesPage({
       <p style={{ fontSize: 14, color: "#555", marginBottom: 24 }}>
         {propertyName}
       </p>
-      <PropertyQuickRepliesManager propertyId={propertyId} propertyName={propertyName} />
+      <PropertyQuickRepliesManager propertyId={propertyId} />
     </main>
   );
 }

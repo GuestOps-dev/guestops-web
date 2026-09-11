@@ -14,12 +14,10 @@ export type QuickReplyRow = {
 
 type Props = {
   propertyId: string;
-  propertyName: string;
 };
 
 export default function PropertyQuickRepliesManager({
   propertyId,
-  propertyName,
 }: Props) {
   const [list, setList] = useState<QuickReplyRow[]>([]);
   const [loading, setLoading] = useState(false);
