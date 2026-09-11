@@ -55,13 +55,16 @@ function belongsToStatusTab(rowStatus: string | null, tab: StatusTab) {
   return rowStatus === tab || (tab === "awaiting_team" && rowStatus === "active");
 }
 
-function formatLastMessageAt(value: string | null): { label: string; exact: string } {
+function formatLastMessageAt(
+  value: string | null,
+  nowMs: number
+): { label: string; exact: string } {
   if (!value) return { label: "No messages yet", exact: "" };
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return { label: "—", exact: "" };
 
-  const differenceMs = Date.now() - date.getTime();
+  const differenceMs = nowMs - date.getTime();
   const minutes = Math.max(0, Math.floor(differenceMs / 60_000));
   const exact = date.toLocaleString();
 
@@ -181,6 +184,7 @@ export default function InboxClient() {
   const [profileNameById, setProfileNameById] = useState<
     Record<string, string>
   >({});
+  const [relativeNow, setRelativeNow] = useState(() => Date.now());
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
@@ -512,6 +516,12 @@ export default function InboxClient() {
 
     window.addEventListener("keydown", focusSearchOnSlash);
     return () => window.removeEventListener("keydown", focusSearchOnSlash);
+  }, []);
+
+  // Keep relative timestamps truthful even while the inbox is otherwise idle.
+  useEffect(() => {
+    const interval = window.setInterval(() => setRelativeNow(Date.now()), 60_000);
+    return () => window.clearInterval(interval);
   }, []);
 
   const refetchRef = useRef(refetch);
@@ -936,8 +946,8 @@ export default function InboxClient() {
               <div>
                 <code>{displayPropertyName(c.property_id)}</code>
               </div>
-              <div title={formatLastMessageAt(c.last_message_at).exact}>
-                {formatLastMessageAt(c.last_message_at).label}
+              <div title={formatLastMessageAt(c.last_message_at, relativeNow).exact}>
+                {formatLastMessageAt(c.last_message_at, relativeNow).label}
               </div>
               <div>
                 <div style={{ fontSize: 12 }}>{assignedLabel(c)}</div>

@@ -74,12 +74,20 @@ export default function SendMessageBox({
     }
   }
 
+  function handleComposerKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      if (!sending && !a2pPending) void handleSend();
+    }
+  }
+
   return (
     <>
       <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
           <textarea
             value={message}
+            onKeyDown={handleComposerKeyDown}
             onChange={(e) => {
               setMessage(e.target.value);
               // A modified draft is a new message, not a retry of the old one.
@@ -120,6 +128,9 @@ export default function SendMessageBox({
                 {error}
               </span>
             ) : null}
+            <span style={{ color: "#64748b", fontSize: 12 }}>
+              Ctrl/⌘ + Enter to send
+            </span>
           </div>
         </div>
         <button
