@@ -34,6 +34,11 @@ function displayDeliveryError(error?: string | null) {
   return error;
 }
 
+function isA2pPendingError(error?: string | null) {
+  const normalized = error?.toLowerCase() ?? "";
+  return normalized === "30034" || normalized.includes("a2p campaign approval");
+}
+
 export default function OutboundBubble({
   conversationId,
   outboundId,
@@ -49,6 +54,7 @@ export default function OutboundBubble({
   const [expanded, setExpanded] = useState(false);
 
   const retryable = canRetry(status);
+  const a2pPending = isA2pPendingError(error);
   const olderCount = olderAttempts.length;
 
   const olderSorted = useMemo(() => {
@@ -199,7 +205,13 @@ export default function OutboundBubble({
         </div>
       )}
 
-      {retryable && (
+      {retryable && a2pPending ? (
+        <div style={{ marginTop: 10, fontSize: 12, color: "#92400e" }}>
+          Retry will be available once Twilio approves the A2P campaign.
+        </div>
+      ) : null}
+
+      {retryable && !a2pPending && (
         <div style={{ marginTop: 10, display: "flex", justifyContent: "flex-end" }}>
           <button
             onClick={onRetry}
