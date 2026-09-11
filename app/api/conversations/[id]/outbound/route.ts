@@ -77,6 +77,12 @@ export async function POST(
       );
     }
     if (existing) {
+      if (existing.status === "failed" || existing.status === "undelivered") {
+        return NextResponse.json(
+          { error: "A previous send attempt failed. Use Retry from the message history." },
+          { status: 409 }
+        );
+      }
       return NextResponse.json({ ok: true, duplicate: true }, { status: 200 });
     }
   }

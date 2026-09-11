@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import QuickReplyPicker from "./QuickReplyPicker";
@@ -17,6 +17,7 @@ export default function SendMessageBox({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const pendingSendKey = useRef<string | null>(null);
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
 
@@ -31,6 +32,8 @@ export default function SendMessageBox({
     if (!body) return;
 
     setSending(true);
+    const idempotencyKey = pendingSendKey.current ?? crypto.randomUUID();
+    pendingSendKey.current = idempotencyKey;
     try {
       const { data, error: sessionErr } = await sb.auth.getSession();
       if (sessionErr || !data.session?.access_token) {
@@ -44,6 +47,7 @@ export default function SendMessageBox({
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
+          "x-idempotency-key": idempotencyKey,
         },
         body: JSON.stringify({ body }),
       });
@@ -54,6 +58,7 @@ export default function SendMessageBox({
       }
 
       setMessage("");
+      pendingSendKey.current = null;
       router.refresh();
     } catch (e: any) {
       setError(e?.message || "Send failed");
