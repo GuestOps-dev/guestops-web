@@ -395,7 +395,7 @@ export default function InboxClient() {
   useEffect(() => {
     void refetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPropertyId, allowedPropertyIds.join(",")]);
+  }, [selectedPropertyId, allowedPropertyIds]);
 
   useEffect(() => {
     function focusSearchOnSlash(event: KeyboardEvent) {
@@ -450,7 +450,7 @@ export default function InboxClient() {
       channel.unsubscribe();
       sb.removeChannel(channel);
     };
-  }, [sb, allowedPropertyIds.join(",")]);
+  }, [sb, allowedPropertyIds]);
 
   useEffect(() => {
     const sbClient = getSupabaseBrowserClient();

@@ -79,7 +79,7 @@ export function PropertyWorkspaceProvider({
           try {
             token = await getAccessToken();
             if (token) break;
-          } catch (e) {
+          } catch {
             // No session yet; wait and retry
           }
     
@@ -146,7 +146,6 @@ export function PropertyWorkspaceProvider({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load saved selection and validate against allowedPropertyIds
@@ -163,7 +162,7 @@ export function PropertyWorkspaceProvider({
     if (saved !== normalized) {
       localStorage.setItem(STORAGE_KEY, normalized);
     }
-  }, [allowedPropertyIds.join(",")]);
+  }, [allowedPropertyIds]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, selectedPropertyId);
