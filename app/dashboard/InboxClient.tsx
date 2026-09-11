@@ -638,7 +638,25 @@ export default function InboxClient() {
             whiteSpace: "pre-wrap",
           }}
         >
-          {error}
+          <div>{error}</div>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={loading}
+            style={{
+              marginTop: 10,
+              padding: "6px 10px",
+              borderRadius: 8,
+              border: "1px solid currentColor",
+              background: "transparent",
+              color: "inherit",
+              cursor: loading ? "wait" : "pointer",
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            {loading ? "Retrying…" : "Retry"}
+          </button>
         </div>
       ) : null}
 
