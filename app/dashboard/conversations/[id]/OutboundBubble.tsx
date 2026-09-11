@@ -27,6 +27,13 @@ function canRetry(status?: string | null) {
   return s === "failed" || s === "undelivered";
 }
 
+function displayDeliveryError(error?: string | null) {
+  if (error?.trim() === "30034") {
+    return "SMS delivery is pending A2P campaign approval.";
+  }
+  return error;
+}
+
 export default function OutboundBubble({
   conversationId,
   outboundId,
@@ -144,8 +151,8 @@ export default function OutboundBubble({
       <div style={{ marginTop: 4, whiteSpace: "pre-wrap" }}>{body}</div>
 
       {(error || localErr) && (
-        <div style={{ fontSize: 12, color: "crimson", marginTop: 6 }}>
-          Error: {localErr || error}
+        <div role="alert" style={{ fontSize: 12, color: "crimson", marginTop: 6 }}>
+          Error: {localErr || displayDeliveryError(error)}
         </div>
       )}
 
@@ -182,8 +189,8 @@ export default function OutboundBubble({
                 </div>
 
                 {a.error && (
-                  <div style={{ fontSize: 12, color: "crimson", marginTop: 6 }}>
-                    Error: {a.error}
+                  <div role="alert" style={{ fontSize: 12, color: "crimson", marginTop: 6 }}>
+                    Error: {displayDeliveryError(a.error)}
                   </div>
                 )}
               </div>

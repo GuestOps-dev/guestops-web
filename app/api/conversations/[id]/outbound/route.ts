@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
 import { requireApiAuth } from "@/lib/api/requireApiAuth";
 
+function outboundErrorMessage(error: unknown): string {
+  const twilioError = error as { code?: number; message?: string } | null;
+  if (twilioError?.code === 30034) {
+    return "SMS delivery is pending A2P campaign approval. Try again after Twilio approves the campaign.";
+  }
+  return twilioError?.message ?? "Twilio send failed";
+}
+
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -146,7 +154,7 @@ export async function POST(
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (e: any) {
-    const errorMessage = e?.message ?? "Twilio send failed";
+    const errorMessage = outboundErrorMessage(e);
     console.error("Twilio send error:", e);
 
     await sb
