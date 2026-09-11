@@ -1,0 +1,50 @@
+# GuestOpsHQ deployment checklist
+
+## 1. Deploy from GitHub
+
+Import `GuestOps-dev/guestops-web` into Vercel and deploy the `main` branch.
+Use the default Next.js build settings:
+
+- Build command: `npm run build`
+- Install command: `npm install`
+- Output directory: leave empty
+
+## 2. Configure Vercel environment variables
+
+Add the following values to both Production and Preview. Never commit the
+server-only values or expose them in client-side variables.
+
+| Variable | Scope | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Browser + server | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser + server | Supabase publishable key |
+| `NEXT_PUBLIC_APP_URL` | Browser + server | Production HTTPS origin, without a trailing slash |
+| `SUPABASE_URL` | Server only | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only | Trusted Twilio webhook writes only |
+| `TWILIO_ACCOUNT_SID` | Server only | Twilio account ID |
+| `TWILIO_AUTH_TOKEN` | Server only | Validates Twilio signatures and sends SMS |
+| `DEFAULT_PROPERTY_ID` | Optional | Local development fallback only |
+
+After adding variables, redeploy the production deployment.
+
+## 3. Configure Twilio webhooks
+
+Use the production origin from `NEXT_PUBLIC_APP_URL`:
+
+- Incoming messages: `https://YOUR_DOMAIN/api/twilio/inbound`
+- Status callbacks: `https://YOUR_DOMAIN/api/twilio/status`
+
+Both endpoints accept `POST` only and verify Twilio's signature before any
+database write. The status callback URL is added automatically to every new
+outbound message.
+
+## 4. Production smoke check
+
+1. Open `/login` and sign in with a property member account.
+2. Confirm `/dashboard` only shows assigned properties.
+3. Open a conversation, add an internal note and guest note, then refresh.
+4. Send a test reply and confirm it appears in the thread as queued/sent.
+5. Send a reply from the test phone and confirm one inbound message appears.
+6. Retry a deliberately failed outbound once; verify only one replacement row
+   is created.
+7. Verify unauthenticated API requests return 401 and `/api/admin` returns 410.
