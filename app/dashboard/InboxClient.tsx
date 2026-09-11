@@ -124,7 +124,14 @@ export default function InboxClient() {
     if (tagFilter) {
       rows = rows.filter((r) => {
         const tags = r.guests?.tags;
-        return Array.isArray(tags) && tags.includes(tagFilter);
+        return (
+          Array.isArray(tags) &&
+          tags.some(
+            (tag) =>
+              typeof tag === "string" &&
+              tag.trim().toLowerCase() === tagFilter
+          )
+        );
       });
     }
     return rows;
@@ -623,6 +630,26 @@ export default function InboxClient() {
             </option>
           ))}
         </select>
+        {hasActiveFilters ? (
+          <button
+            type="button"
+            onClick={() => {
+              setAssignmentFilter("all");
+              setTagFilter("");
+            }}
+            style={{
+              padding: "6px 10px",
+              borderRadius: 8,
+              border: "1px solid #d1d5db",
+              background: "#fff",
+              color: "#374151",
+              fontSize: 12,
+              cursor: "pointer",
+            }}
+          >
+            Clear filters
+          </button>
+        ) : null}
       </div>
 
       {error ? (
