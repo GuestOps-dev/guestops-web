@@ -70,11 +70,17 @@ function formatLastMessageAt(value: string | null): { label: string; exact: stri
   }
 
   const days = Math.floor(hours / 24);
-  if (days < 7) {
+  if (days < 30) {
     return { label: `${days} ${days === 1 ? "day" : "days"} ago`, exact };
   }
 
-  return { label: date.toLocaleDateString(), exact };
+  const months = Math.floor(days / 30);
+  if (months < 12) {
+    return { label: `${months} ${months === 1 ? "month" : "months"} ago`, exact };
+  }
+
+  const years = Math.floor(days / 365);
+  return { label: `${years} ${years === 1 ? "year" : "years"} ago`, exact };
 }
 
 /** Unread: last_inbound_at is not null AND (last_read_at is null OR last_inbound_at > last_read_at) */
