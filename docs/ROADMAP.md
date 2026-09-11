@@ -2,6 +2,36 @@
 
 ---
 
+## Current MVP status
+
+The core messaging operator workflow is in place: authenticated inbox access,
+assignment and tag filters, conversation statuses, guest profile editing, guest
+tags and notes, quick replies, and safe outbound-message retry handling. The
+next work should protect that reliability while making the dashboard faster and
+easier to operate.
+
+---
+
+# Dashboard Usability Pass (Planned MVP Enhancement)
+
+Goal: Reduce the time and attention needed to work an active inbox.
+
+- Make urgency, unread activity, assignment, and conversation state easier to
+  scan from the inbox.
+- Keep frequent actions—assigning, changing status, applying a quick reply,
+  and adding a private note—easy to find and confirm.
+- Improve empty, loading, and error states so operators know what happened and
+  what to do next.
+- Improve small-screen and keyboard usability without sacrificing the desktop
+  workflow.
+- Validate the flow with realistic operator smoke checks before adding larger
+  features such as automation or reporting.
+
+This is intentionally scheduled after the current reliability and authorization
+hardening work; it does not require a database schema change.
+
+---
+
 # Phase 1 — Finish the Messaging CRM (Immediate Next)
 
 Goal: Make the inbox feel like Intercom / Front for vacation rentals.
