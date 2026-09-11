@@ -1,6 +1,6 @@
 GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)
-Generated: 2026-09-11T16:56:16.027Z
-Git SHA: f1a8d4a
+Generated: 2026-09-11T16:56:58.181Z
+Git SHA: 8faee48
 
 RULES FOR NEW CHAT:
 - Prefer code snippets that can be pasted into Cursor.
@@ -170,8 +170,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T16:56:15.978Z
-Git SHA: f1a8d4a
+Generated: 2026-09-11T16:56:58.131Z
+Git SHA: 8faee48
 
 ---
 

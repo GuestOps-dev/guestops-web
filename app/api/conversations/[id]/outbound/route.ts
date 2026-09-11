@@ -18,6 +18,7 @@ export async function POST(
   if (!body) {
     return NextResponse.json({ error: "Body required" }, { status: 400 });
   }
+  const idempotencyKey = req.headers.get("x-idempotency-key")?.trim() || null;
 
   const { supabase, user, error: authError } = await requireApiAuth(req);
   if (authError || !user || !supabase) {
@@ -60,6 +61,26 @@ export async function POST(
     );
   }
 
+  if (idempotencyKey) {
+    const { data: existing, error: existingError } = await sb
+      .from("outbound_messages")
+      .select("id, status")
+      .eq("conversation_id", conversationId)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error("outbound_messages retry lookup error:", existingError);
+      return NextResponse.json(
+        { error: "Unable to check outbound message" },
+        { status: 500 }
+      );
+    }
+    if (existing) {
+      return NextResponse.json({ ok: true, duplicate: true }, { status: 200 });
+    }
+  }
+
   const now = new Date().toISOString();
   const { data: inserted, error: insertError } = await sb
     .from("outbound_messages")
@@ -70,6 +91,7 @@ export async function POST(
       created_by: user.id,
       created_at: now,
       status: "queued",
+      idempotency_key: idempotencyKey,
     })
     .select("id")
     .single();

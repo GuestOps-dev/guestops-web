@@ -65,6 +65,7 @@ export default function OutboundBubble({
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
+          "x-idempotency-key": `retry:${outboundId}`,
         },
         body: JSON.stringify({
           body,
