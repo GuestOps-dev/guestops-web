@@ -111,6 +111,7 @@ export default function InboxClient() {
   const [profileNameById, setProfileNameById] = useState<
     Record<string, string>
   >({});
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
 
@@ -398,6 +399,26 @@ export default function InboxClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPropertyId, allowedPropertyIds.join(",")]);
 
+  useEffect(() => {
+    function focusSearchOnSlash(event: KeyboardEvent) {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.isContentEditable ||
+        ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "")
+      ) {
+        return;
+      }
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    }
+
+    window.addEventListener("keydown", focusSearchOnSlash);
+    return () => window.removeEventListener("keydown", focusSearchOnSlash);
+  }, []);
+
   const refetchRef = useRef(refetch);
   refetchRef.current = refetch;
 
@@ -641,11 +662,13 @@ export default function InboxClient() {
           ))}
         </select>
         <input
+          ref={searchInputRef}
           type="search"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search guest, phone, or property"
           aria-label="Search inbox"
+          title="Press / to search"
           style={{
             padding: "6px 10px",
             borderRadius: 8,
