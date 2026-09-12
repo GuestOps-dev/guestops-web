@@ -8,6 +8,13 @@ export const runtime = "nodejs";
 
 type StayDate = string | null;
 
+function parsePartySize(value: unknown): number | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 100 ? parsed : undefined;
+}
+
 async function getSupabaseFromReq(req: Request) {
   const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
   if (authHeader?.toLowerCase().startsWith("bearer ")) {
@@ -46,7 +53,7 @@ export async function PATCH(
       return NextResponse.json({ error: auth.error ?? "Unauthorized" }, { status: 401 });
     }
 
-    let body: { property_id?: unknown; check_in_date?: unknown; check_out_date?: unknown };
+    let body: { property_id?: unknown; check_in_date?: unknown; check_out_date?: unknown; party_size?: unknown };
     try {
       body = await req.json();
     } catch {
@@ -56,11 +63,13 @@ export async function PATCH(
     const propertyId = requirePropertyId(body?.property_id);
     const checkInDate = parseStayDate(body?.check_in_date);
     const checkOutDate = parseStayDate(body?.check_out_date);
+    const partySize = parsePartySize(body?.party_size);
     if (
       (body?.check_in_date !== undefined && checkInDate === undefined) ||
-      (body?.check_out_date !== undefined && checkOutDate === undefined)
+      (body?.check_out_date !== undefined && checkOutDate === undefined) ||
+      (body?.party_size !== undefined && partySize === undefined)
     ) {
-      return NextResponse.json({ error: "Dates must use YYYY-MM-DD" }, { status: 400 });
+      return NextResponse.json({ error: "Dates must use YYYY-MM-DD and party size must be a whole number from 1 to 100" }, { status: 400 });
     }
 
     const sb = auth.supabase as any;
@@ -80,11 +89,11 @@ export async function PATCH(
     if (!conversation) return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
 
     let bookingId = conversation.booking_id as string | null;
-    let existingStay: { check_in_date: StayDate; check_out_date: StayDate } | null = null;
+    let existingStay: { check_in_date: StayDate; check_out_date: StayDate; party_size: number | null } | null = null;
     if (bookingId) {
       const { data: booking, error: bookingError } = await sb
         .from("bookings")
-        .select("id, check_in_date, check_out_date")
+        .select("id, check_in_date, check_out_date, party_size")
         .eq("id", bookingId)
         .eq("property_id", propertyId)
         .maybeSingle();
@@ -115,10 +124,11 @@ export async function PATCH(
             source_reservation_id: `manual-conversation:${id}`,
             check_in_date: checkInDate ?? null,
             check_out_date: checkOutDate ?? null,
+            party_size: partySize ?? null,
           },
           { onConflict: "property_id,source,source_reservation_id" }
         )
-        .select("id, check_in_date, check_out_date")
+        .select("id, check_in_date, check_out_date, party_size")
         .single();
       if (createError || !created) {
         const status = createError?.code === "42501" ? 403 : 500;
@@ -143,11 +153,12 @@ export async function PATCH(
     if (nextCheckIn && nextCheckOut && nextCheckOut < nextCheckIn) {
       return NextResponse.json({ error: "Check-out must be on or after check-in" }, { status: 400 });
     }
-    const update: Record<string, StayDate> = {};
+    const update: Record<string, StayDate | number> = {};
     if (checkInDate !== undefined) update.check_in_date = checkInDate;
     if (checkOutDate !== undefined) update.check_out_date = checkOutDate;
+    if (partySize !== undefined) update.party_size = partySize;
     if (Object.keys(update).length === 0) {
-      return NextResponse.json({ error: "No stay dates provided" }, { status: 400 });
+      return NextResponse.json({ error: "No stay details provided" }, { status: 400 });
     }
 
     const { data, error } = await sb
@@ -155,7 +166,7 @@ export async function PATCH(
       .update(update)
       .eq("id", bookingId)
       .eq("property_id", propertyId)
-      .select("id, check_in_date, check_out_date")
+      .select("id, check_in_date, check_out_date, party_size")
       .maybeSingle();
     if (error) {
       const status = error.code === "42501" ? 403 : 500;

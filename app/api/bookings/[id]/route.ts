@@ -7,6 +7,7 @@ import { assertCanAccessProperty, requirePropertyId } from "@/lib/supabaseApiAut
 export const runtime = "nodejs";
 
 type StayDate = string | null;
+type PartySize = number | null;
 
 async function getSupabaseFromReq(req: Request) {
   const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
@@ -35,6 +36,15 @@ function parseStayDate(value: unknown): StayDate | undefined {
   return date;
 }
 
+function parsePartySize(value: unknown): PartySize | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 100) {
+    return undefined;
+  }
+  return value;
+}
+
 export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -48,7 +58,12 @@ export async function PATCH(
       return NextResponse.json({ error: auth.error ?? "Unauthorized" }, { status: 401 });
     }
 
-    let body: { property_id?: unknown; check_in_date?: unknown; check_out_date?: unknown };
+    let body: {
+      property_id?: unknown;
+      check_in_date?: unknown;
+      check_out_date?: unknown;
+      party_size?: unknown;
+    };
     try {
       body = await req.json();
     } catch {
@@ -58,14 +73,18 @@ export async function PATCH(
     const propertyId = requirePropertyId(body?.property_id);
     const checkInDate = parseStayDate(body?.check_in_date);
     const checkOutDate = parseStayDate(body?.check_out_date);
+    const partySize = parsePartySize(body?.party_size);
     if (
       (body?.check_in_date !== undefined && checkInDate === undefined) ||
       (body?.check_out_date !== undefined && checkOutDate === undefined)
     ) {
       return NextResponse.json({ error: "Dates must use YYYY-MM-DD" }, { status: 400 });
     }
-    if (checkInDate === undefined && checkOutDate === undefined) {
-      return NextResponse.json({ error: "No stay dates provided" }, { status: 400 });
+    if (body?.party_size !== undefined && partySize === undefined) {
+      return NextResponse.json({ error: "Party size must be a whole number from 1 to 100" }, { status: 400 });
+    }
+    if (checkInDate === undefined && checkOutDate === undefined && partySize === undefined) {
+      return NextResponse.json({ error: "No stay details provided" }, { status: 400 });
     }
 
     const sb = auth.supabase as any;
@@ -73,7 +92,7 @@ export async function PATCH(
 
     const { data: booking, error: bookingError } = await sb
       .from("bookings")
-      .select("id, check_in_date, check_out_date")
+      .select("id, check_in_date, check_out_date, party_size")
       .eq("id", id)
       .eq("property_id", propertyId)
       .maybeSingle();
@@ -94,22 +113,23 @@ export async function PATCH(
       );
     }
 
-    const update: Record<string, StayDate> = {};
+    const update: Record<string, StayDate | PartySize> = {};
     if (checkInDate !== undefined) update.check_in_date = checkInDate;
     if (checkOutDate !== undefined) update.check_out_date = checkOutDate;
+    if (partySize !== undefined) update.party_size = partySize;
 
     const { data, error } = await sb
       .from("bookings")
       .update(update)
       .eq("id", id)
       .eq("property_id", propertyId)
-      .select("id, check_in_date, check_out_date")
+      .select("id, check_in_date, check_out_date, party_size")
       .maybeSingle();
 
     if (error) {
       const status = error.code === "42501" ? 403 : 500;
-      if (status === 500) console.error("Booking stay-date update error:", error);
-      return NextResponse.json({ error: "Unable to save stay dates" }, { status });
+      if (status === 500) console.error("Booking stay update error:", error);
+      return NextResponse.json({ error: "Unable to save stay details" }, { status });
     }
     if (!data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 

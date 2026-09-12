@@ -33,6 +33,7 @@ export type BookingStay = {
   id: string;
   check_in_date: string | null;
   check_out_date: string | null;
+  party_size?: number | null;
 };
 
 export type StayHistoryRow = BookingStay;
@@ -108,6 +109,7 @@ export default function GuestProfilePanel({
   const [editingStay, setEditingStay] = useState(false);
   const [checkInValue, setCheckInValue] = useState(initialBooking?.check_in_date ?? "");
   const [checkOutValue, setCheckOutValue] = useState(initialBooking?.check_out_date ?? "");
+  const [partySizeValue, setPartySizeValue] = useState(initialBooking?.party_size?.toString() ?? "");
   const [savingStay, setSavingStay] = useState(false);
   const [noteBody, setNoteBody] = useState("");
   const [submittingNote, setSubmittingNote] = useState(false);
@@ -208,6 +210,11 @@ export default function GuestProfilePanel({
       setError("Check-out must be on or after check-in");
       return;
     }
+    const partySize = partySizeValue.trim() === "" ? null : Number(partySizeValue);
+    if (partySize !== null && (!Number.isInteger(partySize) || partySize < 1 || partySize > 100)) {
+      setError("Party size must be a whole number from 1 to 100");
+      return;
+    }
     setSavingStay(true);
     setError(null);
     try {
@@ -228,6 +235,7 @@ export default function GuestProfilePanel({
           property_id: propertyId,
           check_in_date: checkInValue || null,
           check_out_date: checkOutValue || null,
+          party_size: partySize,
         }),
       });
       if (!res.ok) {
@@ -238,6 +246,7 @@ export default function GuestProfilePanel({
       setBooking(data);
       setCheckInValue(data.check_in_date ?? "");
       setCheckOutValue(data.check_out_date ?? "");
+      setPartySizeValue(data.party_size?.toString() ?? "");
       setEditingStay(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to save stay dates");
@@ -476,6 +485,10 @@ export default function GuestProfilePanel({
                   style={{ width: "100%", boxSizing: "border-box", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 6, fontSize: 12 }}
                 />
               </label>
+              <label style={{ display: "block", marginBottom: 8 }}>
+                <span style={{ display: "block", color: "#555", marginBottom: 3 }}>Guests in party</span>
+                <input type="number" min="1" max="100" value={partySizeValue} onChange={(e) => setPartySizeValue(e.target.value)} disabled={savingStay} placeholder="Optional" style={{ width: "100%", boxSizing: "border-box", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 6, fontSize: 12 }} />
+              </label>
               <button
                 type="button"
                 onClick={() => void saveStay()}
@@ -489,6 +502,7 @@ export default function GuestProfilePanel({
                 onClick={() => {
                   setCheckInValue(booking?.check_in_date ?? "");
                   setCheckOutValue(booking?.check_out_date ?? "");
+                  setPartySizeValue(booking?.party_size?.toString() ?? "");
                   setEditingStay(false);
                   setError(null);
                 }}
@@ -502,11 +516,13 @@ export default function GuestProfilePanel({
             <div style={{ fontSize: 12, color: "#444" }}>
               <div>Check-in: {formatStayDate(booking.check_in_date)}</div>
               <div>Check-out: {formatStayDate(booking.check_out_date)}</div>
+              {booking.party_size ? <div>Party: {booking.party_size} guests</div> : null}
               <button
                 type="button"
                 onClick={() => {
                   setCheckInValue(booking.check_in_date ?? "");
                   setCheckOutValue(booking.check_out_date ?? "");
+                  setPartySizeValue(booking.party_size?.toString() ?? "");
                   setEditingStay(true);
                 }}
                 style={{ marginTop: 6, padding: 0, border: "none", background: "transparent", color: "#2563eb", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
@@ -522,6 +538,7 @@ export default function GuestProfilePanel({
               onClick={() => {
                 setCheckInValue("");
                 setCheckOutValue("");
+                setPartySizeValue("");
                 setEditingStay(true);
               }}
               style={{ marginTop: 6, padding: 0, border: "none", background: "transparent", color: "#2563eb", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
