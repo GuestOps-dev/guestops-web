@@ -37,6 +37,7 @@ type ConversationRow = {
   last_outbound_at: string | null;
   last_read_at: string | null;
   is_unread?: boolean;
+  tasks?: Array<{ status?: string | null }> | null;
 };
 
 function getGuestDisplayName(c: ConversationRow): string {
@@ -110,6 +111,10 @@ function needsReply(c: ConversationRow) {
     new Date(c.last_inbound_at).getTime() >
     new Date(c.last_outbound_at).getTime()
   );
+}
+
+function openTaskCount(c: ConversationRow) {
+  return c.tasks?.filter((task) => task.status === "open").length ?? 0;
 }
 
 function localDateKey(date = new Date()) {
@@ -928,6 +933,7 @@ export default function InboxClient() {
         {displayRows.map((c) => {
           const unread = c.is_unread ?? isUnread(c);
           const replyNeeded = needsReply(c);
+          const openTasks = openTaskCount(c);
 
           return (
             <div
@@ -978,6 +984,23 @@ export default function InboxClient() {
                     }}
                   >
                     Reply needed
+                  </span>
+                ) : null}
+                {openTasks > 0 ? (
+                  <span
+                    title={`${openTasks} open follow-up${openTasks === 1 ? "" : "s"} on this conversation.`}
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#1d4ed8",
+                      background: "#dbeafe",
+                      border: "1px solid #93c5fd",
+                      borderRadius: 999,
+                      padding: "2px 7px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {openTasks} follow-up{openTasks === 1 ? "" : "s"}
                   </span>
                 ) : null}
               </div>

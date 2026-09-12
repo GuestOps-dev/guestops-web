@@ -32,6 +32,7 @@ export default function ConversationTasks({ propertyId, conversationId, guestId,
 }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [title, setTitle] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,12 +58,13 @@ export default function ConversationTasks({ propertyId, conversationId, guestId,
       const headers = await authHeaders();
       const res = await fetch("/api/tasks", {
         method: "POST", headers,
-        body: JSON.stringify({ property_id: propertyId, conversation_id: conversationId, guest_id: guestId, booking_id: bookingId, title: trimmed }),
+        body: JSON.stringify({ property_id: propertyId, conversation_id: conversationId, guest_id: guestId, booking_id: bookingId, title: trimmed, due_at: dueDate || null }),
       });
       if (!res.ok) throw new Error("Unable to create follow-up");
       const task = await res.json();
       setTasks((previous) => [task, ...previous]);
       setTitle("");
+      setDueDate("");
     } catch (e: any) { setError(e?.message ?? "Unable to create follow-up"); }
     finally { setBusy(false); }
   }
@@ -88,6 +90,10 @@ export default function ConversationTasks({ propertyId, conversationId, guestId,
         <input value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addTask(); }} placeholder="Add a follow-up…" maxLength={280} style={{ minWidth: 0, flex: 1, padding: "7px 8px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12 }} />
         <button type="button" disabled={busy || !title.trim()} onClick={() => void addTask()} style={{ border: "1px solid #2563eb", borderRadius: 8, background: "#2563eb", color: "#fff", padding: "7px 9px", fontSize: 12, cursor: "pointer" }}>Add</button>
       </div>
+      <label style={{ display: "flex", alignItems: "center", gap: 7, color: "#64748b", fontSize: 11, marginTop: 6 }}>
+        Due date
+        <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={busy} style={{ minWidth: 0, padding: "4px 6px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 11 }} />
+      </label>
       {error ? <p style={{ color: "#b91c1c", fontSize: 12, marginTop: 7 }}>{error}</p> : null}
       {tasks.length ? <div style={{ marginTop: 10, display: "grid", gap: 7 }}>
         {tasks.map((task) => <label key={task.id} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, color: task.status === "completed" ? "#64748b" : "#0f172a" }}>
