@@ -5,10 +5,10 @@ import { getTrustedTwilioWebhookUrl } from "@/lib/twilioWebhookUrl";
 export const runtime = "nodejs";
 
 function ok() {
-  return new Response("OK", {
-    status: 200,
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
-  });
+  // A non-empty response body can be interpreted as a TwiML response by
+  // Twilio and sent back to the guest as an SMS. Inbound delivery is silent;
+  // staff reply from the conversation thread when appropriate.
+  return new Response(null, { status: 204 });
 }
 
 /**
