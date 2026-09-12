@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { getSupabaseServiceClient } from "@/lib/supabaseServer";
+import { prepareGroupForStay } from "@/lib/messaging/prepareGroupForStay";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -152,6 +153,11 @@ export async function POST(req: Request) {
     if (conversationError) throw new Error("Unable to create the Inbox record.");
 
     if (property.whatsapp_group_default_enabled && conversation?.id) {
+      try {
+        await prepareGroupForStay({ propertyId: property.id, bookingId: booking.id, conversationId: conversation.id, guestId, guestName: fullName, guestPhone: phone });
+      } catch (groupError) {
+        console.error("Unable to prepare messaging group:", groupError);
+      }
       const title = "Set up the WhatsApp group for this stay";
       const { data: existingTask } = await sb.from("tasks").select("id").eq("booking_id", booking.id).eq("title", title).eq("status", "open").maybeSingle();
       if (!existingTask) await sb.from("tasks").insert({ property_id: property.id, conversation_id: conversation.id, guest_id: guestId, booking_id: booking.id, title });
