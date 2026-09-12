@@ -81,7 +81,7 @@ export async function GET(req: Request) {
       const property = mapping.get(number(booking.property_id));
       const id = number(booking.id);
       if (!property || !id || startedIds.has(String(id))) return null;
-      return { id, property_id: property.property_id, property_name: property.property_name, guest_name: text(booking.guest?.name) ?? text(booking.guest?.guest_name), arrival: date(booking.arrival), departure: date(booking.departure), status: text(booking.status), source: text(booking.source_text), is_new: booking.is_new === true, party_size: partySize(booking) };
+      return { id, property_id: property.property_id, property_name: property.property_name, guest_name: text(booking.guest?.name) ?? text(booking.guest?.guest_name), arrival: date(booking.arrival), departure: date(booking.departure), status: text(booking.status), source: "Lodgify", is_new: booking.is_new === true, party_size: partySize(booking) };
     }).filter(Boolean);
     return NextResponse.json({ bookings }, { status: 200 });
   } catch (err: any) { return NextResponse.json({ error: err?.message ?? "Unable to load Lodgify bookings." }, { status: 502 }); }
