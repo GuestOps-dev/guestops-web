@@ -76,6 +76,11 @@ const checks = [
     expectedStatus: 401,
   },
   {
+    name: "task list rejects anonymous requests",
+    path: "/api/tasks?propertyId=not-a-property",
+    expectedStatus: 401,
+  },
+  {
     name: "profile lookup rejects anonymous requests",
     path: "/api/profiles/lookup",
     method: "POST",
