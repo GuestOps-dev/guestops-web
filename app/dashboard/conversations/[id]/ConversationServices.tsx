@@ -73,6 +73,19 @@ export default function ConversationServices({ propertyId, bookingId }: { proper
     } catch (e: any) { setError(e?.message ?? "Unable to create service request"); } finally { setBusy(false); }
   }
 
+  async function updateService(item: Experience, action: "contacted" | "confirmed" | "cancelled") {
+    if (busy) return;
+    setBusy(true); setError(null);
+    try {
+      const response = await fetch(`/api/experiences/${item.id}`, {
+        method: "PATCH", headers: await headers(), body: JSON.stringify({ property_id: propertyId, action }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error ?? "Unable to update service request");
+      setItems((current) => current.map((value) => value.id === data.id ? data : value));
+    } catch (e: any) { setError(e?.message ?? "Unable to update service request"); } finally { setBusy(false); }
+  }
+
   if (!bookingId) return <section style={{ marginTop: 18, borderTop: "1px solid #e2e8f0", paddingTop: 14 }}><h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 6px" }}>Concierge services</h3><p style={{ margin: 0, color: "#64748b", fontSize: 12 }}>Add this guest’s stay dates before planning a chef, driver, or tour.</p></section>;
 
   return <section style={{ marginTop: 18, borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
@@ -90,9 +103,11 @@ export default function ConversationServices({ propertyId, bookingId }: { proper
       <div style={{ fontSize: 11, color: "#64748b" }}>Need a different provider? <Link href="/dashboard/vendors" style={{ color: "#2563eb" }}>Manage vendors</Link>.</div>
     </div>}
     {error ? <p role="alert" style={{ color: "#b91c1c", fontSize: 12, margin: "8px 0 0" }}>{error}</p> : null}
-    {items.length ? <div style={{ display: "grid", gap: 7, marginTop: 10 }}>{items.map((item) => <div key={item.id} style={{ padding: "7px 8px", borderRadius: 7, border: "1px solid #dbe4ee", background: "#fff", fontSize: 12 }}><strong>{item.experience_types?.name ?? "Service"}</strong><span style={{ color: "#64748b" }}> · {item.status.replaceAll("_", " ")}</span>{item.vendors?.name ? <div style={{ marginTop: 2 }}>Vendor: {item.vendors.name}</div> : <div style={{ marginTop: 2, color: "#64748b" }}>Vendor not chosen yet</div>}{item.start_at ? <div style={{ color: "#64748b", marginTop: 2 }}>{new Date(item.start_at).toLocaleString()}</div> : null}{item.internal_notes_private ? <div style={{ color: "#475569", marginTop: 4, whiteSpace: "pre-wrap" }}>{item.internal_notes_private}</div> : null}</div>)}</div> : null}
+    {items.length ? <div style={{ display: "grid", gap: 7, marginTop: 10 }}>{items.map((item) => <div key={item.id} style={{ padding: "7px 8px", borderRadius: 7, border: "1px solid #dbe4ee", background: "#fff", fontSize: 12 }}><strong>{item.experience_types?.name ?? "Service"}</strong><span style={{ color: "#64748b" }}> · {item.status.replaceAll("_", " ")}</span>{item.vendors?.name ? <div style={{ marginTop: 2 }}>Vendor: {item.vendors.name}</div> : <div style={{ marginTop: 2, color: "#64748b" }}>Vendor not chosen yet</div>}{item.start_at ? <div style={{ color: "#64748b", marginTop: 2 }}>{new Date(item.start_at).toLocaleString()}</div> : null}{item.internal_notes_private ? <div style={{ color: "#475569", marginTop: 4, whiteSpace: "pre-wrap" }}>{item.internal_notes_private}</div> : null}{item.status === "proposed" ? <div style={{ display: "flex", gap: 6, marginTop: 7 }}><button type="button" disabled={busy || !item.vendors} onClick={() => void updateService(item, "contacted")} style={smallButtonStyle}>Mark vendor contacted</button><button type="button" disabled={busy} onClick={() => void updateService(item, "cancelled")} style={quietButtonStyle}>Cancel</button></div> : null}{item.status === "vendor_contacted" ? <div style={{ display: "flex", gap: 6, marginTop: 7 }}><button type="button" disabled={busy} onClick={() => void updateService(item, "confirmed")} style={smallButtonStyle}>Mark confirmed</button><button type="button" disabled={busy} onClick={() => void updateService(item, "cancelled")} style={quietButtonStyle}>Cancel</button></div> : null}</div>)}</div> : null}
   </section>;
 }
 
 const inputStyle = { width: "100%", boxSizing: "border-box" as const, padding: "7px 8px", border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 12, background: "#fff" };
 const buttonStyle = { padding: "7px 9px", border: "1px solid #2563eb", borderRadius: 7, background: "#2563eb", color: "#fff", fontSize: 12, cursor: "pointer" };
+const smallButtonStyle = { padding: "5px 7px", border: "1px solid #2563eb", borderRadius: 6, background: "#eff6ff", color: "#1d4ed8", fontSize: 11, cursor: "pointer" };
+const quietButtonStyle = { padding: "5px 7px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", color: "#475569", fontSize: 11, cursor: "pointer" };

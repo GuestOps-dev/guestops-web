@@ -86,6 +86,14 @@ const checks = [
     expectedStatus: 401,
   },
   {
+    name: "concierge service updates reject anonymous requests",
+    path: "/api/experiences/not-an-experience",
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+    expectedStatus: 401,
+  },
+  {
     name: "task list rejects anonymous requests",
     path: "/api/tasks?propertyId=not-a-property",
     expectedStatus: 401,

@@ -34,6 +34,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  ├─ experience-types
 │  │  │  └─ route.ts
 │  │  ├─ experiences
+│  │  │  ├─ [id]
+│  │  │  │  └─ route.ts
 │  │  │  └─ route.ts
 │  │  ├─ guests
 │  │  │  └─ [id]
