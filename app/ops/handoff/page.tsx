@@ -3,12 +3,13 @@ import fs from "fs";
 import path from "path";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-function readFileSafe(relPath: string) {
+const docsDirectory = path.join(process.cwd(), "docs");
+
+function readDocSafe(filename: string) {
   try {
-    const p = path.join(process.cwd(), relPath);
-    return fs.readFileSync(p, "utf8");
+    return fs.readFileSync(path.join(docsDirectory, filename), "utf8");
   } catch {
-    return `Missing: ${relPath}`;
+    return `Missing documentation file: ${filename}`;
   }
 }
 
@@ -33,19 +34,17 @@ export default async function HandoffPage() {
     notFound();
   }
 
-  const productBrief = readFileSafe("docs/PRODUCT_BRIEF.md");
-  const productVision = readFileSafe("docs/PRODUCT_VISION.md");
-  const techHandoff = readFileSafe("docs/TECH_HANDOFF.md");
-  const smokeTests = readFileSafe("docs/M1_SMOKE_TESTS.md");
+  const productBrief = readDocSafe("PRODUCT_BRIEF.md");
+  const productVision = readDocSafe("PRODUCT_VISION.md");
+  const techHandoff = readDocSafe("TECH_HANDOFF.md");
+  const smokeTests = readDocSafe("M1_SMOKE_TESTS.md");
 
-  const structure = readFileSafe("docs/STRUCTURE.md");
-  const routes = readFileSafe("docs/ROUTES.md");
-  const handoffReadme = readFileSafe("docs/HANDOFF_README.md");
-  const codeIndex = readFileSafe("docs/CODE_INDEX.md");
-  const newChatPrompt = readFileSafe("docs/NEW_CHAT_PROMPT.txt");
-  const handoffPack = readFileSafe("HANDOFF_PACK.txt");
-
-  const roadMap = readFileSafe("docs/ROADMAP.md");
+  const structure = readDocSafe("STRUCTURE.md");
+  const routes = readDocSafe("ROUTES.md");
+  const handoffReadme = readDocSafe("HANDOFF_README.md");
+  const codeIndex = readDocSafe("CODE_INDEX.md");
+  const newChatPrompt = readDocSafe("NEW_CHAT_PROMPT.txt");
+  const roadMap = readDocSafe("ROADMAP.md");
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
@@ -68,8 +67,6 @@ export default async function HandoffPage() {
       <Section title="Handoff Instructions (How This Works)" text={handoffReadme} />
       <Section title="Code Index (Generated Snapshot)" text={codeIndex} />
       <Section title="NEW CHAT PROMPT (Copy/Paste This First)" text={newChatPrompt} />
-
-      <Section title="Auto Handoff Pack (Optional)" text={handoffPack} />
 
       <Section title="Roadmap (Generated)" text={roadMap} />
     </div>
