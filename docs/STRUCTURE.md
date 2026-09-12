@@ -55,6 +55,10 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  ├─ [id]
 │  │  │  │  └─ route.ts
 │  │  │  └─ route.ts
+│  │  ├─ tasks
+│  │  │  ├─ [id]
+│  │  │  │  └─ route.ts
+│  │  │  └─ route.ts
 │  │  ├─ twilio
 │  │  │  ├─ inbound
 │  │  │  │  └─ route.ts
@@ -69,6 +73,7 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  └─ [id]
 │  │  │     ├─ ConversationPrioritySelect.tsx
 │  │  │     ├─ ConversationStatusSelect.tsx
+│  │  │     ├─ ConversationTasks.tsx
 │  │  │     ├─ GuestProfilePanel.tsx
 │  │  │     ├─ LiveThread.tsx
 │  │  │     ├─ MarkRead.tsx
@@ -173,6 +178,9 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │     ├─ 20260911_000002_remove_legacy_message_read_policies.sql
 │     ├─ 20260911_000003_create_sms_opt_in_consents.sql
 │     ├─ 20260911_000004_message_idempotency_indexes.sql
-│     └─ 20260911_000005_add_booking_stay_dates.sql
+│     ├─ 20260911_000005_add_booking_stay_dates.sql
+│     ├─ 20260912_000001_revoke_anonymous_guest_data_reads.sql
+│     ├─ 20260912_000002_pin_public_function_search_paths.sql
+│     └─ 20260912_000003_create_conversation_tasks.sql
 └─ tsconfig.json
 ```
