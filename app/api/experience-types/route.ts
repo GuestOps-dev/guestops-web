@@ -41,13 +41,26 @@ export async function GET(req: Request) {
     await assertCanAccessProperty(auth.supabase, propertyId);
     let query = (auth.supabase as any)
       .from("experience_types")
-      .select("id, property_id, name, category, default_vendor_id, active")
+      .select("id, property_id, library_experience_id, name, category, default_vendor_id, active")
       .eq("property_id", propertyId)
       .order("name");
     if (new URL(req.url).searchParams.get("includeInactive") !== "true") query = query.eq("active", true);
     const { data, error } = await query;
     if (error) throw error;
-    return NextResponse.json(data ?? []);
+
+    const types = data ?? [];
+    const libraryExperienceIds = [...new Set(types.map((item: any) => item.library_experience_id).filter(Boolean))];
+    if (!libraryExperienceIds.length) return NextResponse.json(types);
+
+    const { data: availability, error: availabilityError } = await (auth.supabase as any)
+      .from("property_experience_availability")
+      .select("experience_id, enabled")
+      .eq("property_id", propertyId)
+      .in("experience_id", libraryExperienceIds);
+    if (availabilityError) throw availabilityError;
+
+    const enabledByExperience = new Map((availability ?? []).map((item: any) => [item.experience_id, item.enabled]));
+    return NextResponse.json(types.filter((item: any) => !item.library_experience_id || enabledByExperience.get(item.library_experience_id) !== false));
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? "Unable to load service types" }, { status: error?.status ?? 400 });
   }

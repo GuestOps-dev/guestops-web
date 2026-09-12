@@ -10,7 +10,7 @@ create unique index if not exists experience_types_property_library_unique
   where library_experience_id is not null;
 
 insert into public.experience_types (property_id, library_experience_id, name, category, active)
-select availability.property_id, library.id, library.name, 'Experience', library.active
+select availability.property_id, library.id, library.name, 'other', library.active
 from public.property_experience_availability availability
 join public.experience_library library on library.id = availability.experience_id
 where availability.enabled
@@ -51,7 +51,7 @@ begin
   insert into public.property_experience_availability (property_id, experience_id, enabled)
   select p.id, created_experience_id, true from public.properties p where p.org_id = target_org_id;
   insert into public.experience_types (property_id, library_experience_id, name, category, active)
-  select p.id, created_experience_id, clean_name, 'Experience', true from public.properties p where p.org_id = target_org_id;
+  select p.id, created_experience_id, clean_name, 'other', true from public.properties p where p.org_id = target_org_id;
   return created_experience_id;
 end;
 $$;
