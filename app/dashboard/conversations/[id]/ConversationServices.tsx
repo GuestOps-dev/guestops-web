@@ -27,6 +27,7 @@ export default function ConversationServices({ propertyId, bookingId }: { proper
   const [startsAt, setStartsAt] = useState("");
   const [notes, setNotes] = useState("");
   const [newType, setNewType] = useState("");
+  const [vendorChoices, setVendorChoices] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,6 +87,19 @@ export default function ConversationServices({ propertyId, bookingId }: { proper
     } catch (e: any) { setError(e?.message ?? "Unable to update service request"); } finally { setBusy(false); }
   }
 
+  async function assignVendor(item: Experience) {
+    const vendorId = vendorChoices[item.id];
+    if (!vendorId || busy) return;
+    setBusy(true); setError(null);
+    try {
+      const response = await fetch(`/api/experiences/${item.id}`, { method: "PATCH", headers: await headers(), body: JSON.stringify({ property_id: propertyId, vendor_id: vendorId }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error ?? "Unable to assign vendor");
+      setItems((current) => current.map((value) => value.id === data.id ? data : value));
+      setVendorChoices((current) => ({ ...current, [item.id]: "" }));
+    } catch (e: any) { setError(e?.message ?? "Unable to assign vendor"); } finally { setBusy(false); }
+  }
+
   if (!bookingId) return <section style={{ marginTop: 18, borderTop: "1px solid #e2e8f0", paddingTop: 14 }}><h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 6px" }}>Concierge services</h3><p style={{ margin: 0, color: "#64748b", fontSize: 12 }}>Add this guest’s stay dates before planning a chef, driver, or tour.</p></section>;
 
   return <section style={{ marginTop: 18, borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
@@ -103,7 +117,7 @@ export default function ConversationServices({ propertyId, bookingId }: { proper
       <div style={{ fontSize: 11, color: "#64748b" }}>Need a different provider? <Link href="/dashboard/vendors" style={{ color: "#2563eb" }}>Manage vendors</Link>.</div>
     </div>}
     {error ? <p role="alert" style={{ color: "#b91c1c", fontSize: 12, margin: "8px 0 0" }}>{error}</p> : null}
-    {items.length ? <div style={{ display: "grid", gap: 7, marginTop: 10 }}>{items.map((item) => <div key={item.id} style={{ padding: "7px 8px", borderRadius: 7, border: "1px solid #dbe4ee", background: "#fff", fontSize: 12 }}><strong>{item.experience_types?.name ?? "Service"}</strong><span style={{ color: "#64748b" }}> · {item.status.replaceAll("_", " ")}</span>{item.vendors?.name ? <div style={{ marginTop: 2 }}>Vendor: {item.vendors.name}</div> : <div style={{ marginTop: 2, color: "#64748b" }}>Vendor not chosen yet</div>}{item.start_at ? <div style={{ color: "#64748b", marginTop: 2 }}>{new Date(item.start_at).toLocaleString()}</div> : null}{item.internal_notes_private ? <div style={{ color: "#475569", marginTop: 4, whiteSpace: "pre-wrap" }}>{item.internal_notes_private}</div> : null}{item.status === "proposed" ? <div style={{ display: "flex", gap: 6, marginTop: 7 }}><button type="button" disabled={busy || !item.vendors} onClick={() => void updateService(item, "contacted")} style={smallButtonStyle}>Mark vendor contacted</button><button type="button" disabled={busy} onClick={() => void updateService(item, "cancelled")} style={quietButtonStyle}>Cancel</button></div> : null}{item.status === "vendor_contacted" ? <div style={{ display: "flex", gap: 6, marginTop: 7 }}><button type="button" disabled={busy} onClick={() => void updateService(item, "confirmed")} style={smallButtonStyle}>Mark confirmed</button><button type="button" disabled={busy} onClick={() => void updateService(item, "cancelled")} style={quietButtonStyle}>Cancel</button></div> : null}</div>)}</div> : null}
+    {items.length ? <div style={{ display: "grid", gap: 7, marginTop: 10 }}>{items.map((item) => <div key={item.id} style={{ padding: "7px 8px", borderRadius: 7, border: "1px solid #dbe4ee", background: "#fff", fontSize: 12 }}><strong>{item.experience_types?.name ?? "Service"}</strong><span style={{ color: "#64748b" }}> · {item.status.replaceAll("_", " ")}</span>{item.vendors?.name ? <div style={{ marginTop: 2 }}>Vendor: {item.vendors.name}</div> : <><div style={{ marginTop: 2, color: "#64748b" }}>Vendor not chosen yet</div>{item.status === "proposed" ? <div style={{ display: "flex", gap: 5, marginTop: 6 }}><select value={vendorChoices[item.id] ?? ""} onChange={(event) => setVendorChoices((current) => ({ ...current, [item.id]: event.target.value }))} style={{ ...inputStyle, flex: 1, padding: "5px 6px" }}><option value="">Choose vendor…</option>{vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</select><button type="button" disabled={busy || !vendorChoices[item.id]} onClick={() => void assignVendor(item)} style={smallButtonStyle}>Assign</button></div> : null}</>}{item.start_at ? <div style={{ color: "#64748b", marginTop: 2 }}>{new Date(item.start_at).toLocaleString()}</div> : null}{item.internal_notes_private ? <div style={{ color: "#475569", marginTop: 4, whiteSpace: "pre-wrap" }}>{item.internal_notes_private}</div> : null}{item.status === "proposed" ? <div style={{ display: "flex", gap: 6, marginTop: 7 }}><button type="button" disabled={busy || !item.vendors} onClick={() => void updateService(item, "contacted")} style={smallButtonStyle}>Mark vendor contacted</button><button type="button" disabled={busy} onClick={() => void updateService(item, "cancelled")} style={quietButtonStyle}>Cancel</button></div> : null}{item.status === "vendor_contacted" ? <div style={{ display: "flex", gap: 6, marginTop: 7 }}><button type="button" disabled={busy} onClick={() => void updateService(item, "confirmed")} style={smallButtonStyle}>Mark confirmed</button><button type="button" disabled={busy} onClick={() => void updateService(item, "cancelled")} style={quietButtonStyle}>Cancel</button></div> : null}</div>)}</div> : null}
   </section>;
 }
 

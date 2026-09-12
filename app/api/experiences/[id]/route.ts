@@ -24,7 +24,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     const body = await req.json();
     const propertyId = requirePropertyId(body.property_id);
     const action = body.action;
-    if (action !== "contacted" && action !== "confirmed" && action !== "cancelled") {
+    const vendorId = typeof body.vendor_id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.vendor_id.trim()) ? body.vendor_id.trim() : null;
+    if (action !== "contacted" && action !== "confirmed" && action !== "cancelled" && !vendorId) {
       return NextResponse.json({ error: "Choose a valid service action" }, { status: 400 });
     }
     await assertCanAccessProperty(auth.supabase, propertyId);
@@ -38,6 +39,11 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     if (findError) throw findError;
     if (!experience) return NextResponse.json({ error: "Service request not found" }, { status: 404 });
 
+    if (vendorId) {
+      const { data: vendor } = await sb.from("vendors").select("id").eq("id", vendorId).eq("property_id", propertyId).eq("active", true).maybeSingle();
+      if (!vendor) return NextResponse.json({ error: "The selected vendor is unavailable" }, { status: 400 });
+    }
+
     if (action === "contacted") {
       if (!experience.vendor_id) return NextResponse.json({ error: "Choose a vendor before marking them contacted" }, { status: 400 });
       const { error: requestError } = await sb.from("vendor_requests").insert({
@@ -50,8 +56,10 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     }
 
     const status = action === "contacted" ? "vendor_contacted" : action;
+    const updates: Record<string, unknown> = vendorId ? { vendor_id: vendorId } : {};
+    if (action) updates.status = status;
     const { data, error } = await sb.from("experiences")
-      .update({ status })
+      .update(updates)
       .eq("id", id)
       .eq("property_id", propertyId)
       .select(COLUMNS)
