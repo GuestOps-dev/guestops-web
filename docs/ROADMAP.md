@@ -285,6 +285,24 @@ Examples:
 - Check-in instructions
 - Local recommendations
 
+### Property guide for AI
+
+Add an editable **Guide for AI** section to every Property page. It is the
+property team's approved operational playbook, not an unbounded chatbot
+memory. It should let staff record concise, property-specific guidance such
+as:
+
+- Key selling points guests may ask about (for example, ocean views).
+- Troubleshooting steps for common issues such as a stuck door, Wi-Fi, or a
+  power outage.
+- Approved guest-facing explanations and any important limits or safety
+  instructions.
+- When a human, vendor, or emergency service must take over.
+
+Future AI drafting and automation may use this guide as a cited source, but
+must never invent instructions or take action beyond the guidance. Staff
+remain able to review and override every guest-facing recommendation.
+
 Used by:
 
 - Staff
