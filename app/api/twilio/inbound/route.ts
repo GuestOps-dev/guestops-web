@@ -182,24 +182,48 @@ export async function POST(req: Request) {
         ? "whatsapp"
         : "sms";
 
-    // Find/create conversation
-    const { data: convo, error: convoErr } = await sb
+    // A guest can already have a conversation that predates the placeholder
+    // stay. Prefer that thread: the database also enforces one provider thread
+    // per property/channel/guest number.
+    const { data: existingConvo, error: existingConvoErr } = await sb
       .from("conversations")
-      .upsert(
-        {
-          property_id: propertyId,
-          booking_id: booking.id,
-          guest_id: guest.id,
-          guest_number: fromAddr.raw,   // keep raw for provider context (may include whatsapp:)
-          service_number: toAddr.raw,
-          channel,
-          provider: "twilio",
-          status: "awaiting_team",
-        },
-        { onConflict: "booking_id,channel" }
-      )
       .select("id")
-      .single();
+      .eq("property_id", propertyId)
+      .eq("channel", channel)
+      .eq("provider", "twilio")
+      .eq("guest_number", fromAddr.raw)
+      .maybeSingle();
+
+    if (existingConvoErr) {
+      console.error("conversation lookup error:", existingConvoErr);
+      return ok();
+    }
+
+    const conversationValues = {
+      booking_id: booking.id,
+      guest_id: guest.id,
+      service_number: toAddr.raw,
+      status: "awaiting_team",
+    };
+
+    const { data: convo, error: convoErr } = existingConvo
+      ? await sb
+          .from("conversations")
+          .update(conversationValues)
+          .eq("id", existingConvo.id)
+          .select("id")
+          .single()
+      : await sb
+          .from("conversations")
+          .insert({
+            property_id: propertyId,
+            guest_number: fromAddr.raw, // retain WhatsApp provider prefix when present
+            channel,
+            provider: "twilio",
+            ...conversationValues,
+          })
+          .select("id")
+          .single();
 
     if (convoErr) {
       console.error("conversation upsert error:", convoErr);
