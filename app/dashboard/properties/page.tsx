@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { PropertyWorkspaceProvider } from "../PropertyWorkspaceProvider";
 import PropertyGuideManager from "./PropertyGuideManager";
+import PropertyGuideReadiness from "./PropertyGuideReadiness";
 import KnownContactsManager from "./KnownContactsManager";
 import SleepingArrangementsManager from "./SleepingArrangementsManager";
 
@@ -16,6 +17,14 @@ export default async function PropertiesPage() {
     id: membership.property_id,
     name: membership.property_name,
   }));
+  const propertyIds = propertyOptions.map((property: any) => property.id);
+  const { data: guideReadiness } = propertyIds.length
+    ? await (supabase as any)
+      .from("properties")
+      .select("id, name, lodgify_property_id, ai_guide, welcome_message_draft, check_in_instructions_guest, check_out_instructions_guest")
+      .in("id", propertyIds)
+      .order("name")
+    : { data: [] };
 
   return (
     <PropertyWorkspaceProvider
@@ -28,6 +37,7 @@ export default async function PropertiesPage() {
         <p style={{ fontSize: 14, color: "#555", margin: "0 0 24px" }}>
           Keep guest-facing details and private operating knowledge current for each property.
         </p>
+        <PropertyGuideReadiness properties={guideReadiness ?? []} />
         <PropertyGuideManager />
         <SleepingArrangementsManager />
         <KnownContactsManager />
