@@ -38,8 +38,7 @@ export async function POST(req: NextRequest) {
   const payload = Object.fromEntries(params.entries());
 
   // Webhook = server-to-server => service client (bypass RLS is OK here)
-  const supabase = getSupabaseServiceClient();
-  const sb: any = supabase as any;
+  const sb = getSupabaseServiceClient();
 
   // If we can't identify the message, just log and exit.
   if (!messageSid) {
@@ -76,7 +75,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const update: Record<string, any> = { status: messageStatus };
+  const update: { status: string; error: string | null } = {
+    status: messageStatus,
+    error: null,
+  };
 
   if (messageStatus === "failed" || messageStatus === "undelivered") {
     update.error =
