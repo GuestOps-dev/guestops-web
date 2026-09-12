@@ -71,10 +71,25 @@ body {
 
   .conversation-page-main {
     width: 100%;
+    min-height: 0 !important;
+  }
+
+  .conversation-message-scroll {
+    overflow-y: visible !important;
+    padding-right: 0 !important;
+  }
+
+  .conversation-composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
   }
 
   .guest-profile-panel {
     width: 100% !important;
+    position: static !important;
+    max-height: none !important;
+    overflow-y: visible !important;
     box-sizing: border-box;
     border-left: none !important;
     border-top: 1px solid #eee;

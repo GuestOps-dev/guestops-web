@@ -174,6 +174,13 @@ export default function LiveThread({
   );
   const markReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // An operator opening a thread should land where work is happening: the
+  // newest guest message and the reply composer, not the first historical
+  // message in a long stay.
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ block: "end" });
+  }, []);
+
   // Auto-scroll to bottom when a new message or note is appended
   useEffect(() => {
     const total = inbound.length + outbound.length + internalNotes.length + guestNotes.length;
@@ -457,20 +464,24 @@ export default function LiveThread({
   return (
     <>
       {legacyCount > 0 && (
-        <div
+        <details
           style={{
             marginTop: 12,
-            padding: 12,
-            borderRadius: 12,
+            padding: "8px 10px",
+            borderRadius: 8,
             background: "#fff7ed",
             border: "1px solid #fed7aa",
             color: "#7c2d12",
-            fontSize: 13,
+            fontSize: 12,
           }}
         >
-          System note: {legacyCount} earlier outbound attempt(s) failed due to a
-          configuration issue that has since been fixed.
-        </div>
+          <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+            {legacyCount} earlier delivery issue{legacyCount === 1 ? "" : "s"} (fixed)
+          </summary>
+          <div style={{ marginTop: 6 }}>
+            These older messages failed before the SMS configuration was completed.
+          </div>
+        </details>
       )}
 
       <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>

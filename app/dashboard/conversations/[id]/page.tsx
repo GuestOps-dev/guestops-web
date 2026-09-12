@@ -269,7 +269,16 @@ export default async function ConversationPage({
       style={{ padding: 16, maxWidth: 1200, margin: "0 auto", display: "flex" }}
     >
       <MarkRead conversationId={conversationId} propertyId={propertyId} />
-      <div className="conversation-page-main" style={{ flex: 1, minWidth: 0 }}>
+      <div
+        className="conversation-page-main conversation-workspace-main"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: "calc(100vh - 32px)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Link href="/dashboard">← Back</Link>
 
         <div
@@ -301,23 +310,23 @@ export default async function ConversationPage({
         {canManageQuickReplies && (
           <Link
             href={`/dashboard/properties/${propertyId}/quick-replies`}
+            title="Manage this property's quick replies"
             style={{
-              fontSize: 13,
+              fontSize: 12,
               marginLeft: "auto",
-              padding: "6px 10px",
-              borderRadius: 8,
-              border: "1px solid #ddd",
-              background: "#f9f9f9",
-              color: "#111",
+              color: "#475569",
               textDecoration: "none",
             }}
           >
-            Manage Quick Replies
+            Edit quick replies
           </Link>
         )}
         </div>
 
-        <div style={{ marginTop: 12 }}>
+        <div
+          className="conversation-message-scroll"
+          style={{ flex: 1, minHeight: 0, overflowY: "auto", paddingRight: 8 }}
+        >
           <LiveThread
             conversationId={conversationId}
             propertyId={propertyId}
@@ -329,7 +338,15 @@ export default async function ConversationPage({
           />
         </div>
 
-        <div style={{ marginTop: 12 }}>
+        <div
+          className="conversation-composer"
+          style={{
+            marginTop: 12,
+            paddingTop: 12,
+            background: "#fff",
+            borderTop: "1px solid #e5e7eb",
+          }}
+        >
           <SendMessageBox conversationId={conversationId} propertyId={propertyId} />
         </div>
       </div>

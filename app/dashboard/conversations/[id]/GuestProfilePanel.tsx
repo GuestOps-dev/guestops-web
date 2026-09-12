@@ -360,6 +360,11 @@ export default function GuestProfilePanel({
       style={{
         width: 280,
         flexShrink: 0,
+        position: "sticky",
+        top: 16,
+        alignSelf: "flex-start",
+        maxHeight: "calc(100vh - 32px)",
+        overflowY: "auto",
         borderLeft: "1px solid #eee",
         paddingLeft: 16,
         marginLeft: 16,
