@@ -10,7 +10,7 @@ type LodgifyBooking = {
   property_id?: unknown;
   arrival?: unknown;
   departure?: unknown;
-  guest?: { name?: unknown; guest_name?: unknown; email?: unknown; phone?: unknown; phone_numbers?: unknown; locale?: unknown };
+  guest?: { name?: unknown; guest_name?: unknown; email?: unknown; phone?: unknown; phone_number?: unknown; phone_numbers?: unknown; locale?: unknown };
   people?: unknown;
   total_guest_breakdown?: { adults?: unknown; children?: unknown; infants?: unknown };
 };
@@ -39,6 +39,8 @@ function normalizePhone(value: unknown): string | null {
 function guestPhone(guest: LodgifyBooking["guest"]): string | null {
   const direct = normalizePhone(guest?.phone);
   if (direct) return direct;
+  const alternate = normalizePhone(guest?.phone_number);
+  if (alternate) return alternate;
   if (!Array.isArray(guest?.phone_numbers)) return null;
   for (const item of guest.phone_numbers) {
     const candidate = typeof item === "string"

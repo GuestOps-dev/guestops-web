@@ -5,7 +5,7 @@ import { getSupabaseServiceClient } from "@/lib/supabaseServer";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type LodgifyBooking = { id?: unknown; property_id?: unknown; property_name?: unknown; arrival?: unknown; departure?: unknown; status?: unknown; is_new?: unknown; source_text?: unknown; guest?: { name?: unknown; guest_name?: unknown; email?: unknown; phone?: unknown; phone_numbers?: unknown; locale?: unknown }; people?: unknown; total_guest_breakdown?: { adults?: unknown; children?: unknown; infants?: unknown } };
+type LodgifyBooking = { id?: unknown; property_id?: unknown; property_name?: unknown; arrival?: unknown; departure?: unknown; status?: unknown; is_new?: unknown; source_text?: unknown; guest?: { name?: unknown; guest_name?: unknown; email?: unknown; phone?: unknown; phone_number?: unknown; phone_numbers?: unknown; locale?: unknown }; people?: unknown; total_guest_breakdown?: { adults?: unknown; children?: unknown; infants?: unknown } };
 
 function date(value: unknown) { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : null; }
 function text(value: unknown) { return typeof value === "string" ? value.trim() || null : null; }
@@ -57,6 +57,8 @@ function normalizePhone(value: unknown): string | null {
 function guestPhone(guest: LodgifyBooking["guest"]): string | null {
   const direct = normalizePhone(guest?.phone);
   if (direct) return direct;
+  const alternate = normalizePhone(guest?.phone_number);
+  if (alternate) return alternate;
   if (!Array.isArray(guest?.phone_numbers)) return null;
   for (const item of guest.phone_numbers) {
     const phone = typeof item === "string" ? item : (item as { phone?: unknown; number?: unknown } | null)?.phone ?? (item as { number?: unknown } | null)?.number;
