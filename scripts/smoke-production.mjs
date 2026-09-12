@@ -76,6 +76,16 @@ const checks = [
     expectedStatus: 401,
   },
   {
+    name: "concierge service types reject anonymous requests",
+    path: "/api/experience-types",
+    expectedStatus: 401,
+  },
+  {
+    name: "concierge service requests reject anonymous requests",
+    path: "/api/experiences",
+    expectedStatus: 401,
+  },
+  {
     name: "task list rejects anonymous requests",
     path: "/api/tasks?propertyId=not-a-property",
     expectedStatus: 401,

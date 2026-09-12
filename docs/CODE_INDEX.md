@@ -1,7 +1,7 @@
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-12T16:38:45.076Z
-Git SHA: 827447c
+Generated: 2026-09-12T16:46:28.965Z
+Git SHA: 59a0739
 
 ---
 
@@ -31,6 +31,10 @@ Git SHA: 827447c
   - file: `app/api/conversations/[id]/thread/route.ts`
 - **/api/conversations** (GET)  
   - file: `app/api/conversations/route.ts`
+- **/api/experience-types** (GET, POST)  
+  - file: `app/api/experience-types/route.ts`
+- **/api/experiences** (GET, POST)  
+  - file: `app/api/experiences/route.ts`
 - **/api/guests/[id]/notes** (GET, POST)  
   - file: `app/api/guests/[id]/notes/route.ts`
 - **/api/guests/[id]** (GET, PATCH)  

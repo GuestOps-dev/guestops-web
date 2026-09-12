@@ -1,6 +1,6 @@
 GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)
-Generated: 2026-09-12T16:38:45.133Z
-Git SHA: 827447c
+Generated: 2026-09-12T16:46:29.026Z
+Git SHA: 59a0739
 
 RULES FOR NEW CHAT:
 - Prefer code snippets that can be pasted into Cursor.
@@ -44,6 +44,10 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  │  └─ thread
 │  │  │  │     └─ route.ts
 │  │  │  └─ route.ts
+│  │  ├─ experience-types
+│  │  │  └─ route.ts
+│  │  ├─ experiences
+│  │  │  └─ route.ts
 │  │  ├─ guests
 │  │  │  └─ [id]
 │  │  │     ├─ notes
@@ -85,6 +89,7 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  ├─ conversations
 │  │  │  └─ [id]
 │  │  │     ├─ ConversationPrioritySelect.tsx
+│  │  │     ├─ ConversationServices.tsx
 │  │  │     ├─ ConversationStatusSelect.tsx
 │  │  │     ├─ ConversationTasks.tsx
 │  │  │     ├─ GuestProfilePanel.tsx
@@ -194,7 +199,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │     ├─ 20260911_000005_add_booking_stay_dates.sql
 │     ├─ 20260912_000001_revoke_anonymous_guest_data_reads.sql
 │     ├─ 20260912_000002_pin_public_function_search_paths.sql
-│     └─ 20260912_000003_create_conversation_tasks.sql
+│     ├─ 20260912_000003_create_conversation_tasks.sql
+│     └─ 20260912_000004_secure_vendor_coordination.sql
 └─ tsconfig.json
 ```
 
@@ -203,8 +209,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-12T16:38:45.076Z
-Git SHA: 827447c
+Generated: 2026-09-12T16:46:28.965Z
+Git SHA: 59a0739
 
 ---
 
@@ -234,6 +240,10 @@ Git SHA: 827447c
   - file: `app/api/conversations/[id]/thread/route.ts`
 - **/api/conversations** (GET)  
   - file: `app/api/conversations/route.ts`
+- **/api/experience-types** (GET, POST)  
+  - file: `app/api/experience-types/route.ts`
+- **/api/experiences** (GET, POST)  
+  - file: `app/api/experiences/route.ts`
 - **/api/guests/[id]/notes** (GET, POST)  
   - file: `app/api/guests/[id]/notes/route.ts`
 - **/api/guests/[id]** (GET, PATCH)  

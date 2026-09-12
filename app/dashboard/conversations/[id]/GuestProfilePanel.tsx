@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import ConversationTasks from "./ConversationTasks";
+import ConversationServices from "./ConversationServices";
 
 export type GuestRow = {
   id: string;
@@ -578,6 +579,8 @@ export default function GuestProfilePanel({
         guestId={profile.id}
         bookingId={booking?.id}
       />
+
+      <ConversationServices propertyId={propertyId} bookingId={booking?.id} />
 
       {editingName ? (
         <div style={{ marginBottom: 12 }}>

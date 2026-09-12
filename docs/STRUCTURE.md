@@ -31,6 +31,10 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  │  └─ thread
 │  │  │  │     └─ route.ts
 │  │  │  └─ route.ts
+│  │  ├─ experience-types
+│  │  │  └─ route.ts
+│  │  ├─ experiences
+│  │  │  └─ route.ts
 │  │  ├─ guests
 │  │  │  └─ [id]
 │  │  │     ├─ notes
@@ -72,6 +76,7 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  ├─ conversations
 │  │  │  └─ [id]
 │  │  │     ├─ ConversationPrioritySelect.tsx
+│  │  │     ├─ ConversationServices.tsx
 │  │  │     ├─ ConversationStatusSelect.tsx
 │  │  │     ├─ ConversationTasks.tsx
 │  │  │     ├─ GuestProfilePanel.tsx
@@ -181,6 +186,7 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │     ├─ 20260911_000005_add_booking_stay_dates.sql
 │     ├─ 20260912_000001_revoke_anonymous_guest_data_reads.sql
 │     ├─ 20260912_000002_pin_public_function_search_paths.sql
-│     └─ 20260912_000003_create_conversation_tasks.sql
+│     ├─ 20260912_000003_create_conversation_tasks.sql
+│     └─ 20260912_000004_secure_vendor_coordination.sql
 └─ tsconfig.json
 ```
