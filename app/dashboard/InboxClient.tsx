@@ -49,6 +49,7 @@ function getGuestDisplayName(c: ConversationRow): string {
 
 type StatusTab = "awaiting_team" | "waiting_guest" | "closed";
 type AssignmentFilter = "all" | "assigned_to_me" | "unassigned";
+const STATUS_TABS: StatusTab[] = ["awaiting_team", "waiting_guest", "closed"];
 
 function belongsToStatusTab(rowStatus: string | null, tab: StatusTab) {
   // `active` is a legacy pre-MVP status. Keep existing rows visible in Inbox
@@ -178,7 +179,7 @@ export default function InboxClient() {
   const [allRows, setAllRows] = useState<ConversationRow[]>([]);
   const [rawCount, setRawCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<StatusTab>("awaiting_team");
+  const [statusTabs, setStatusTabs] = useState<StatusTab[]>(["awaiting_team"]);
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
   const [tagFilter, setTagFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -201,7 +202,7 @@ export default function InboxClient() {
   }, [propertyOptions]);
 
   const displayRows = useMemo(() => {
-    let rows = allRows.filter((r) => belongsToStatusTab(r.status, status));
+    let rows = allRows.filter((r) => statusTabs.some((tab) => belongsToStatusTab(r.status, tab)));
     if (assignmentFilter === "assigned_to_me" && currentUserId) {
       rows = rows.filter((r) => r.assigned_to_user_id === currentUserId);
     } else if (assignmentFilter === "unassigned") {
@@ -242,7 +243,7 @@ export default function InboxClient() {
       });
     }
     return rows;
-  }, [allRows, status, assignmentFilter, currentUserId, replyNeededOnly, inHouseOnly, tagFilter, searchQuery, propertyNameById]);
+  }, [allRows, statusTabs, assignmentFilter, currentUserId, replyNeededOnly, inHouseOnly, tagFilter, searchQuery, propertyNameById]);
 
   const tagOptions = useMemo(() => {
     const set = new Set<string>();
@@ -290,6 +291,10 @@ export default function InboxClient() {
   };
   const hasActiveFilters =
     assignmentFilter !== "all" || replyNeededOnly || inHouseOnly || tagFilter !== "" || searchQuery.trim() !== "";
+
+  function toggleStatusTab(tab: StatusTab) {
+    setStatusTabs((current) => current.includes(tab) ? current.filter((item) => item !== tab) : [...current, tab]);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -634,25 +639,31 @@ export default function InboxClient() {
               fontSize: 12,
             }}
           >
-            {(["awaiting_team", "waiting_guest", "closed"] as const).map((tab) => {
+            {STATUS_TABS.map((tab) => {
               const unread =
                 tab === "awaiting_team"
                   ? unreadInbox
                   : tab === "waiting_guest"
                     ? unreadWaitingGuest
                     : unreadClosed;
-              const active = status === tab;
+              const active = statusTabs.includes(tab);
+              const tone = tab === "awaiting_team"
+                ? { background: "#dcfce7", border: "#86efac", color: "#166534", badge: "#15803d" }
+                : tab === "waiting_guest"
+                  ? { background: "#fef3c7", border: "#fcd34d", color: "#92400e", badge: "#b45309" }
+                  : { background: "#f1f5f9", border: "#cbd5e1", color: "#475569", badge: "#64748b" };
               return (
                 <button
                   key={tab}
                   type="button"
-                  onClick={() => setStatus(tab)}
+                  onClick={() => toggleStatusTab(tab)}
+                  aria-pressed={active}
                   style={{
                     padding: "8px 14px",
-                    border: "none",
-                    borderRight: tab !== "closed" ? "1px solid #e5e5e5" : "none",
-                    background: active ? "#111" : "transparent",
-                    color: active ? "#fff" : "#444",
+                    border: `1px solid ${active ? tone.border : "transparent"}`,
+                    borderRight: tab !== "closed" ? `1px solid ${active ? tone.border : "#e5e5e5"}` : undefined,
+                    background: active ? tone.background : "transparent",
+                    color: active ? tone.color : "#64748b",
                     cursor: "pointer",
                     fontWeight: active ? 600 : 500,
                     display: "inline-flex",
@@ -668,8 +679,8 @@ export default function InboxClient() {
                         minWidth: 18,
                         padding: "2px 6px",
                         borderRadius: 999,
-                        background: active ? "rgba(255,255,255,0.25)" : "#111",
-                        color: active ? "#fff" : "#fff",
+                        background: active ? tone.badge : "#64748b",
+                        color: "#fff",
                       }}
                     >
                       {unread}
@@ -897,7 +908,9 @@ export default function InboxClient() {
         >
           {hasActiveFilters
             ? "No conversations match your filters."
-            : `No conversations in ${tabLabel[status]}.`}
+            : statusTabs.length
+              ? "No conversations in the selected views."
+              : "Choose one or more status views above to see conversations."}
         </div>
       ) : null}
 
