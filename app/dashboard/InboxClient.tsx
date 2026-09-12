@@ -16,6 +16,7 @@ type GuestInfo = {
 type BookingInfo = {
   check_in_date?: string | null;
   check_out_date?: string | null;
+  source_reservation_id?: string | null;
 } | null;
 
 type ConversationRow = {
@@ -133,6 +134,9 @@ function bookingFor(c: ConversationRow): BookingInfo {
 function isInHouse(c: ConversationRow, today = localDateKey()) {
   const booking = bookingFor(c);
   if (!booking?.check_in_date || !booking.check_out_date) return false;
+  // A new inbound message without a reservation receives a short-lived
+  // placeholder record solely to keep its thread routable. It is not a stay.
+  if (booking.source_reservation_id?.startsWith("placeholder:")) return false;
   return booking.check_in_date <= today && today <= booking.check_out_date;
 }
 
