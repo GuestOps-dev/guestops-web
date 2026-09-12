@@ -6,6 +6,7 @@ import SendMessageBox from "./SendMessageBox";
 import GuestProfilePanel, { type PropertyGuideSummary } from "./GuestProfilePanel";
 import ConversationStatusSelect from "./ConversationStatusSelect";
 import ConversationPrioritySelect from "./ConversationPrioritySelect";
+import ConversationAiSummary from "./ConversationAiSummary";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 // Realtime (inbound_messages, outbound_messages filtered by conversation_id) is subscribed in LiveThread.
@@ -340,6 +341,7 @@ export default async function ConversationPage({
           className="conversation-message-scroll"
           style={{ flex: 1, minHeight: 0, overflowY: "auto", paddingRight: 8 }}
         >
+          <ConversationAiSummary conversationId={conversationId} />
           <LiveThread
             conversationId={conversationId}
             propertyId={propertyId}
