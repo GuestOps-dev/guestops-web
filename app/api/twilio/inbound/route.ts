@@ -219,6 +219,8 @@ export async function POST(req: Request) {
 
     const { error: inErr } = await sb.from("inbound_messages").insert({
       conversation_id: convo.id,
+      property_id: propertyId,
+      channel,
       body,
       provider: "twilio",
       provider_message_id: messageSid,
