@@ -12,7 +12,7 @@ Updated September 12, 2026. This is the working list for the next session; it se
 
 ## Product improvements queued next
 
-- [ ] **Complete the group-chat launch flow.** New Bookings now lets the team capture or correct the guest mobile number before intake. Next, select the property defaults, create the provider-supported group when available, and show its setup status in the booking/inbox. Default channel should remain WhatsApp.
+- [ ] **Complete the group-chat launch flow.** New Bookings captures or corrects the guest mobile number before intake; each current property now defaults to a prepared WhatsApp group including Scott and Orlando, and the Inbox shows its setup status and participant list. The remaining step is to create the provider-supported group when available. Default channel remains WhatsApp.
 - [ ] **Build the team/role experience.** Add staff management, property assignments, and an operator-to-operator conversation/follow-up assignment control after the real accounts are known.
 - [ ] **Make follow-ups even more operational.** Consider editing, reassigning, closing/reopening, and optionally escalating overdue tasks. Manual follow-ups and due-date filters already exist.
 - [ ] **Decide the assistant’s chat name and personality.** GuestOpsHQ is the product; the conversational assistant still needs its final, guest-facing name.
