@@ -158,8 +158,8 @@ export async function POST(req: Request) {
       } catch (groupError) {
         console.error("Unable to prepare messaging group:", groupError);
       }
-      const title = "Set up the WhatsApp group for this stay";
-      const { data: existingTask } = await sb.from("tasks").select("id").eq("booking_id", booking.id).eq("title", title).eq("status", "open").maybeSingle();
+      const title = "Review internal WhatsApp group setup (no live group)";
+      const { data: existingTask } = await sb.from("tasks").select("id").eq("booking_id", booking.id).in("title", [title, "Set up the WhatsApp group for this stay"]).eq("status", "open").maybeSingle();
       if (!existingTask) await sb.from("tasks").insert({ property_id: property.id, conversation_id: conversation.id, guest_id: guestId, booking_id: booking.id, title });
     }
 
