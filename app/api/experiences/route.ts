@@ -33,7 +33,7 @@ export async function GET(req: Request) {
     const { data, error } = await (auth.supabase as any).from("experiences").select(COLUMNS).eq("property_id", propertyId).eq("booking_id", bookingId).order("created_at", { ascending: false });
     if (error) throw error;
     return NextResponse.json(data ?? []);
-  } catch (error: any) { return NextResponse.json({ error: error?.message ?? "Unable to load service requests" }, { status: error?.status ?? 400 }); }
+  } catch (error: any) { return NextResponse.json({ error: error?.message ?? "Unable to load experiences" }, { status: error?.status ?? 400 }); }
 }
 
 export async function POST(req: Request) {
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     const bookingId = uuid(body.booking_id);
     const typeId = uuid(body.experience_type_id);
     const vendorId = uuid(body.vendor_id);
-    if (!bookingId || !typeId) return NextResponse.json({ error: "A stay and service type are required" }, { status: 400 });
+    if (!bookingId || !typeId) return NextResponse.json({ error: "A stay and experience are required" }, { status: 400 });
     await assertCanAccessProperty(auth.supabase, propertyId);
     const sb = auth.supabase as any;
     const [{ data: booking }, { data: type }, vendorResult] = await Promise.all([
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       sb.from("experience_types").select("id, name").eq("id", typeId).eq("property_id", propertyId).maybeSingle(),
       vendorId ? sb.from("vendors").select("id").eq("id", vendorId).eq("property_id", propertyId).eq("active", true).maybeSingle() : Promise.resolve({ data: true }),
     ]);
-    if (!booking || !type || !vendorResult.data) return NextResponse.json({ error: "The selected stay, service, or vendor is unavailable" }, { status: 400 });
+    if (!booking || !type || !vendorResult.data) return NextResponse.json({ error: "The selected stay, experience, or vendor is unavailable" }, { status: 400 });
     const { data, error } = await sb.from("experiences").insert({
       property_id: propertyId, booking_id: bookingId, experience_type_id: typeId, vendor_id: vendorId,
       status: "proposed", start_at: optionalDate(body.start_at), pickup_location: optionalText(body.pickup_location, 500),
@@ -72,5 +72,5 @@ export async function POST(req: Request) {
     });
     if (taskError) console.error("Concierge follow-up task create error:", taskError);
     return NextResponse.json(data, { status: 201 });
-  } catch (error: any) { return NextResponse.json({ error: error?.message ?? "Unable to create service request" }, { status: error?.status ?? 400 }); }
+  } catch (error: any) { return NextResponse.json({ error: error?.message ?? "Unable to plan experience" }, { status: error?.status ?? 400 }); }
 }
