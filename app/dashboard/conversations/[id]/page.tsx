@@ -363,6 +363,7 @@ export default async function ConversationPage({
           <SendMessageBox
             conversationId={conversationId}
             propertyId={propertyId}
+            recipientAvailable={/^\+\d{7,15}$/.test(guestNumber ?? "")}
             welcomeDraft={booking?.source === "lodgify" ? propertyRow?.welcome_message_draft ?? null : null}
             welcomeVariables={{
               guestName: guest?.full_name ?? null,

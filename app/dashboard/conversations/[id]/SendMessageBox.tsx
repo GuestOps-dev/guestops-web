@@ -8,11 +8,13 @@ import QuickReplyPicker from "./QuickReplyPicker";
 export default function SendMessageBox({
   conversationId,
   propertyId,
+  recipientAvailable = true,
   welcomeDraft,
   welcomeVariables,
 }: {
   conversationId: string;
   propertyId: string;
+  recipientAvailable?: boolean;
   welcomeDraft?: string | null;
   welcomeVariables?: {
     guestName: string | null;
@@ -53,6 +55,8 @@ export default function SendMessageBox({
 
   async function handleSend() {
     setError(null);
+
+    if (!recipientAvailable) return;
 
     const body = message.trim();
     if (!body) return;
@@ -102,7 +106,7 @@ export default function SendMessageBox({
   function handleComposerKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
-      if (!sending && !a2pPending) void handleSend();
+      if (!sending && !a2pPending && recipientAvailable) void handleSend();
     }
   }
 
@@ -129,21 +133,24 @@ export default function SendMessageBox({
               resize: "vertical",
               minHeight: 44,
             }}
-            disabled={sending || a2pPending}
+            disabled={sending || a2pPending || !recipientAvailable}
           />
+          {!recipientAvailable ? <span role="status" style={{ color: "#92400e", fontSize: 12 }}>
+            A guest mobile number is needed before a message can be sent.
+          </span> : null}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              disabled={a2pPending}
+              disabled={a2pPending || !recipientAvailable}
               style={{
                 padding: "6px 10px",
                 borderRadius: 8,
                 border: "1px solid #ddd",
                 background: "#f9f9f9",
                 fontSize: 12,
-                cursor: a2pPending ? "not-allowed" : "pointer",
-                opacity: a2pPending ? 0.6 : 1,
+                cursor: a2pPending || !recipientAvailable ? "not-allowed" : "pointer",
+                opacity: a2pPending || !recipientAvailable ? 0.6 : 1,
               }}
             >
               ⚡ Quick Replies
@@ -151,7 +158,7 @@ export default function SendMessageBox({
             {welcomeDraft ? <button
               type="button"
               onClick={insertWelcomeDraft}
-              disabled={a2pPending}
+              disabled={a2pPending || !recipientAvailable}
               style={{
                 padding: "6px 10px",
                 borderRadius: 8,
@@ -159,8 +166,8 @@ export default function SendMessageBox({
                 background: "#eff6ff",
                 color: "#1d4ed8",
                 fontSize: 12,
-                cursor: a2pPending ? "not-allowed" : "pointer",
-                opacity: a2pPending ? 0.6 : 1,
+                cursor: a2pPending || !recipientAvailable ? "not-allowed" : "pointer",
+                opacity: a2pPending || !recipientAvailable ? 0.6 : 1,
               }}
             >
               Use welcome draft
@@ -177,17 +184,17 @@ export default function SendMessageBox({
         </div>
         <button
           onClick={handleSend}
-          disabled={sending || a2pPending}
+          disabled={sending || a2pPending || !recipientAvailable}
           style={{
             padding: "10px 12px",
             borderRadius: 10,
             border: "1px solid #111",
             background: "#111",
             color: "white",
-            cursor: sending || a2pPending ? "not-allowed" : "pointer",
+            cursor: sending || a2pPending || !recipientAvailable ? "not-allowed" : "pointer",
           }}
         >
-          {a2pPending ? "Pending A2P approval" : sending ? "Sending…" : "Send"}
+          {!recipientAvailable ? "Add mobile number" : a2pPending ? "Pending A2P approval" : sending ? "Sending…" : "Send"}
         </button>
       </div>
       <QuickReplyPicker
