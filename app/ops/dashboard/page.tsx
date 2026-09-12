@@ -72,6 +72,12 @@ export default async function OpsDashboardPage() {
           >
             Operator Inbox
           </Link>
+          <Link
+            href="/ops/inquiries"
+            className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Product inquiries
+          </Link>
         </header>
 
         <section>
