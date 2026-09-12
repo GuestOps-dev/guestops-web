@@ -8,9 +8,18 @@ import QuickReplyPicker from "./QuickReplyPicker";
 export default function SendMessageBox({
   conversationId,
   propertyId,
+  welcomeDraft,
+  welcomeVariables,
 }: {
   conversationId: string;
   propertyId: string;
+  welcomeDraft?: string | null;
+  welcomeVariables?: {
+    guestName: string | null;
+    propertyName: string;
+    checkInDate: string | null;
+    checkOutDate: string | null;
+  };
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
@@ -24,6 +33,22 @@ export default function SendMessageBox({
 
   function insertQuickReply(body: string) {
     setMessage((prev) => (prev ? prev + "\n" + body : body));
+  }
+
+  function insertWelcomeDraft() {
+    if (!welcomeDraft) return;
+    const firstName = welcomeVariables?.guestName?.trim().split(/\s+/)[0] ?? "there";
+    const formatDate = (value: string | null | undefined) => value
+      ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(`${value}T12:00:00`))
+      : "[Check-in Date]";
+    const completed = welcomeDraft
+      .replaceAll("[Guest First Name]", firstName)
+      .replaceAll("[Guest Name]", welcomeVariables?.guestName?.trim() || "[Guest Name]")
+      .replaceAll("[Property Name]", welcomeVariables?.propertyName || "[Property Name]")
+      .replaceAll("[Check-in Date]", formatDate(welcomeVariables?.checkInDate))
+      .replaceAll("[Check-out Date]", welcomeVariables?.checkOutDate ? formatDate(welcomeVariables.checkOutDate) : "[Check-out Date]");
+    setMessage((prev) => (prev.trim() ? `${prev}\n\n${completed}` : completed));
+    pendingSendKey.current = null;
   }
 
   async function handleSend() {
@@ -123,6 +148,23 @@ export default function SendMessageBox({
             >
               ⚡ Quick Replies
             </button>
+            {welcomeDraft ? <button
+              type="button"
+              onClick={insertWelcomeDraft}
+              disabled={a2pPending}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 8,
+                border: "1px solid #bfdbfe",
+                background: "#eff6ff",
+                color: "#1d4ed8",
+                fontSize: 12,
+                cursor: a2pPending ? "not-allowed" : "pointer",
+                opacity: a2pPending ? 0.6 : 1,
+              }}
+            >
+              Use welcome draft
+            </button> : null}
             {error ? (
               <span role="alert" style={{ color: "crimson", fontSize: 12 }}>
                 {error}

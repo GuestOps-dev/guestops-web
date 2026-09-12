@@ -58,7 +58,7 @@ export default async function ConversationPage({
 
   const { data: propertyRow } = await (sb as any)
     .from("properties")
-    .select("name, check_in_time, check_out_time, wifi_ssid, wifi_password, check_in_instructions_guest")
+    .select("name, check_in_time, check_out_time, wifi_ssid, wifi_password, check_in_instructions_guest, welcome_message_draft")
     .eq("id", propertyId)
     .maybeSingle();
   const propertyName = (propertyRow as any)?.name ?? "Property";
@@ -360,7 +360,17 @@ export default async function ConversationPage({
             borderTop: "1px solid #e5e7eb",
           }}
         >
-          <SendMessageBox conversationId={conversationId} propertyId={propertyId} />
+          <SendMessageBox
+            conversationId={conversationId}
+            propertyId={propertyId}
+            welcomeDraft={booking?.source === "lodgify" ? propertyRow?.welcome_message_draft ?? null : null}
+            welcomeVariables={{
+              guestName: guest?.full_name ?? null,
+              propertyName,
+              checkInDate: booking?.check_in_date ?? null,
+              checkOutDate: booking?.check_out_date ?? null,
+            }}
+          />
         </div>
       </div>
 
