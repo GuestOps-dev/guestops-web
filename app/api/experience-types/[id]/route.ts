@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuth } from "@/lib/api/requireApiAuth";
 import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerClient";
 import { assertCanAccessProperty, requirePropertyId } from "@/lib/supabaseApiAuth";
@@ -21,57 +21,42 @@ function text(value: unknown, max = 280) {
 async function validDefaultVendor(supabase: any, propertyId: string, value: unknown) {
   if (value === null || value === undefined || value === "") return null;
   if (typeof value !== "string" || !value.trim()) throw Object.assign(new Error("Invalid default vendor"), { status: 400 });
-  const { data, error } = await supabase
-    .from("vendors")
-    .select("id")
-    .eq("id", value.trim())
-    .eq("property_id", propertyId)
-    .eq("active", true)
-    .maybeSingle();
+  const { data, error } = await supabase.from("vendors").select("id").eq("id", value.trim()).eq("property_id", propertyId).eq("active", true).maybeSingle();
   if (error) throw error;
   if (!data) throw Object.assign(new Error("Default vendor must be an active vendor for this property"), { status: 400 });
   return data.id as string;
 }
 
-export async function GET(req: Request) {
-  const auth = await getAuth(req);
-  if (!auth.supabase || !auth.user) return NextResponse.json({ error: auth.error ?? "Unauthorized" }, { status: 401 });
-  try {
-    const propertyId = requirePropertyId(new URL(req.url).searchParams.get("propertyId"));
-    await assertCanAccessProperty(auth.supabase, propertyId);
-    let query = (auth.supabase as any)
-      .from("experience_types")
-      .select("id, property_id, name, category, default_vendor_id, active")
-      .eq("property_id", propertyId)
-      .order("name");
-    if (new URL(req.url).searchParams.get("includeInactive") !== "true") query = query.eq("active", true);
-    const { data, error } = await query;
-    if (error) throw error;
-    return NextResponse.json(data ?? []);
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message ?? "Unable to load service types" }, { status: error?.status ?? 400 });
-  }
-}
-
-export async function POST(req: Request) {
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
+  if (!id?.trim()) return NextResponse.json({ error: "Missing service type id" }, { status: 400 });
   const auth = await getAuth(req);
   if (!auth.supabase || !auth.user) return NextResponse.json({ error: auth.error ?? "Unauthorized" }, { status: 401 });
   try {
     const body = await req.json();
     const propertyId = requirePropertyId(body.property_id);
     await assertCanAccessProperty(auth.supabase, propertyId);
-    const name = text(body.name);
-    const category = text(body.category);
-    if (!name) return NextResponse.json({ error: "A service name is required" }, { status: 400 });
-    const defaultVendorId = await validDefaultVendor(auth.supabase, propertyId, body.default_vendor_id);
+    const updates: Record<string, unknown> = {};
+    if (body.name !== undefined) {
+      const name = text(body.name);
+      if (!name) return NextResponse.json({ error: "A service name is required" }, { status: 400 });
+      updates.name = name;
+    }
+    if (body.category !== undefined) updates.category = text(body.category) || null;
+    if (body.default_vendor_id !== undefined) updates.default_vendor_id = await validDefaultVendor(auth.supabase, propertyId, body.default_vendor_id);
+    if (typeof body.active === "boolean") updates.active = body.active;
+    if (!Object.keys(updates).length) return NextResponse.json({ error: "No valid service type fields to update" }, { status: 400 });
     const { data, error } = await (auth.supabase as any)
       .from("experience_types")
-      .insert({ property_id: propertyId, name, category: category || null, default_vendor_id: defaultVendorId })
+      .update(updates)
+      .eq("id", id)
+      .eq("property_id", propertyId)
       .select("id, property_id, name, category, default_vendor_id, active")
-      .single();
+      .maybeSingle();
     if (error) throw error;
-    return NextResponse.json(data, { status: 201 });
+    if (!data) return NextResponse.json({ error: "Service type not found" }, { status: 404 });
+    return NextResponse.json(data);
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message ?? "Unable to add service type" }, { status: error?.status ?? 400 });
+    return NextResponse.json({ error: error?.message ?? "Unable to update service type" }, { status: error?.status ?? 400 });
   }
 }

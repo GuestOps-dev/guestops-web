@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
-type ServiceType = { id: string; name: string; category: string | null };
+type ServiceType = { id: string; name: string; category: string | null; default_vendor_id: string | null };
 type Vendor = { id: string; name: string; vendor_type: string };
 type Experience = {
   id: string; status: string; start_at: string | null; pickup_location: string | null; internal_notes_private: string | null;
@@ -109,7 +109,7 @@ export default function ConversationServices({ propertyId, bookingId }: { proper
       <strong>Set up your first service</strong>
       <div style={{ display: "flex", gap: 6, marginTop: 7 }}><input value={newType} onChange={(event) => setNewType(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void addType(); }} placeholder="Private chef, airport driver…" maxLength={280} style={{ flex: 1, minWidth: 0, padding: "6px 7px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 12 }} /><button type="button" onClick={() => void addType()} disabled={busy || !newType.trim()} style={buttonStyle}>Add</button></div>
     </div> : <div style={{ display: "grid", gap: 7 }}>
-      <select value={serviceTypeId} onChange={(event) => setServiceTypeId(event.target.value)} style={inputStyle}><option value="">Choose service…</option>{types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select>
+      <select value={serviceTypeId} onChange={(event) => { const selected = types.find((type) => type.id === event.target.value); setServiceTypeId(event.target.value); if (selected?.default_vendor_id) setVendorId(selected.default_vendor_id); }} style={inputStyle}><option value="">Choose service…</option>{types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select>
       <select value={vendorId} onChange={(event) => setVendorId(event.target.value)} style={inputStyle}><option value="">Choose vendor later</option>{vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name} · {vendor.vendor_type}</option>)}</select>
       <input type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} style={inputStyle} aria-label="Service date and time" />
       <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={2} placeholder="Private request details for the team…" style={{ ...inputStyle, resize: "vertical" }} />

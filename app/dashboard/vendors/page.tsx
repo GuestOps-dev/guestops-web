@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { PropertyWorkspaceProvider } from "../PropertyWorkspaceProvider";
 import VendorsManager from "./VendorsManager";
+import ServiceTypesManager from "./ServiceTypesManager";
 
 export default async function VendorsPage() {
   const supabase = await getSupabaseServerClient();
@@ -27,6 +28,9 @@ export default async function VendorsPage() {
           Keep the trusted people and services your team can call for each property in one place.
         </p>
         <VendorsManager />
+        <div style={{ marginTop: 28, borderTop: "1px solid #e5e7eb", paddingTop: 24 }}>
+          <ServiceTypesManager />
+        </div>
       </main>
     </PropertyWorkspaceProvider>
   );

@@ -1,6 +1,6 @@
 GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)
-Generated: 2026-09-12T16:57:54.824Z
-Git SHA: e3be39d
+Generated: 2026-09-12T17:03:10.785Z
+Git SHA: 98e3943
 
 RULES FOR NEW CHAT:
 - Prefer code snippets that can be pasted into Cursor.
@@ -45,6 +45,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  │     └─ route.ts
 │  │  │  └─ route.ts
 │  │  ├─ experience-types
+│  │  │  ├─ [id]
+│  │  │  │  └─ route.ts
 │  │  │  └─ route.ts
 │  │  ├─ experiences
 │  │  │  ├─ [id]
@@ -116,6 +118,7 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  └─ QuickRepliesAdmin.tsx
 │  │  └─ vendors
 │  │     ├─ page.tsx
+│  │     ├─ ServiceTypesManager.tsx
 │  │     └─ VendorsManager.tsx
 │  ├─ forgot-password
 │  │  └─ page.tsx
@@ -213,8 +216,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-12T16:57:54.764Z
-Git SHA: e3be39d
+Generated: 2026-09-12T17:03:10.728Z
+Git SHA: 98e3943
 
 ---
 
@@ -244,6 +247,8 @@ Git SHA: e3be39d
   - file: `app/api/conversations/[id]/thread/route.ts`
 - **/api/conversations** (GET)  
   - file: `app/api/conversations/route.ts`
+- **/api/experience-types/[id]** (PATCH)  
+  - file: `app/api/experience-types/[id]/route.ts`
 - **/api/experience-types** (GET, POST)  
   - file: `app/api/experience-types/route.ts`
 - **/api/experiences/[id]** (PATCH)  

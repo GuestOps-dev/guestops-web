@@ -32,6 +32,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  │     └─ route.ts
 │  │  │  └─ route.ts
 │  │  ├─ experience-types
+│  │  │  ├─ [id]
+│  │  │  │  └─ route.ts
 │  │  │  └─ route.ts
 │  │  ├─ experiences
 │  │  │  ├─ [id]
@@ -103,6 +105,7 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │  └─ QuickRepliesAdmin.tsx
 │  │  └─ vendors
 │  │     ├─ page.tsx
+│  │     ├─ ServiceTypesManager.tsx
 │  │     └─ VendorsManager.tsx
 │  ├─ forgot-password
 │  │  └─ page.tsx
