@@ -1,7 +1,7 @@
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-12T18:00:36.409Z
-Git SHA: 69e3a31
+Generated: 2026-09-12T18:07:32.954Z
+Git SHA: 7603b1d
 
 ---
 
@@ -49,6 +49,8 @@ Git SHA: 69e3a31
   - file: `app/api/lodgify/bookings/route.ts`
 - **/api/lodgify/properties** (GET)  
   - file: `app/api/lodgify/properties/route.ts`
+- **/api/lodgify/webhook** (POST)  
+  - file: `app/api/lodgify/webhook/route.ts`
 - **/api/me/memberships** (GET)  
   - file: `app/api/me/memberships/route.ts`
 - **/api/messages/send** (POST)  
@@ -89,6 +91,7 @@ Git SHA: 69e3a31
 ## Environment Variables Referenced in Code
 
 - `LODGIFY_API_KEY`
+- `LODGIFY_WEBHOOK_SECRET`
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`

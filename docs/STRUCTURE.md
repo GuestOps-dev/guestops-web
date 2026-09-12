@@ -49,7 +49,9 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  ├─ lodgify
 │  │  │  ├─ bookings
 │  │  │  │  └─ route.ts
-│  │  │  └─ properties
+│  │  │  ├─ properties
+│  │  │  │  └─ route.ts
+│  │  │  └─ webhook
 │  │  │     └─ route.ts
 │  │  ├─ me
 │  │  │  └─ memberships

@@ -23,6 +23,8 @@ server-only values or expose them in client-side variables.
 | `SUPABASE_SERVICE_ROLE_KEY` | Server only | Trusted Twilio webhook writes only |
 | `TWILIO_ACCOUNT_SID` | Server only | Twilio account ID |
 | `TWILIO_AUTH_TOKEN` | Server only | Validates Twilio signatures and sends SMS |
+| `LODGIFY_API_KEY` | Server only | Reads mapped rentals and reservation data from Lodgify |
+| `LODGIFY_WEBHOOK_SECRET` | Server only | Verifies signed Lodgify booking webhooks |
 | `DEFAULT_PROPERTY_ID` | Optional | Local development fallback only |
 
 After adding variables, redeploy the production deployment.
@@ -37,6 +39,17 @@ Use the production origin from `NEXT_PUBLIC_APP_URL`:
 Both endpoints accept `POST` only and verify Twilio's signature before any
 database write. The status callback URL is added automatically to every new
 outbound message.
+
+## 4. Configure Lodgify booking webhooks
+
+Subscribe Lodgify's `booking_new_status_booked` event to:
+
+`https://YOUR_DOMAIN/api/lodgify/webhook`
+
+Lodgify returns a signing secret once when the subscription is created. Store
+that value as `LODGIFY_WEBHOOK_SECRET` in Vercel before enabling the endpoint.
+GuestOpsHQ verifies the `ms-signature` HMAC on every request and creates only
+the guest, stay, and Inbox record. It never sends a welcome message.
 
 ### A2P campaign review
 
