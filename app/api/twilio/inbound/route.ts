@@ -162,7 +162,9 @@ export async function POST(req: Request) {
           guest_id: guest.id,
           check_in: now,
           check_out: placeholderCheckOut,
-          source: "placeholder",
+          // "direct" is the supported source for a conversation that began
+          // with an SMS instead of an imported booking channel.
+          source: "direct",
           source_reservation_id: `placeholder:${fromAddr.e164}`,
         },
         { onConflict: "property_id,source,source_reservation_id" }
