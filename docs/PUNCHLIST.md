@@ -43,6 +43,7 @@ Updated September 12, 2026. This is the working list for the next session; it se
 - New Bookings workspace with property filtering and most-recent sorting, plus Lodgify-ready reservation records.
 - Follow-ups workspace with manual task creation and All / Overdue / Due today filters.
 - Vendor workflow and Operations overview foundations, including recent messaging insights.
+- Account-wide Experiences library, with per-property availability controls, approved internal reference details for AI, and stay-level planning/follow-ups for enabled experiences.
 - WhatsApp Business Account and sender work begun; provider-level group capability still needs confirmation.
 
 ## Best starting point next time
