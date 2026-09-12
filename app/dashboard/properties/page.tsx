@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { PropertyWorkspaceProvider } from "../PropertyWorkspaceProvider";
 import PropertyGuideManager from "./PropertyGuideManager";
 import KnownContactsManager from "./KnownContactsManager";
+import SleepingArrangementsManager from "./SleepingArrangementsManager";
 
 export default async function PropertiesPage() {
   const supabase = await getSupabaseServerClient();
@@ -28,6 +29,7 @@ export default async function PropertiesPage() {
           Keep guest-facing details and private operating knowledge current for each property.
         </p>
         <PropertyGuideManager />
+        <SleepingArrangementsManager />
         <KnownContactsManager />
       </main>
     </PropertyWorkspaceProvider>
