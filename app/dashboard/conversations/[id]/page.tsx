@@ -7,6 +7,7 @@ import GuestProfilePanel, { type PropertyGuideSummary } from "./GuestProfilePane
 import ConversationStatusSelect from "./ConversationStatusSelect";
 import ConversationPrioritySelect from "./ConversationPrioritySelect";
 import ConversationAiSummary from "./ConversationAiSummary";
+import WhatsAppGroupSetup, { type WhatsAppGroupSetupData } from "./WhatsAppGroupSetup";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 // Realtime (inbound_messages, outbound_messages filtered by conversation_id) is subscribed in LiveThread.
@@ -97,6 +98,30 @@ export default async function ConversationPage({
         source: bookingRow.source ?? null,
       };
     }
+  }
+
+  let whatsappGroup: WhatsAppGroupSetupData | null = null;
+  const { data: whatsappGroupRow } = await (sb as any)
+    .from("messaging_groups")
+    .select("id, display_name, status")
+    .eq("conversation_id", conversationId)
+    .maybeSingle();
+  if (whatsappGroupRow) {
+    const { data: memberRows } = await (sb as any)
+      .from("messaging_group_members")
+      .select("id, display_name, participant_role, membership_status")
+      .eq("messaging_group_id", whatsappGroupRow.id)
+      .order("created_at", { ascending: true });
+    whatsappGroup = {
+      display_name: whatsappGroupRow.display_name,
+      status: whatsappGroupRow.status,
+      members: (memberRows ?? []).map((member: any) => ({
+        id: member.id,
+        display_name: member.display_name ?? null,
+        participant_role: member.participant_role,
+        membership_status: member.membership_status,
+      })),
+    };
   }
 
   const { data: profile } = await (sb as any)
@@ -342,6 +367,7 @@ export default async function ConversationPage({
           style={{ flex: 1, minHeight: 0, overflowY: "auto", paddingRight: 8 }}
         >
           <ConversationAiSummary conversationId={conversationId} />
+          <WhatsAppGroupSetup group={whatsappGroup} />
           <LiveThread
             conversationId={conversationId}
             propertyId={propertyId}
