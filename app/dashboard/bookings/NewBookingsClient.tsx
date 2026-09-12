@@ -24,6 +24,8 @@ export default function NewBookingsClient() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [startingId, setStartingId] = useState<number | null>(null);
+  const [updatesActive, setUpdatesActive] = useState<boolean | null>(null);
+  const [activatingUpdates, setActivatingUpdates] = useState(false);
 
   const accessToken = useCallback(async () => {
     const { data, error: sessionError } = await supabase.auth.getSession();
@@ -46,6 +48,33 @@ export default function NewBookingsClient() {
       }
     })();
   }, [accessToken]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const token = await accessToken();
+        const response = await fetch("/api/lodgify/webhook/subscribe", { headers: { Authorization: `Bearer ${token}` } });
+        const result = await response.json().catch(() => null);
+        if (response.ok) setUpdatesActive(result?.active === true);
+      } catch { /* The booking list remains usable if setup status is unavailable. */ }
+    })();
+  }, [accessToken]);
+
+  async function enableAutomaticUpdates() {
+    setActivatingUpdates(true);
+    setError(null);
+    try {
+      const token = await accessToken();
+      const response = await fetch("/api/lodgify/webhook/subscribe", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error ?? "Unable to enable automatic Lodgify updates.");
+      setUpdatesActive(true);
+    } catch (setupError: any) {
+      setError(setupError?.message ?? "Unable to enable automatic Lodgify updates.");
+    } finally {
+      setActivatingUpdates(false);
+    }
+  }
 
   async function startInInbox(booking: Booking) {
     setStartingId(booking.id);
@@ -76,6 +105,11 @@ export default function NewBookingsClient() {
       <p style={{ color: "#64748b", maxWidth: 650 }}>
         Recent Lodgify reservations waiting to become active GuestOpsHQ guest workflows. Starting one creates its guest, stay, and Inbox record—no message is sent.
       </p>
+      {updatesActive === false ? <div style={{ border: "1px solid #bfdbfe", background: "#eff6ff", borderRadius: 10, padding: 12, margin: "14px 0", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13, color: "#1e3a5f" }}>New confirmed Lodgify bookings are not yet arriving automatically.</span>
+        <button type="button" onClick={() => void enableAutomaticUpdates()} disabled={activatingUpdates} style={{ padding: "8px 11px", border: "none", borderRadius: 8, background: "#0f5bff", color: "#fff", cursor: activatingUpdates ? "wait" : "pointer" }}>{activatingUpdates ? "Enabling…" : "Enable automatic updates"}</button>
+      </div> : null}
+      {updatesActive === true ? <p style={{ color: "#166534", fontSize: 13, margin: "14px 0" }}>Automatic confirmed-booking updates are on. Records are created without sending a message.</p> : null}
 
       {loading ? <p>Loading bookings…</p> : null}
       {error ? <p role="alert" style={{ color: "#b91c1c" }}>{error}</p> : null}

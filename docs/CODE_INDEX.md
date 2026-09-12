@@ -1,7 +1,7 @@
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-12T18:07:32.954Z
-Git SHA: 7603b1d
+Generated: 2026-09-12T18:12:37.179Z
+Git SHA: 8628a35
 
 ---
 
@@ -51,6 +51,8 @@ Git SHA: 7603b1d
   - file: `app/api/lodgify/properties/route.ts`
 - **/api/lodgify/webhook** (POST)  
   - file: `app/api/lodgify/webhook/route.ts`
+- **/api/lodgify/webhook/subscribe** (GET, POST)  
+  - file: `app/api/lodgify/webhook/subscribe/route.ts`
 - **/api/me/memberships** (GET)  
   - file: `app/api/me/memberships/route.ts`
 - **/api/messages/send** (POST)  

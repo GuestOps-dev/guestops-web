@@ -59,6 +59,13 @@ function signatureIsValid(rawBody: string, header: string | null, secret: string
   return receivedBuffer.length === expectedBuffer.length && timingSafeEqual(receivedBuffer, expectedBuffer);
 }
 
+async function signingSecret() {
+  if (process.env.LODGIFY_WEBHOOK_SECRET) return process.env.LODGIFY_WEBHOOK_SECRET;
+  const sb = getSupabaseServiceClient() as any;
+  const { data } = await sb.from("integration_webhooks").select("signing_secret").eq("provider", "lodgify").maybeSingle();
+  return typeof data?.signing_secret === "string" ? data.signing_secret : null;
+}
+
 async function fetchBooking(id: number): Promise<LodgifyBooking> {
   const apiKey = process.env.LODGIFY_API_KEY;
   if (!apiKey) throw new Error("Lodgify has not been connected yet.");
@@ -72,7 +79,7 @@ async function fetchBooking(id: number): Promise<LodgifyBooking> {
 
 /** Receives confirmed Lodgify bookings and creates records only—never a message. */
 export async function POST(req: Request) {
-  const secret = process.env.LODGIFY_WEBHOOK_SECRET;
+  const secret = await signingSecret();
   if (!secret) return NextResponse.json({ error: "Webhook is not configured." }, { status: 503 });
 
   const rawBody = await req.text();
