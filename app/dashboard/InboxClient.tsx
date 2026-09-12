@@ -647,6 +647,7 @@ export default function InboxClient() {
           >
             <Link href="/dashboard/overview" style={dashboardNavLinkStyle("/dashboard/overview")}>Overview</Link>
             <Link href="/dashboard/bookings" style={dashboardNavLinkStyle("/dashboard/bookings")}>New Bookings</Link>
+            <Link href="/dashboard/experiences" style={dashboardNavLinkStyle("/dashboard/experiences")}>Experiences</Link>
             <Link href="/dashboard/tasks" style={dashboardNavLinkStyle("/dashboard/tasks")}>Follow-ups</Link>
             <Link href="/dashboard/vendors" style={dashboardNavLinkStyle("/dashboard/vendors")}>
               Vendors
