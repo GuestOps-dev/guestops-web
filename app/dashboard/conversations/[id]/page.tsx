@@ -266,7 +266,16 @@ export default async function ConversationPage({
   return (
     <main
       className="conversation-page"
-      style={{ padding: 16, maxWidth: 1200, margin: "0 auto", display: "flex" }}
+      style={{
+        padding: 16,
+        maxWidth: 1200,
+        margin: "0 auto",
+        display: "flex",
+        background: "#f8fafc",
+        border: "1px solid #e2e8f0",
+        borderRadius: 16,
+        boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
+      }}
     >
       <MarkRead conversationId={conversationId} propertyId={propertyId} />
       <div

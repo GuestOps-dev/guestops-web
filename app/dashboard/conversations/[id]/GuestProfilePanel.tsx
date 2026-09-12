@@ -365,9 +365,13 @@ export default function GuestProfilePanel({
         alignSelf: "flex-start",
         maxHeight: "calc(100vh - 32px)",
         overflowY: "auto",
-        borderLeft: "1px solid #eee",
-        paddingLeft: 16,
+        borderLeft: "1px solid #dbe4ee",
+        paddingLeft: 18,
         marginLeft: 16,
+        background: "#fff",
+        borderRadius: 10,
+        paddingTop: 4,
+        paddingRight: 4,
       }}
     >
       <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>

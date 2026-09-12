@@ -578,8 +578,21 @@ export default function InboxClient() {
   }
 
   return (
-    <>
-      <div className="inbox-summarybar" style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
+    <div className="inbox-workspace">
+      <div
+        className="inbox-summarybar"
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          marginBottom: 10,
+          padding: "12px 14px",
+          border: "1px solid #dbe4ee",
+          borderRadius: 14,
+          background: "#fff",
+          boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
+        }}
+      >
         <div style={{ fontSize: 14, opacity: 0.75 }}>
           {loading
             ? "Refreshing…"
@@ -687,6 +700,10 @@ export default function InboxClient() {
           alignItems: "center",
           marginBottom: 12,
           flexWrap: "wrap",
+          padding: "10px 14px",
+          border: "1px solid #e2e8f0",
+          borderRadius: 12,
+          background: "#f8fafc",
         }}
       >
         <span style={{ fontSize: 12, color: "#666" }}>Assignment:</span>
@@ -877,7 +894,16 @@ export default function InboxClient() {
       ) : null}
 
       {displayRows.length > 0 ? (
-      <div className="inbox-table" style={{ border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
+      <div
+        className="inbox-table"
+        style={{
+          border: "1px solid #dbe4ee",
+          borderRadius: 14,
+          overflow: "hidden",
+          background: "#fff",
+          boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
+        }}
+      >
         <div
           className="inbox-table-header"
           style={{
@@ -885,7 +911,7 @@ export default function InboxClient() {
             gridTemplateColumns: "2.1fr 2fr 1.4fr 1.4fr 1fr 0.8fr",
             gap: 12,
             padding: 12,
-            background: "#fafafa",
+            background: "#f8fafc",
             fontWeight: 600,
           }}
         >
@@ -927,7 +953,7 @@ export default function InboxClient() {
                 gridTemplateColumns: "2.1fr 2fr 1.4fr 1.4fr 1fr 0.8fr",
                 gap: 12,
                 padding: 12,
-                borderTop: "1px solid #eee",
+                borderTop: "1px solid #edf2f7",
                 background: unread ? "#fffdf3" : "white",
                 cursor: "pointer",
               }}
@@ -1035,7 +1061,7 @@ export default function InboxClient() {
         })}
       </div>
       ) : null}
-    </>
+    </div>
   );
 }
 

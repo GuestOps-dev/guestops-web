@@ -16,15 +16,34 @@
 }
 
 body {
-  background: var(--background);
+  background: #f1f5f9;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.inbox-workspace {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.inbox-table-row {
+  transition: background 140ms ease, box-shadow 140ms ease;
+}
+
+.inbox-table-row:hover {
+  background: #f8fbff !important;
+  box-shadow: inset 3px 0 0 #60a5fa;
 }
 
 @media (max-width: 760px) {
   .inbox-summarybar {
     align-items: stretch !important;
     flex-direction: column;
+  }
+
+  .inbox-workspace {
+    padding: 14px;
   }
 
   .inbox-primary-controls {
@@ -67,6 +86,9 @@ body {
 
   .conversation-page {
     flex-direction: column;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
   }
 
   .conversation-page-main {
