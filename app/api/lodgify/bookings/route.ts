@@ -95,14 +95,27 @@ export async function POST(req: Request) {
   const { supabase, user, error } = await requireApiAuth(req);
   if (!user) return NextResponse.json({ error: error ?? "Unauthorized" }, { status: 401 });
 
-  let id: number | null;
+  let body: { booking_id?: unknown; guest_phone?: unknown };
   try {
-    const body = await req.json();
-    id = number(body?.booking_id);
+    body = await req.json();
   } catch {
-    id = null;
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
+
+  const id = number(body?.booking_id);
   if (!id) return NextResponse.json({ error: "A Lodgify booking is required." }, { status: 400 });
+
+  let phoneOverride: string | undefined;
+  if (body?.guest_phone !== undefined && body?.guest_phone !== null && body?.guest_phone !== "") {
+    if (typeof body.guest_phone !== "string") {
+      return NextResponse.json({ error: "Guest mobile number must be text." }, { status: 400 });
+    }
+    const normalizedPhone = normalizePhone(body.guest_phone);
+    if (!normalizedPhone) {
+      return NextResponse.json({ error: "Use a valid mobile number, including the country code." }, { status: 400 });
+    }
+    phoneOverride = normalizedPhone;
+  }
 
   try {
     const [properties, imported] = await Promise.all([accessibleProperties(supabase), fetchBooking(id)]);
@@ -112,7 +125,7 @@ export async function POST(req: Request) {
     const sb = getSupabaseServiceClient() as any;
     const fullName = text(imported.guest?.name) ?? text(imported.guest?.guest_name);
     const email = text(imported.guest?.email)?.toLowerCase() ?? null;
-    const phone = guestPhone(imported.guest);
+    const phone = phoneOverride ?? guestPhone(imported.guest);
     const language = text(imported.guest?.locale)?.toLowerCase().startsWith("es") ? "spanish" : "english";
 
     let guest: { id: string } | null = null;
@@ -136,6 +149,13 @@ export async function POST(req: Request) {
       }).select("id").single();
       if (guestError || !data) throw new Error("Unable to create the guest profile.");
       guest = data;
+    } else if (phoneOverride) {
+      const { error: phoneUpdateError } = await sb
+        .from("guests")
+        .update({ phone_e164: phoneOverride, phone: phoneOverride })
+        .eq("id", guest.id)
+        .eq("property_id", property.property_id);
+      if (phoneUpdateError) throw new Error("Unable to save the guest mobile number.");
     }
     if (!guest) throw new Error("Unable to create the guest profile.");
     const guestId = guest.id;

@@ -16,6 +16,7 @@ type Booking = {
   source: string | null;
   is_new: boolean;
   party_size: number | null;
+  guest_phone: string | null;
 };
 
 export default function NewBookingsClient() {
@@ -29,6 +30,7 @@ export default function NewBookingsClient() {
   const [activatingUpdates, setActivatingUpdates] = useState(false);
   const [propertyFilter, setPropertyFilter] = useState("all");
   const [sort, setSort] = useState<"recent" | "arrival">("recent");
+  const [phoneEdits, setPhoneEdits] = useState<Record<number, string>>({});
 
   const accessToken = useCallback(async () => {
     const { data, error: sessionError } = await supabase.auth.getSession();
@@ -87,7 +89,10 @@ export default function NewBookingsClient() {
       const response = await fetch("/api/lodgify/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ booking_id: booking.id }),
+        body: JSON.stringify({
+          booking_id: booking.id,
+          guest_phone: (phoneEdits[booking.id] ?? booking.guest_phone ?? "").trim() || undefined,
+        }),
       });
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error(result?.error ?? "Unable to start this booking.");
@@ -141,7 +146,7 @@ export default function NewBookingsClient() {
 
       {!loading ? <div style={{ display: "grid", gap: 10 }}>
         {visibleRows.map((booking) => <article key={booking.id} style={{ border: "1px solid #dbe4ee", borderRadius: 12, padding: 16, background: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <div>
+          <div style={{ minWidth: 260, flex: "1 1 420px" }}>
             <strong>{booking.guest_name ?? "Guest name pending"}</strong>
             <div style={{ fontSize: 13, color: "#475569", marginTop: 6 }}>
               {booking.property_name} · {booking.arrival ?? "Date pending"} → {booking.departure ?? "Date pending"}
@@ -150,6 +155,18 @@ export default function NewBookingsClient() {
             <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
               {booking.booked_at ? `Booked ${new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(booking.booked_at))} · ` : ""}Lodgify #{booking.id}{booking.source ? ` · ${booking.source}` : ""}
             </div>
+            <label style={{ display: "grid", gap: 5, marginTop: 12, maxWidth: 270, color: "#475569", fontSize: 12 }}>
+              Guest mobile for WhatsApp
+              <input
+                type="tel"
+                inputMode="tel"
+                placeholder="+1 555 123 4567"
+                value={phoneEdits[booking.id] ?? booking.guest_phone ?? ""}
+                onChange={(event) => setPhoneEdits((current) => ({ ...current, [booking.id]: event.target.value }))}
+                style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", color: "#0f172a" }}
+              />
+              <span style={{ color: "#64748b", lineHeight: 1.35 }}>Confirm or add this before starting the guest’s WhatsApp-first workflow.</span>
+            </label>
           </div>
           <button type="button" onClick={() => void startInInbox(booking)} disabled={startingId === booking.id} style={{ padding: "9px 13px", border: "none", borderRadius: 8, background: "#0f5bff", color: "#fff", cursor: startingId === booking.id ? "wait" : "pointer" }}>
             {startingId === booking.id ? "Starting…" : "Start in Inbox"}
