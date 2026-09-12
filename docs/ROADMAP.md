@@ -10,6 +10,46 @@ tags and notes, quick replies, and safe outbound-message retry handling. The
 next work should protect that reliability while making the dashboard faster and
 easier to operate.
 
+## Delivery snapshot — September 2026
+
+### Built and in production
+
+- Inbox workflow: property switching, relative activity times, compact status
+  treatment, search, assignment/tag filters, reply-needed and in-house views.
+- Guest CRM: editable name/mobile/channel/language, tags, internal notes,
+  booking dates, party size, history, and stay-aware VIP attention.
+- Follow-ups: per-conversation tasks plus an all-property Follow-ups workspace;
+  Lodgify bookings and concierge requests create actionable setup tasks.
+- Properties: operational quick reference, per-house welcome drafts, editable
+  Guide for AI, WhatsApp group defaults, and editable Known Contacts.
+- Lodgify: mapped-property New Bookings feed, manual import, signed webhook
+  subscription, reservation-to-guest/stay/conversation creation, property
+  filters, and booking-date sorting.
+- WhatsApp foundation: new Lodgify conversations default to WhatsApp, outbound
+  messages use WhatsApp sender addressing, and group setup is surfaced as a
+  task without attempting unsupported personal-number automation.
+- Concierge workflow: vendor directory, service types, service planning,
+  vendor assignment/statuses, and confirmation follow-ups.
+- Owner view: Operations Overview showing Inbox, reply-needed, in-house, and
+  open follow-up counts by property.
+- AI interface: review-before-send drafts and internal three-line conversation
+  summaries. Shared policy blocks disclosure of private information about Scott,
+  Orlando, and known contacts; guest messages are treated as untrusted input.
+
+### Waiting on external activation or a product decision
+
+- **OpenAI API billing:** the API key is installed in Production, but the first
+  live request returned `credit_balance_exhausted`. Add API billing credit to
+  activate AI drafts and summaries; neither feature sends guest messages.
+- **Supported WhatsApp groups:** do an eligibility/product check with Meta and
+  Twilio before creating groups. The implementation must use the supported
+  Meta Groups API or Twilio Conversations approach, retain a provider group ID
+  and members, and never use WhatsApp Web or personal-number automation.
+- **Automation engine:** once API billing is active, assess whether AI-assisted
+  reply-needed detection should create a task automatically or remain a
+  reviewable operator recommendation. The current reply-needed indicator is
+  immediate and rule-based (a newer guest message than property reply).
+
 ---
 
 # Dashboard Usability Pass (MVP Enhancement)
