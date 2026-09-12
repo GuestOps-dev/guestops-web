@@ -26,6 +26,7 @@ export default function SendMessageBox({
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [drafting, setDrafting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [a2pPending, setA2pPending] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -51,6 +52,29 @@ export default function SendMessageBox({
       .replaceAll("[Check-out Date]", welcomeVariables?.checkOutDate ? formatDate(welcomeVariables.checkOutDate) : "[Check-out Date]");
     setMessage((prev) => (prev.trim() ? `${prev}\n\n${completed}` : completed));
     pendingSendKey.current = null;
+  }
+
+  async function draftWithAi() {
+    setError(null);
+    setDrafting(true);
+    try {
+      const { data, error: sessionErr } = await sb.auth.getSession();
+      if (sessionErr || !data.session?.access_token) throw new Error("No Supabase session");
+      const res = await fetch(`/api/conversations/${conversationId}/draft-reply`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || typeof payload?.draft !== "string") {
+        throw new Error(payload?.error || "Unable to draft a reply");
+      }
+      setMessage(payload.draft);
+      pendingSendKey.current = null;
+    } catch (e: any) {
+      setError(e?.message || "Unable to draft a reply");
+    } finally {
+      setDrafting(false);
+    }
   }
 
   async function handleSend() {
@@ -133,7 +157,7 @@ export default function SendMessageBox({
               resize: "vertical",
               minHeight: 44,
             }}
-            disabled={sending || a2pPending || !recipientAvailable}
+            disabled={sending || drafting || a2pPending || !recipientAvailable}
           />
           {!recipientAvailable ? <span role="status" style={{ color: "#92400e", fontSize: 12 }}>
             A guest mobile number is needed before a message can be sent.
@@ -142,7 +166,7 @@ export default function SendMessageBox({
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              disabled={a2pPending || !recipientAvailable}
+              disabled={drafting || a2pPending || !recipientAvailable}
               style={{
                 padding: "6px 10px",
                 borderRadius: 8,
@@ -155,10 +179,28 @@ export default function SendMessageBox({
             >
               ⚡ Quick Replies
             </button>
+            <button
+              type="button"
+              onClick={draftWithAi}
+              disabled={sending || drafting || a2pPending || !recipientAvailable}
+              title="Creates a draft for review; it does not send a message"
+              style={{
+                padding: "6px 10px",
+                borderRadius: 8,
+                border: "1px solid #c4b5fd",
+                background: "#f5f3ff",
+                color: "#6d28d9",
+                fontSize: 12,
+                cursor: sending || drafting || a2pPending || !recipientAvailable ? "not-allowed" : "pointer",
+                opacity: sending || drafting || a2pPending || !recipientAvailable ? 0.6 : 1,
+              }}
+            >
+              {drafting ? "Drafting…" : "✨ Draft with AI"}
+            </button>
             {welcomeDraft ? <button
               type="button"
               onClick={insertWelcomeDraft}
-              disabled={a2pPending || !recipientAvailable}
+              disabled={drafting || a2pPending || !recipientAvailable}
               style={{
                 padding: "6px 10px",
                 borderRadius: 8,
