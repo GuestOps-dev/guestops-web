@@ -47,6 +47,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │     └─ tags
 │  │  │        └─ route.ts
 │  │  ├─ lodgify
+│  │  │  ├─ bookings
+│  │  │  │  └─ route.ts
 │  │  │  └─ properties
 │  │  │     └─ route.ts
 │  │  ├─ me
@@ -199,6 +201,7 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │     ├─ 20260912_000005_revoke_anonymous_task_reads.sql
 │     ├─ 20260912_000006_add_property_ai_guide.sql
 │     ├─ 20260912_000007_add_booking_party_size.sql
-│     └─ 20260912_000008_add_lodgify_property_mapping.sql
+│     ├─ 20260912_000008_add_lodgify_property_mapping.sql
+│     └─ 20260912_000009_add_booking_intake_status.sql
 └─ tsconfig.json
 ```

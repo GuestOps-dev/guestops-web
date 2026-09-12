@@ -1,6 +1,6 @@
 GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)
-Generated: 2026-09-12T17:25:36.621Z
-Git SHA: 7627a68
+Generated: 2026-09-12T17:29:11.057Z
+Git SHA: aa4a4dd
 
 RULES FOR NEW CHAT:
 - Prefer code snippets that can be pasted into Cursor.
@@ -60,6 +60,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │     └─ tags
 │  │  │        └─ route.ts
 │  │  ├─ lodgify
+│  │  │  ├─ bookings
+│  │  │  │  └─ route.ts
 │  │  │  └─ properties
 │  │  │     └─ route.ts
 │  │  ├─ me
@@ -212,7 +214,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │     ├─ 20260912_000005_revoke_anonymous_task_reads.sql
 │     ├─ 20260912_000006_add_property_ai_guide.sql
 │     ├─ 20260912_000007_add_booking_party_size.sql
-│     └─ 20260912_000008_add_lodgify_property_mapping.sql
+│     ├─ 20260912_000008_add_lodgify_property_mapping.sql
+│     └─ 20260912_000009_add_booking_intake_status.sql
 └─ tsconfig.json
 ```
 
@@ -221,8 +224,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-12T17:25:36.552Z
-Git SHA: 7627a68
+Generated: 2026-09-12T17:29:11.000Z
+Git SHA: aa4a4dd
 
 ---
 
@@ -266,6 +269,8 @@ Git SHA: 7627a68
   - file: `app/api/guests/[id]/route.ts`
 - **/api/guests/[id]/tags** (POST)  
   - file: `app/api/guests/[id]/tags/route.ts`
+- **/api/lodgify/bookings** (GET)  
+  - file: `app/api/lodgify/bookings/route.ts`
 - **/api/lodgify/properties** (GET)  
   - file: `app/api/lodgify/properties/route.ts`
 - **/api/me/memberships** (GET)  
