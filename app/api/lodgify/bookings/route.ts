@@ -13,7 +13,7 @@ function text(value: unknown) { return typeof value === "string" ? value.trim() 
 function number(value: unknown) { const n = Number(value); return Number.isSafeInteger(n) && n > 0 ? n : null; }
 function partySize(booking: LodgifyBooking) { const p = booking.total_guest_breakdown ?? booking.people; if (!p || typeof p !== "object") return null; const raw = p as Record<string, unknown>; const total = [raw.adults, raw.children, raw.infants].reduce<number>((sum, value) => sum + (number(value) ?? 0), 0); return total || null; }
 
-type MappedProperty = { property_id: string; property_name: string; lodgify_property_id: number | null };
+type MappedProperty = { property_id: string; property_name: string; lodgify_property_id: number | null; whatsapp_group_default_enabled: boolean };
 
 async function accessibleProperties(authSupabase: any): Promise<MappedProperty[]> {
   const { data, error } = await authSupabase.rpc("my_property_memberships");
@@ -21,8 +21,8 @@ async function accessibleProperties(authSupabase: any): Promise<MappedProperty[]
   const ids = (data ?? []).map((row: any) => row.property_id);
   if (!ids.length) return [];
   const sb = getSupabaseServiceClient() as any;
-  const { data: properties } = await sb.from("properties").select("id, name, lodgify_property_id").in("id", ids).not("lodgify_property_id", "is", null);
-  return (properties ?? []).map((property: any): MappedProperty => ({ property_id: property.id, property_name: property.name, lodgify_property_id: property.lodgify_property_id }));
+  const { data: properties } = await sb.from("properties").select("id, name, lodgify_property_id, whatsapp_group_default_enabled").in("id", ids).not("lodgify_property_id", "is", null);
+  return (properties ?? []).map((property: any): MappedProperty => ({ property_id: property.id, property_name: property.name, lodgify_property_id: property.lodgify_property_id, whatsapp_group_default_enabled: property.whatsapp_group_default_enabled === true }));
 }
 
 async function fetchBookings() {
@@ -172,6 +172,12 @@ export async function POST(req: Request) {
       updated_at: now,
     }, { onConflict: "booking_id,channel" }).select("id").single();
     if (conversationError || !conversation) throw new Error("Unable to create the Inbox record.");
+
+    if (property.whatsapp_group_default_enabled) {
+      const title = "Set up the WhatsApp group for this stay";
+      const { data: existingTask } = await sb.from("tasks").select("id").eq("booking_id", booking.id).eq("title", title).eq("status", "open").maybeSingle();
+      if (!existingTask) await sb.from("tasks").insert({ property_id: property.property_id, conversation_id: conversation.id, guest_id: guestId, booking_id: booking.id, title });
+    }
 
     return NextResponse.json({ conversation_id: conversation.id, booking_id: booking.id }, { status: 201 });
   } catch (err: any) {

@@ -106,7 +106,7 @@ export async function POST(req: Request) {
     if (!lodgifyPropertyId) throw new Error("The booking has no Lodgify property.");
 
     const sb = getSupabaseServiceClient() as any;
-    const { data: property } = await sb.from("properties").select("id").eq("lodgify_property_id", lodgifyPropertyId).maybeSingle();
+    const { data: property } = await sb.from("properties").select("id, whatsapp_group_default_enabled").eq("lodgify_property_id", lodgifyPropertyId).maybeSingle();
     if (!property) return NextResponse.json({ received: true, ignored: true }, { status: 200 });
 
     const fullName = text(imported.guest?.name) ?? text(imported.guest?.guest_name);
@@ -144,12 +144,18 @@ export async function POST(req: Request) {
     if (bookingError || !booking) throw new Error("Unable to save the reservation.");
 
     const { data: sender } = await sb.from("phone_numbers").select("e164").eq("property_id", property.id).eq("is_active", true).limit(1).maybeSingle();
-    const { error: conversationError } = await sb.from("conversations").upsert({
+    const { data: conversation, error: conversationError } = await sb.from("conversations").upsert({
       property_id: property.id, booking_id: booking.id, guest_id: guestId,
       guest_number: phone ?? `lodgify:${bookingId}`, service_number: sender?.e164 ?? null,
       channel: "whatsapp", provider: "lodgify", status: "awaiting_team", updated_at: now,
-    }, { onConflict: "booking_id,channel" });
+    }, { onConflict: "booking_id,channel" }).select("id").single();
     if (conversationError) throw new Error("Unable to create the Inbox record.");
+
+    if (property.whatsapp_group_default_enabled && conversation?.id) {
+      const title = "Set up the WhatsApp group for this stay";
+      const { data: existingTask } = await sb.from("tasks").select("id").eq("booking_id", booking.id).eq("title", title).eq("status", "open").maybeSingle();
+      if (!existingTask) await sb.from("tasks").insert({ property_id: property.id, conversation_id: conversation.id, guest_id: guestId, booking_id: booking.id, title });
+    }
 
     return NextResponse.json({ received: true, created: true }, { status: 200 });
   } catch (error) {
