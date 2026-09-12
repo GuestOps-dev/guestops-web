@@ -119,6 +119,12 @@ export async function POST(
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
       console.error("OpenAI draft request failed:", response.status, payload?.error?.code);
+      if (payload?.error?.code === "credit_balance_exhausted") {
+        return NextResponse.json(
+          { error: "AI drafting needs available OpenAI API credits. Add billing credit, then try again." },
+          { status: 402 }
+        );
+      }
       return NextResponse.json({ error: "AI drafting is temporarily unavailable. Please try again." }, { status: 502 });
     }
 
