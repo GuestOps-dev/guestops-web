@@ -18,6 +18,7 @@ type PropertyGuide = {
   property_notes: string | null;
   vibe_description: string | null;
   ai_guide: string | null;
+  lodgify_property_id: number | null;
 };
 
 type GuideForm = {
@@ -37,13 +38,14 @@ const emptyGuide: GuideForm = {
   property_notes: "",
   vibe_description: "",
   ai_guide: "",
+  lodgify_property_id: "",
 };
 
 function formFromGuide(guide: PropertyGuide): GuideForm {
   return Object.fromEntries(
     Object.entries(guide)
       .filter(([key]) => key !== "id")
-      .map(([key, value]) => [key, value ?? ""])
+      .map(([key, value]) => [key, value == null ? "" : String(value)])
   ) as GuideForm;
 }
 
@@ -142,6 +144,12 @@ export default function PropertyGuideManager() {
         </section>
 
         <section style={sectionStyle}>
+          <h2 style={headingStyle}>Reservation connection</h2>
+          <p style={{ margin: 0, color: "#52525b", fontSize: 13, lineHeight: 1.5 }}>Once Lodgify is connected, this tells GuestOpsHQ which Lodgify rental belongs to this property. Find the numeric Rental ID in Lodgify; leave it blank until you are ready to connect.</p>
+          <Field label="Lodgify rental ID" value={form.lodgify_property_id} onChange={(value) => setField("lodgify_property_id", value)} placeholder="Example: 779143" inputMode="numeric" />
+        </section>
+
+        <section style={sectionStyle}>
           <h2 style={headingStyle}>Guest essentials</h2>
           <div style={gridStyle}>
             <Field label="Wi-Fi network" value={form.wifi_ssid} onChange={(value) => setField("wifi_ssid", value)} />
@@ -174,8 +182,8 @@ const sectionStyle: React.CSSProperties = { display: "flex", flexDirection: "col
 const headingStyle: React.CSSProperties = { fontSize: 16, margin: 0 };
 const gridStyle: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 };
 
-function Field({ label, value, onChange, required, type = "text", placeholder }: { label: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string }) {
-  return <label style={{ fontSize: 12, display: "grid", gap: 4 }}>{label}<input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #ddd" }} /></label>;
+function Field({ label, value, onChange, required, type = "text", placeholder, inputMode }: { label: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string; inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"] }) {
+  return <label style={{ fontSize: 12, display: "grid", gap: 4 }}>{label}<input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} inputMode={inputMode} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #ddd" }} /></label>;
 }
 
 function TextArea({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {

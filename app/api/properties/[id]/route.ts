@@ -16,6 +16,7 @@ const PROPERTY_FIELDS = [
   "property_notes",
   "vibe_description",
   "ai_guide",
+  "lodgify_property_id",
 ] as const;
 
 type PropertyField = (typeof PROPERTY_FIELDS)[number];
@@ -40,6 +41,15 @@ function optionalText(value: unknown) {
 
 function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(value);
+}
+
+function parseLodgifyPropertyId(value: unknown): number | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  if (typeof value !== "string" || !/^\d+$/.test(value.trim())) return undefined;
+  const parsed = Number(value.trim());
+  if (!Number.isSafeInteger(parsed) || parsed < 1) return undefined;
+  return parsed;
 }
 
 export async function GET(
@@ -104,10 +114,15 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const updates: Partial<Record<PropertyField, string | null>> = {};
-  for (const field of PROPERTY_FIELDS) {
+  const updates: Partial<Record<PropertyField, string | number | null>> = {};
+  for (const field of PROPERTY_FIELDS.filter((field) => field !== "lodgify_property_id")) {
     if (body[field] !== undefined) updates[field] = optionalText(body[field]);
   }
+  const lodgifyPropertyId = parseLodgifyPropertyId(body.lodgify_property_id);
+  if (body.lodgify_property_id !== undefined && lodgifyPropertyId === undefined) {
+    return NextResponse.json({ error: "Lodgify property ID must be a positive whole number" }, { status: 400 });
+  }
+  if (lodgifyPropertyId !== undefined) updates.lodgify_property_id = lodgifyPropertyId;
   if (typeof updates.name === "string" && !updates.name) {
     return NextResponse.json({ error: "Property name cannot be empty" }, { status: 400 });
   }
