@@ -46,6 +46,9 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │  │     ├─ route.ts
 │  │  │     └─ tags
 │  │  │        └─ route.ts
+│  │  ├─ lodgify
+│  │  │  └─ properties
+│  │  │     └─ route.ts
 │  │  ├─ me
 │  │  │  └─ memberships
 │  │  │     └─ route.ts

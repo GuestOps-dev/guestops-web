@@ -25,6 +25,8 @@ type GuideForm = {
   [Field in Exclude<keyof PropertyGuide, "id">]: string;
 };
 
+type LodgifyRental = { id: number; name: string };
+
 const emptyGuide: GuideForm = {
   name: "",
   location: "",
@@ -57,6 +59,8 @@ export default function PropertyGuideManager() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [lodgifyRentals, setLodgifyRentals] = useState<LodgifyRental[] | null>(null);
+  const [lodgifyLoading, setLodgifyLoading] = useState(false);
   const propertyId = selectedPropertyId === "all" ? null : selectedPropertyId;
 
   const getToken = useCallback(async () => {
@@ -93,6 +97,22 @@ export default function PropertyGuideManager() {
   function setField(field: keyof GuideForm, value: string) {
     setSaved(false);
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function checkLodgifyConnection() {
+    setLodgifyLoading(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      const response = await fetch("/api/lodgify/properties", { headers: { Authorization: `Bearer ${token}` } });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error ?? "Unable to reach Lodgify.");
+      setLodgifyRentals(result.properties as LodgifyRental[]);
+    } catch (connectionError: any) {
+      setError(connectionError?.message ?? "Unable to reach Lodgify.");
+    } finally {
+      setLodgifyLoading(false);
+    }
   }
 
   async function saveGuide(event: React.FormEvent) {
@@ -147,6 +167,10 @@ export default function PropertyGuideManager() {
           <h2 style={headingStyle}>Reservation connection</h2>
           <p style={{ margin: 0, color: "#52525b", fontSize: 13, lineHeight: 1.5 }}>Once Lodgify is connected, this tells GuestOpsHQ which Lodgify rental belongs to this property. Find the numeric Rental ID in Lodgify; leave it blank until you are ready to connect.</p>
           <Field label="Lodgify rental ID" value={form.lodgify_property_id} onChange={(value) => setField("lodgify_property_id", value)} placeholder="Example: 779143" inputMode="numeric" />
+          <div>
+            <button type="button" onClick={() => void checkLodgifyConnection()} disabled={lodgifyLoading} style={{ padding: "8px 11px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", color: "#1e3a5f", cursor: lodgifyLoading ? "wait" : "pointer" }}>{lodgifyLoading ? "Checking Lodgify…" : "Show Lodgify rentals"}</button>
+          </div>
+          {lodgifyRentals ? <div style={{ display: "grid", gap: 6, fontSize: 13, color: "#334155" }}>{lodgifyRentals.map((rental) => <button key={rental.id} type="button" onClick={() => setField("lodgify_property_id", String(rental.id))} style={{ textAlign: "left", padding: "8px 10px", borderRadius: 8, border: `1px solid ${form.lodgify_property_id === String(rental.id) ? "#2563eb" : "#e2e8f0"}`, background: form.lodgify_property_id === String(rental.id) ? "#eff6ff" : "#fff", cursor: "pointer" }}>{rental.name} <span style={{ color: "#64748b" }}>· Rental ID {rental.id}</span></button>)}</div> : null}
         </section>
 
         <section style={sectionStyle}>
