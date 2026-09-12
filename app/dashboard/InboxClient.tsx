@@ -619,21 +619,30 @@ export default function InboxClient() {
         </div>
 
         <div className="inbox-primary-controls" style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
-          <Link href="/dashboard/overview" style={{ fontSize: 13, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>Overview</Link>
-          <Link href="/dashboard/bookings" style={{ fontSize: 13, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>New Bookings</Link>
-          <Link href="/dashboard/tasks" style={{ fontSize: 13, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>Follow-ups</Link>
-          <Link
-            href="/dashboard/vendors"
-            style={{ fontSize: 13, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}
+          <nav
+            aria-label="Dashboard sections"
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 2,
+              alignItems: "center",
+              padding: 4,
+              border: "1px solid #d9e3ee",
+              borderRadius: 11,
+              background: "#f6f9fc",
+              boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.9)",
+            }}
           >
-            Vendors
-          </Link>
-          <Link
-            href="/dashboard/properties"
-            style={{ fontSize: 13, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}
-          >
-            Property Guide
-          </Link>
+            <Link href="/dashboard/overview" style={{ padding: "6px 8px", borderRadius: 7, fontSize: 13, fontWeight: 550, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>Overview</Link>
+            <Link href="/dashboard/bookings" style={{ padding: "6px 8px", borderRadius: 7, fontSize: 13, fontWeight: 550, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>New Bookings</Link>
+            <Link href="/dashboard/tasks" style={{ padding: "6px 8px", borderRadius: 7, fontSize: 13, fontWeight: 550, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>Follow-ups</Link>
+            <Link href="/dashboard/vendors" style={{ padding: "6px 8px", borderRadius: 7, fontSize: 13, fontWeight: 550, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>
+              Vendors
+            </Link>
+            <Link href="/dashboard/properties" style={{ padding: "6px 8px", borderRadius: 7, fontSize: 13, fontWeight: 550, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>
+              Property Guide
+            </Link>
+          </nav>
           <div
             style={{
               display: "inline-flex",
