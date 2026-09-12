@@ -16,6 +16,7 @@ const PROPERTY_FIELDS = [
   "property_notes",
   "vibe_description",
   "ai_guide",
+  "welcome_message_draft",
   "lodgify_property_id",
 ] as const;
 

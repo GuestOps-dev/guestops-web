@@ -82,6 +82,9 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │  │     │  └─ route.ts
 │  │     └─ route.ts
 │  ├─ dashboard
+│  │  ├─ bookings
+│  │  │  ├─ NewBookingsClient.tsx
+│  │  │  └─ page.tsx
 │  │  ├─ conversations
 │  │  │  └─ [id]
 │  │  │     ├─ ConversationPrioritySelect.tsx
@@ -202,6 +205,7 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │     ├─ 20260912_000006_add_property_ai_guide.sql
 │     ├─ 20260912_000007_add_booking_party_size.sql
 │     ├─ 20260912_000008_add_lodgify_property_mapping.sql
-│     └─ 20260912_000009_add_booking_intake_status.sql
+│     ├─ 20260912_000009_add_booking_intake_status.sql
+│     └─ 20260912_000010_add_property_welcome_message_draft.sql
 └─ tsconfig.json
 ```

@@ -18,6 +18,7 @@ type PropertyGuide = {
   property_notes: string | null;
   vibe_description: string | null;
   ai_guide: string | null;
+  welcome_message_draft: string | null;
   lodgify_property_id: number | null;
 };
 
@@ -40,6 +41,7 @@ const emptyGuide: GuideForm = {
   property_notes: "",
   vibe_description: "",
   ai_guide: "",
+  welcome_message_draft: "",
   lodgify_property_id: "",
 };
 
@@ -194,6 +196,12 @@ export default function PropertyGuideManager() {
           <h2 style={headingStyle}>Guide for AI</h2>
           <p style={{ margin: 0, color: "#52525b", fontSize: 13, lineHeight: 1.5 }}>Add approved, property-specific guidance for future AI drafting: what makes the home special, common fixes, guest-safe explanations, and when to contact a person or vendor. This is internal-only and will never be sent automatically.</p>
           <TextArea label="Approved property guidance" value={form.ai_guide} onChange={(value) => setField("ai_guide", value)} placeholder={"Ocean-view details guests may ask about…\n\nIf the front door sticks: [approved steps].\n\nIf power is out: [guest-safe explanation and escalation contact]."} />
+        </section>
+
+        <section style={sectionStyle}>
+          <h2 style={headingStyle}>Welcome message draft</h2>
+          <p style={{ margin: 0, color: "#52525b", fontSize: 13, lineHeight: 1.5 }}>Keep the house-specific starting point here. New bookings never send this automatically; your team can review and personalize it before sending.</p>
+          <TextArea label="Draft for this property" value={form.welcome_message_draft} onChange={(value) => setField("welcome_message_draft", value)} placeholder={"Hi [Guest First Name], welcome to [Property Name]! We’re looking forward to hosting you from [Check-in Date] to [Check-out Date].\n\n[Property-specific arrival detail]"} />
         </section>
 
         <div><button type="submit" disabled={saving} style={{ padding: "9px 14px", borderRadius: 8, border: "none", background: "#111", color: "#fff", cursor: saving ? "wait" : "pointer" }}>{saving ? "Saving…" : "Save property guide"}</button></div>
