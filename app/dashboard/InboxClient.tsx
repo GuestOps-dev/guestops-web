@@ -954,7 +954,7 @@ export default function InboxClient() {
           className="inbox-table-header"
           style={{
             display: "grid",
-            gridTemplateColumns: "2.1fr 2fr 1.4fr 1.4fr 1fr 0.8fr",
+            gridTemplateColumns: "2.1fr 2fr 1.4fr 1.4fr 1fr",
             gap: 12,
             padding: 12,
             background: "#f8fafc",
@@ -965,9 +965,6 @@ export default function InboxClient() {
           <div>Property</div>
           <div>Last Message</div>
           <div>Assigned</div>
-          <div aria-label="Conversation status" title="Conversation status" style={{ textAlign: "center" }}>
-            ●
-          </div>
           <div>Actions</div>
         </div>
 
@@ -975,12 +972,14 @@ export default function InboxClient() {
           const unread = c.is_unread ?? isUnread(c);
           const replyNeeded = needsReply(c);
           const openTasks = openTaskCount(c);
+          const statusLabel = conversationStatusLabel(c.status);
 
           return (
             <div
               key={c.id}
               className="inbox-table-row"
               role="button"
+              aria-label={`${getGuestDisplayName(c)} conversation, ${statusLabel}`}
               tabIndex={0}
               onClick={(e) => {
                 const target = e.target as HTMLElement | null;
@@ -997,10 +996,11 @@ export default function InboxClient() {
               }}
               style={{
                 display: "grid",
-                gridTemplateColumns: "2.1fr 2fr 1.4fr 1.4fr 1fr 0.8fr",
+                gridTemplateColumns: "2.1fr 2fr 1.4fr 1.4fr 1fr",
                 gap: 12,
-                padding: 12,
+                padding: "12px 12px 12px 9px",
                 borderTop: "1px solid #edf2f7",
+                borderLeft: `4px solid ${conversationStatusAccent(c.status)}`,
                 background: unread ? "#fffdf3" : "white",
                 cursor: "pointer",
               }}
@@ -1070,9 +1070,6 @@ export default function InboxClient() {
                     {c.assigned_to_user_id ? "Assign to me" : "Claim"}
                   </button>
                 ) : null}
-              </div>
-              <div>
-                <StatusBadge status={c.status} />
               </div>
               <div style={{ display: "flex", gap: 6 }}>
                 {c.status === "closed" ? (
@@ -1173,43 +1170,18 @@ function InHouseBadge() {
   );
 }
 
-function StatusBadge({ status }: { status: string | null }) {
+function conversationStatusLabel(status: string | null) {
   const s = (status || "").toLowerCase();
-  const label =
-    s === "awaiting_team"
-      ? "Inbox"
-      : s === "waiting_guest"
-        ? "Waiting on Guest"
-        : s === "active"
-          ? "Inbox"
-          : s === "closed"
-            ? "Closed"
-            : status ?? "-";
+  if (s === "awaiting_team" || s === "active") return "Inbox";
+  if (s === "waiting_guest") return "Waiting on Guest";
+  if (s === "closed") return "Closed";
+  return status ?? "Unknown status";
+}
 
-  const color =
-    s === "awaiting_team"
-      ? "#d97706"
-      : s === "waiting_guest"
-      ? "#2563eb"
-      : s === "active"
-      ? "#d97706"
-      : s === "closed"
-      ? "#94a3b8"
-      : "#64748b";
-
-  return (
-    <span
-      role="img"
-      aria-label={`${label} status`}
-      title={label}
-      style={{
-        display: "inline-block",
-        width: 10,
-        height: 10,
-        borderRadius: "50%",
-        background: color,
-        boxShadow: "0 0 0 2px rgba(15, 23, 42, 0.08)",
-      }}
-    />
-  );
+function conversationStatusAccent(status: string | null) {
+  const s = (status || "").toLowerCase();
+  if (s === "awaiting_team" || s === "active") return "#22a75b";
+  if (s === "waiting_guest") return "#d97706";
+  if (s === "closed") return "#94a3b8";
+  return "#cbd5e1";
 }
