@@ -321,6 +321,27 @@ Role examples:
 
 Critical for Costa Rica guest communication.
 
+### Shared guest concierge groups (future, high-value)
+
+GuestOpsHQ should support a booking-specific WhatsApp group that includes the
+guest party, Orlando, the owner/operations lead, and the GuestOpsHQ business
+identity. The product goal is a shared, auditable concierge conversation:
+
+- Guests can use the familiar group chat instead of learning a new portal.
+- Orlando and the owner see the entire conversation in real time and can reply
+  naturally whenever human judgment is needed.
+- GuestOpsHQ can draft, send permitted operational messages, create follow-ups,
+  surface property/stay context, and record a complete activity history.
+
+This must use Meta's supported WhatsApp Business group capability—not an
+unofficial WhatsApp Web automation or a personal-number workaround. Before
+building it, confirm the business account's group eligibility, supported group
+size, invite/consent flow, webhook events, and any restrictions on existing
+groups. The data model must keep a stable provider group ID, member identities,
+per-message sender identity, group membership events, and a human/automation
+audit trail. It should remain channel-agnostic so the existing SMS thread is a
+safe fallback when a group cannot be used.
+
 ---
 
 ## 16. OTA Integration
