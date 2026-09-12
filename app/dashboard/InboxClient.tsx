@@ -611,6 +611,7 @@ export default function InboxClient() {
 
         <div className="inbox-primary-controls" style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
           <Link href="/dashboard/bookings" style={{ fontSize: 13, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>New Bookings</Link>
+          <Link href="/dashboard/tasks" style={{ fontSize: 13, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>Follow-ups</Link>
           <Link
             href="/dashboard/vendors"
             style={{ fontSize: 13, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}
