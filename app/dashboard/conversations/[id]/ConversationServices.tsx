@@ -104,7 +104,7 @@ export default function ConversationServices({ propertyId, bookingId }: { proper
 
   return <section style={{ marginTop: 18, borderTop: "1px solid #e2e8f0", paddingTop: 14 }}>
     <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 6px" }}>Concierge services</h3>
-    <p style={{ color: "#64748b", fontSize: 12, margin: "0 0 9px" }}>Plan the request here; contact vendors manually and keep the details with this stay.</p>
+    <p style={{ color: "#64748b", fontSize: 12, margin: "0 0 9px" }}>Plan the request here; contact vendors manually and keep the details with this stay. Planning a service also adds a follow-up so it does not get missed.</p>
     {types.length === 0 ? <div style={{ padding: 9, borderRadius: 8, background: "#f8fafc", border: "1px solid #e2e8f0", fontSize: 12 }}>
       <strong>Set up your first service</strong>
       <div style={{ display: "flex", gap: 6, marginTop: 7 }}><input value={newType} onChange={(event) => setNewType(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void addType(); }} placeholder="Private chef, airport driver…" maxLength={280} style={{ flex: 1, minWidth: 0, padding: "6px 7px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 12 }} /><button type="button" onClick={() => void addType()} disabled={busy || !newType.trim()} style={buttonStyle}>Add</button></div>

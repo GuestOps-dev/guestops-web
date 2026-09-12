@@ -49,8 +49,8 @@ export async function POST(req: Request) {
     await assertCanAccessProperty(auth.supabase, propertyId);
     const sb = auth.supabase as any;
     const [{ data: booking }, { data: type }, vendorResult] = await Promise.all([
-      sb.from("bookings").select("id").eq("id", bookingId).eq("property_id", propertyId).maybeSingle(),
-      sb.from("experience_types").select("id").eq("id", typeId).eq("property_id", propertyId).maybeSingle(),
+      sb.from("bookings").select("id, guest_id").eq("id", bookingId).eq("property_id", propertyId).maybeSingle(),
+      sb.from("experience_types").select("id, name").eq("id", typeId).eq("property_id", propertyId).maybeSingle(),
       vendorId ? sb.from("vendors").select("id").eq("id", vendorId).eq("property_id", propertyId).eq("active", true).maybeSingle() : Promise.resolve({ data: true }),
     ]);
     if (!booking || !type || !vendorResult.data) return NextResponse.json({ error: "The selected stay, service, or vendor is unavailable" }, { status: 400 });
@@ -60,6 +60,17 @@ export async function POST(req: Request) {
       guest_instructions: optionalText(body.guest_instructions), internal_notes_private: optionalText(body.internal_notes_private),
     }).select(COLUMNS).single();
     if (error) throw error;
+    // Concierge work should be visible in the follow-up workspace, not just
+    // buried inside the guest conversation. The task remains intentionally
+    // human-completed when the vendor outcome is actually known.
+    const { error: taskError } = await sb.from("tasks").insert({
+      property_id: propertyId,
+      booking_id: bookingId,
+      guest_id: booking.guest_id ?? null,
+      title: `Confirm ${type.name} for this stay`,
+      created_by_user_id: auth.user.id,
+    });
+    if (taskError) console.error("Concierge follow-up task create error:", taskError);
     return NextResponse.json(data, { status: 201 });
   } catch (error: any) { return NextResponse.json({ error: error?.message ?? "Unable to create service request" }, { status: error?.status ?? 400 }); }
 }
