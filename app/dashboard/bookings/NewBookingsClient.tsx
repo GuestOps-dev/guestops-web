@@ -83,6 +83,10 @@ export default function NewBookingsClient() {
   }
 
   async function startInInbox(booking: Booking) {
+    const proceed = window.confirm(
+      `Start ${booking.guest_name ?? "this guest"} in GuestOpsHQ? This creates an internal guest, stay, and Inbox record. It does not send a message or create a WhatsApp group.`
+    );
+    if (!proceed) return;
     setStartingId(booking.id);
     setError(null);
     try {
