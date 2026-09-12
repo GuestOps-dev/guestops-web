@@ -17,6 +17,7 @@ type PropertyGuide = {
   check_out_instructions_guest: string | null;
   property_notes: string | null;
   vibe_description: string | null;
+  ai_guide: string | null;
 };
 
 type GuideForm = {
@@ -35,6 +36,7 @@ const emptyGuide: GuideForm = {
   check_out_instructions_guest: "",
   property_notes: "",
   vibe_description: "",
+  ai_guide: "",
 };
 
 function formFromGuide(guide: PropertyGuide): GuideForm {
@@ -154,6 +156,12 @@ export default function PropertyGuideManager() {
           <TextArea label="Check-in instructions for guests" value={form.check_in_instructions_guest} onChange={(value) => setField("check_in_instructions_guest", value)} placeholder="Arrival, access, parking, welcome details…" />
           <TextArea label="Check-out instructions for guests" value={form.check_out_instructions_guest} onChange={(value) => setField("check_out_instructions_guest", value)} placeholder="Departure checklist and key return…" />
           <TextArea label="Private operating notes" value={form.property_notes} onChange={(value) => setField("property_notes", value)} placeholder="Team-only operating knowledge. Never sent to guests automatically." />
+        </section>
+
+        <section style={sectionStyle}>
+          <h2 style={headingStyle}>Guide for AI</h2>
+          <p style={{ margin: 0, color: "#52525b", fontSize: 13, lineHeight: 1.5 }}>Add approved, property-specific guidance for future AI drafting: what makes the home special, common fixes, guest-safe explanations, and when to contact a person or vendor. This is internal-only and will never be sent automatically.</p>
+          <TextArea label="Approved property guidance" value={form.ai_guide} onChange={(value) => setField("ai_guide", value)} placeholder={"Ocean-view details guests may ask about…\n\nIf the front door sticks: [approved steps].\n\nIf power is out: [guest-safe explanation and escalation contact]."} />
         </section>
 
         <div><button type="submit" disabled={saving} style={{ padding: "9px 14px", borderRadius: 8, border: "none", background: "#111", color: "#fff", cursor: saving ? "wait" : "pointer" }}>{saving ? "Saving…" : "Save property guide"}</button></div>

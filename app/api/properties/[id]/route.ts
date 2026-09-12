@@ -15,6 +15,7 @@ const PROPERTY_FIELDS = [
   "check_out_instructions_guest",
   "property_notes",
   "vibe_description",
+  "ai_guide",
 ] as const;
 
 type PropertyField = (typeof PROPERTY_FIELDS)[number];
