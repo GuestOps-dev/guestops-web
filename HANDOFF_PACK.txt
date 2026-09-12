@@ -1,6 +1,6 @@
 GUESTOPSHQ — HANDOFF PACK (COPY/PASTE INTO NEW CHAT)
-Generated: 2026-09-11T23:57:53.839Z
-Git SHA: b6f30d5
+Generated: 2026-09-12T00:00:00.484Z
+Git SHA: 8edac1f
 
 RULES FOR NEW CHAT:
 - Prefer code snippets that can be pasted into Cursor.
@@ -171,7 +171,6 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │     ├─ serverAuth.ts
 │     ├─ supabase
 │     │  └─ getSupabaseRlsServerClient.ts
-│     ├─ supabaseAdmin.ts
 │     ├─ supabaseApiAuth.ts
 │     ├─ supabaseBrowser.ts
 │     ├─ supabaseServer.ts
@@ -196,8 +195,8 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 
 # GuestOpsHQ — CODE INDEX (Generated)
 
-Generated: 2026-09-11T23:57:53.784Z
-Git SHA: b6f30d5
+Generated: 2026-09-12T00:00:00.432Z
+Git SHA: 8edac1f
 
 ---
 

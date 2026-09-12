@@ -158,7 +158,6 @@ Only showing relevant file extensions: .ts, .tsx, .js, .mjs, .json, .sql, .md, .
 │     ├─ serverAuth.ts
 │     ├─ supabase
 │     │  └─ getSupabaseRlsServerClient.ts
-│     ├─ supabaseAdmin.ts
 │     ├─ supabaseApiAuth.ts
 │     ├─ supabaseBrowser.ts
 │     ├─ supabaseServer.ts
