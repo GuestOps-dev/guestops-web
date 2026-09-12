@@ -77,11 +77,12 @@ export default async function ConversationPage({
     check_in_date: string | null;
     check_out_date: string | null;
     party_size: number | null;
+    source: string | null;
   } | null = null;
   if (bookingId) {
     const { data: bookingRow, error: bookingError } = await (sb as any)
       .from("bookings")
-      .select("id, check_in_date, check_out_date, party_size")
+      .select("id, check_in_date, check_out_date, party_size, source")
       .eq("id", bookingId)
       .eq("property_id", propertyId)
       .maybeSingle();
@@ -92,6 +93,7 @@ export default async function ConversationPage({
         check_in_date: bookingRow.check_in_date ?? null,
         check_out_date: bookingRow.check_out_date ?? null,
         party_size: bookingRow.party_size ?? null,
+        source: bookingRow.source ?? null,
       };
     }
   }

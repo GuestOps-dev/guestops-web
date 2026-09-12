@@ -34,6 +34,7 @@ export type BookingStay = {
   check_in_date: string | null;
   check_out_date: string | null;
   party_size?: number | null;
+  source?: string | null;
 };
 
 export type StayHistoryRow = BookingStay;
@@ -75,6 +76,13 @@ function formatHistoryDate(value: string | null) {
   if (!value) return "No messages";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "Unknown date" : date.toLocaleDateString();
+}
+
+function formatBookingSource(value: string | null | undefined) {
+  if (!value) return null;
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function conversationStatusLabel(status: string | null) {
@@ -517,6 +525,7 @@ export default function GuestProfilePanel({
               <div>Check-in: {formatStayDate(booking.check_in_date)}</div>
               <div>Check-out: {formatStayDate(booking.check_out_date)}</div>
               {booking.party_size ? <div>Party: {booking.party_size} guests</div> : null}
+              {formatBookingSource(booking.source) ? <div>Booked via: {formatBookingSource(booking.source)}</div> : null}
               <button
                 type="button"
                 onClick={() => {
