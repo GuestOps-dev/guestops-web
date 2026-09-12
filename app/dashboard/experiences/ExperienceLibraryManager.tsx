@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { usePropertyWorkspace } from "../PropertyWorkspaceProvider";
+import DashboardNavigation from "../DashboardNavigation";
 
 type Experience = { id: string; name: string; details: string; active: boolean };
 type Property = { id: string; name: string };
@@ -73,8 +74,8 @@ export default function ExperienceLibraryManager() {
   function enabledFor(experienceId: string, targetPropertyId: string) { return availability.find((item) => item.experience_id === experienceId && item.property_id === targetPropertyId)?.enabled ?? true; }
 
   return <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
-    <a href="/dashboard">← Inbox</a>
-    <h1 style={{ margin: "16px 0 6px" }}>Experiences</h1>
+    <DashboardNavigation />
+    <h1 style={{ margin: "0 0 6px" }}>Experiences</h1>
     <p style={{ color: "#64748b", maxWidth: 720, lineHeight: 1.5 }}>One account-wide library for tours, dining, grocery stocking, and anything else your concierge can arrange. Keep the full reference details in one place so AI and the team have the same approved information. New experiences are available to every house by default.</p>
 
     <label style={{ display: "grid", gap: 5, maxWidth: 360, fontSize: 13, margin: "20px 0" }}>Account / property context

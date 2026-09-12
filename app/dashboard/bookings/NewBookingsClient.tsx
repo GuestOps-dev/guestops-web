@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import DashboardNavigation from "../DashboardNavigation";
 
 type Booking = {
   id: number;
@@ -120,8 +121,8 @@ export default function NewBookingsClient() {
 
   return (
     <main style={{ padding: 24, maxWidth: 1000, margin: "0 auto" }}>
-      <a href="/dashboard">← Inbox</a>
-      <h1 style={{ margin: "16px 0 6px" }}>New Bookings</h1>
+      <DashboardNavigation />
+      <h1 style={{ margin: "0 0 6px" }}>New Bookings</h1>
       <p style={{ color: "#64748b", maxWidth: 650 }}>
         Recent Lodgify reservations waiting to become active GuestOpsHQ guest workflows. Starting one creates its guest, stay, and Inbox record—no message is sent.
       </p>

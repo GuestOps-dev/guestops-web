@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import DashboardNavigation from "../DashboardNavigation";
 
 function localDateKey() {
   const now = new Date();
@@ -58,8 +59,8 @@ export default async function OperationsOverviewPage() {
   const total = stats.reduce((sum: any, item: any) => ({ inbox: sum.inbox + item.inbox, replyNeeded: sum.replyNeeded + item.replyNeeded, inHouse: sum.inHouse + item.inHouse, followUps: sum.followUps + item.followUps, guestMessages30d: sum.guestMessages30d + item.guestMessages30d, teamReplies30d: sum.teamReplies30d + item.teamReplies30d }), { inbox: 0, replyNeeded: 0, inHouse: 0, followUps: 0, guestMessages30d: 0, teamReplies30d: 0 });
 
   return <main style={{ maxWidth: 1060, padding: 24, margin: "0 auto" }}>
-    <Link href="/dashboard" style={{ fontSize: 14, color: "#475569", textDecoration: "none" }}>← Inbox</Link>
-    <h1 style={{ fontSize: 26, margin: "16px 0 6px" }}>Operations overview</h1>
+    <DashboardNavigation />
+    <h1 style={{ fontSize: 26, margin: "0 0 6px" }}>Operations overview</h1>
     <p style={{ margin: "0 0 20px", color: "#64748b" }}>A live snapshot of where the team’s attention is needed today.</p>
     <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(175px, 1fr))", gap: 12, marginBottom: 22 }}>
       <Metric label="Inbox" value={total.inbox} tone="#1d4ed8" />

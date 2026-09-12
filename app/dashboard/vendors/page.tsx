@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { PropertyWorkspaceProvider } from "../PropertyWorkspaceProvider";
 import VendorsManager from "./VendorsManager";
+import DashboardNavigation from "../DashboardNavigation";
 
 export default async function VendorsPage() {
   const supabase = await getSupabaseServerClient();
@@ -21,8 +21,8 @@ export default async function VendorsPage() {
       propertyOptions={propertyOptions}
     >
       <main style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-        <Link href="/dashboard" style={{ fontSize: 14 }}>← Inbox</Link>
-        <h1 style={{ fontSize: 24, margin: "16px 0 8px" }}>Vendors</h1>
+        <DashboardNavigation />
+        <h1 style={{ fontSize: 24, margin: "0 0 8px" }}>Vendors</h1>
         <p style={{ fontSize: 14, color: "#555", margin: "0 0 24px" }}>
           Keep the trusted people your team can call for each property in one place.
         </p>
