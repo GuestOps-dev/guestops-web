@@ -48,7 +48,7 @@ export async function POST(
   }
 
   const propertyId = conversation.property_id as string;
-  const [propertyResult, guestResult, bookingResult, contactsResult, inboundResult, outboundResult] = await Promise.all([
+  const [propertyResult, guestResult, bookingResult, contactsResult, roomsResult, inboundResult, outboundResult] = await Promise.all([
     sb.from("properties").select("name, ai_guide").eq("id", propertyId).maybeSingle(),
     conversation.guest_id
       ? sb.from("guests").select("full_name, language_pref").eq("id", conversation.guest_id).eq("property_id", propertyId).maybeSingle()
@@ -57,12 +57,13 @@ export async function POST(
       ? sb.from("bookings").select("check_in_date, check_out_date, party_size").eq("id", conversation.booking_id).eq("property_id", propertyId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     sb.from("known_contacts").select("name, role, ai_context").eq("property_id", propertyId).order("name").limit(30),
+    sb.from("property_rooms").select("name, room_type, property_beds(bed_type, quantity, sleeps)").eq("property_id", propertyId).order("sort_order").order("created_at").limit(30),
     sb.from("inbound_messages").select("body, created_at").eq("conversation_id", conversationId).order("created_at", { ascending: false }).limit(16),
     sb.from("outbound_messages").select("body, created_at").eq("conversation_id", conversationId).order("created_at", { ascending: false }).limit(16),
   ]);
 
-  if (propertyResult.error || inboundResult.error || outboundResult.error) {
-    console.error("AI draft context load error:", propertyResult.error ?? inboundResult.error ?? outboundResult.error);
+  if (propertyResult.error || roomsResult.error || inboundResult.error || outboundResult.error) {
+    console.error("AI draft context load error:", propertyResult.error ?? roomsResult.error ?? inboundResult.error ?? outboundResult.error);
     return NextResponse.json({ error: "Unable to load this conversation for drafting" }, { status: 500 });
   }
 
@@ -85,11 +86,21 @@ export async function POST(
     role: tidy(contact.role, 120),
     context: tidy(contact.ai_context, 400),
   }));
+  const sleepingArrangements = (roomsResult.data ?? []).map((room: any) => ({
+    room: tidy(room.name, 120),
+    type: tidy(room.room_type, 40),
+    beds: (room.property_beds ?? []).slice(0, 12).map((bed: any) => ({
+      type: tidy(bed.bed_type, 40),
+      quantity: Number.isInteger(bed.quantity) ? bed.quantity : null,
+      sleeps_per_bed: Number.isInteger(bed.sleeps) ? bed.sleeps : null,
+    })),
+  }));
 
   const input = JSON.stringify({
     property: { name: tidy(property.name, 160), guide_for_ai: tidy(property.ai_guide, 5000) },
     guest: { name: tidy(guest.full_name, 160) || "Guest", preferred_language: tidy(guest.language_pref, 40) || "English" },
     stay: { check_in: formatDate(booking.check_in_date), check_out: formatDate(booking.check_out_date), party_size: booking.party_size ?? null },
+    sleeping_arrangements: sleepingArrangements,
     known_contacts: contacts,
     thread: thread.map((item) => ({ from: item.role, message: item.body })),
   });
@@ -99,6 +110,7 @@ export async function POST(
     "This is a draft only; never claim that a booking, vendor, price, availability, refund, repair, access code, or reservation change is confirmed unless the supplied context explicitly confirms it.",
     AI_UNTRUSTED_CONTENT_RULE,
     "Known contacts are team members or vendors. Respect their stated role and do not contradict or impersonate them.",
+    "Sleeping arrangements are property information. Mention them only when relevant to the guest's request, and never infer availability, a bed assignment, or capacity beyond the supplied details.",
     AI_CONTACT_PRIVACY_RULE,
     "If more information is required, ask a clear follow-up question or say the team will confirm—do not invent details.",
     "Use the guest's preferred language when provided. Keep the message under 120 words.",
