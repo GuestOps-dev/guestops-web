@@ -5,9 +5,10 @@ import { getSupabaseServiceClient } from "@/lib/supabaseServer";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type LodgifyBooking = { id?: unknown; property_id?: unknown; property_name?: unknown; arrival?: unknown; departure?: unknown; status?: unknown; is_new?: unknown; source_text?: unknown; guest?: { name?: unknown; guest_name?: unknown; email?: unknown; phone?: unknown; phone_number?: unknown; phone_numbers?: unknown; locale?: unknown }; people?: unknown; total_guest_breakdown?: { adults?: unknown; children?: unknown; infants?: unknown } };
+type LodgifyBooking = { id?: unknown; property_id?: unknown; property_name?: unknown; arrival?: unknown; departure?: unknown; created_at?: unknown; booking_date?: unknown; booked_at?: unknown; status?: unknown; is_new?: unknown; source_text?: unknown; guest?: { name?: unknown; guest_name?: unknown; email?: unknown; phone?: unknown; phone_number?: unknown; phone_numbers?: unknown; locale?: unknown }; people?: unknown; total_guest_breakdown?: { adults?: unknown; children?: unknown; infants?: unknown } };
 
 function date(value: unknown) { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : null; }
+function timestamp(value: unknown) { return typeof value === "string" && !Number.isNaN(Date.parse(value)) ? value : null; }
 function text(value: unknown) { return typeof value === "string" ? value.trim() || null : null; }
 function number(value: unknown) { const n = Number(value); return Number.isSafeInteger(n) && n > 0 ? n : null; }
 function partySize(booking: LodgifyBooking) { const p = booking.total_guest_breakdown ?? booking.people; if (!p || typeof p !== "object") return null; const raw = p as Record<string, unknown>; const total = [raw.adults, raw.children, raw.infants].reduce<number>((sum, value) => sum + (number(value) ?? 0), 0); return total || null; }
@@ -83,7 +84,7 @@ export async function GET(req: Request) {
       const property = mapping.get(number(booking.property_id));
       const id = number(booking.id);
       if (!property || !id || startedIds.has(String(id))) return null;
-      return { id, property_id: property.property_id, property_name: property.property_name, guest_name: text(booking.guest?.name) ?? text(booking.guest?.guest_name), arrival: date(booking.arrival), departure: date(booking.departure), status: text(booking.status), source: "Lodgify", is_new: booking.is_new === true, party_size: partySize(booking) };
+      return { id, property_id: property.property_id, property_name: property.property_name, guest_name: text(booking.guest?.name) ?? text(booking.guest?.guest_name), arrival: date(booking.arrival), departure: date(booking.departure), booked_at: timestamp(booking.created_at) ?? timestamp(booking.booked_at) ?? timestamp(booking.booking_date), status: text(booking.status), source: "Lodgify", is_new: booking.is_new === true, party_size: partySize(booking) };
     }).filter(Boolean);
     return NextResponse.json({ bookings }, { status: 200 });
   } catch (err: any) { return NextResponse.json({ error: err?.message ?? "Unable to load Lodgify bookings." }, { status: 502 }); }

@@ -11,6 +11,7 @@ type Booking = {
   guest_name: string | null;
   arrival: string | null;
   departure: string | null;
+  booked_at: string | null;
   status: string | null;
   source: string | null;
   is_new: boolean;
@@ -26,6 +27,8 @@ export default function NewBookingsClient() {
   const [startingId, setStartingId] = useState<number | null>(null);
   const [updatesActive, setUpdatesActive] = useState<boolean | null>(null);
   const [activatingUpdates, setActivatingUpdates] = useState(false);
+  const [propertyFilter, setPropertyFilter] = useState("all");
+  const [sort, setSort] = useState<"recent" | "arrival">("recent");
 
   const accessToken = useCallback(async () => {
     const { data, error: sessionError } = await supabase.auth.getSession();
@@ -96,7 +99,14 @@ export default function NewBookingsClient() {
   }
 
   const fresh = rows.filter((booking) => booking.is_new);
-  const visibleRows = fresh.length ? fresh : rows;
+  const sourceRows = fresh.length ? fresh : rows;
+  const propertyOptions = Array.from(new Map(sourceRows.map((booking) => [booking.property_id, booking.property_name])).entries());
+  const visibleRows = sourceRows
+    .filter((booking) => propertyFilter === "all" || booking.property_id === propertyFilter)
+    .sort((a, b) => {
+      if (sort === "arrival") return (a.arrival ?? "9999-12-31").localeCompare(b.arrival ?? "9999-12-31");
+      return (b.booked_at ? Date.parse(b.booked_at) : b.id) - (a.booked_at ? Date.parse(a.booked_at) : a.id);
+    });
 
   return (
     <main style={{ padding: 24, maxWidth: 1000, margin: "0 auto" }}>
@@ -111,6 +121,21 @@ export default function NewBookingsClient() {
       </div> : null}
       {updatesActive === true ? <p style={{ color: "#166534", fontSize: 13, margin: "14px 0" }}>Automatic confirmed-booking updates are on. Records are created without sending a message.</p> : null}
 
+      {!loading && <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "18px 0" }}>
+        <label style={{ display: "grid", gap: 4, fontSize: 12, color: "#475569" }}>Show house
+          <select value={propertyFilter} onChange={(event) => setPropertyFilter(event.target.value)} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff" }}>
+            <option value="all">All houses</option>
+            {propertyOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+        </label>
+        <label style={{ display: "grid", gap: 4, fontSize: 12, color: "#475569" }}>Sort by
+          <select value={sort} onChange={(event) => setSort(event.target.value as "recent" | "arrival")} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff" }}>
+            <option value="recent">Most recent booking</option>
+            <option value="arrival">Upcoming check-in</option>
+          </select>
+        </label>
+      </div>}
+
       {loading ? <p>Loading bookings…</p> : null}
       {error ? <p role="alert" style={{ color: "#b91c1c" }}>{error}</p> : null}
 
@@ -123,7 +148,7 @@ export default function NewBookingsClient() {
               {booking.party_size ? ` · ${booking.party_size} guests` : ""}
             </div>
             <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
-              Lodgify #{booking.id}{booking.source ? ` · ${booking.source}` : ""}
+              {booking.booked_at ? `Booked ${new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(booking.booked_at))} · ` : ""}Lodgify #{booking.id}{booking.source ? ` · ${booking.source}` : ""}
             </div>
           </div>
           <button type="button" onClick={() => void startInInbox(booking)} disabled={startingId === booking.id} style={{ padding: "9px 13px", border: "none", borderRadius: 8, background: "#0f5bff", color: "#fff", cursor: startingId === booking.id ? "wait" : "pointer" }}>
@@ -131,6 +156,7 @@ export default function NewBookingsClient() {
           </button>
         </article>)}
         {!rows.length ? <p>No Lodgify bookings match your mapped properties yet. Set each rental in Property Guide first.</p> : null}
+        {rows.length > 0 && visibleRows.length === 0 ? <p>No new bookings match this house.</p> : null}
       </div> : null}
     </main>
   );
