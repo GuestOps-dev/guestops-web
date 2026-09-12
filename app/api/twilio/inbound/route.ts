@@ -149,13 +149,19 @@ export async function POST(req: Request) {
       });
     }
 
-    // Placeholder booking
+    // A text may arrive before a reservation has been imported. Create a
+    // short-lived placeholder stay so it still has a routable conversation;
+    // operators can replace these dates from the guest profile later.
+    const now = new Date().toISOString();
+    const placeholderCheckOut = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const { data: booking, error: bookingErr } = await sb
       .from("bookings")
       .upsert(
         {
           property_id: propertyId,
           guest_id: guest.id,
+          check_in: now,
+          check_out: placeholderCheckOut,
           source: "placeholder",
           source_reservation_id: `placeholder:${fromAddr.e164}`,
         },
@@ -197,8 +203,6 @@ export async function POST(req: Request) {
       console.error("conversation upsert error:", convoErr);
       return ok();
     }
-
-    const now = new Date().toISOString();
 
     // Twilio can retry a webhook if a prior request times out. The persisted
     // provider MessageSid is the stable idempotency key for an inbound SMS.
