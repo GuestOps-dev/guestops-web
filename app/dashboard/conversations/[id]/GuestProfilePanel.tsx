@@ -122,11 +122,42 @@ export default function GuestProfilePanel({
   const [savingStay, setSavingStay] = useState(false);
   const [noteBody, setNoteBody] = useState("");
   const [submittingNote, setSubmittingNote] = useState(false);
+  const [aiNotesValue, setAiNotesValue] = useState(profile.notes ?? "");
+  const [savingAiNotes, setSavingAiNotes] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [tagsBusy, setTagsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const tags = profile.tags ?? [];
+
+  const saveAiNotes = async () => {
+    if (savingAiNotes) return;
+    const notes = aiNotesValue.trim();
+    if (notes === (profile.notes ?? "")) return;
+
+    setSavingAiNotes(true);
+    setError(null);
+    try {
+      const sb = getSupabaseBrowserClient();
+      const { data: session } = await sb.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+
+      const res = await fetch(`/api/guests/${guest.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ property_id: propertyId, notes: notes || null }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((data as { error?: string }).error ?? res.statusText);
+      setProfile((current) => ({ ...current, notes: data.notes ?? null }));
+      setAiNotesValue(data.notes ?? "");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save AI notes");
+    } finally {
+      setSavingAiNotes(false);
+    }
+  };
 
   const saveName = async () => {
     const trimmed = nameValue.trim();
@@ -875,6 +906,57 @@ export default function GuestProfilePanel({
           {error}
         </div>
       )}
+
+      <section
+        style={{
+          marginBottom: 14,
+          padding: 10,
+          border: "1px solid #c4b5fd",
+          borderRadius: 8,
+          background: "#faf5ff",
+        }}
+      >
+        <h4 style={{ fontSize: 12, fontWeight: 700, color: "#5b21b6", margin: "0 0 4px" }}>
+          AI notes for this guest
+        </h4>
+        <p style={{ fontSize: 11, lineHeight: 1.45, color: "#6b21a8", margin: "0 0 8px" }}>
+          Private team context for future drafts—celebrations, preferences, allergies, or other care details. Never sent as a message by itself.
+        </p>
+        <textarea
+          value={aiNotesValue}
+          onChange={(e) => setAiNotesValue(e.target.value)}
+          placeholder="Example: Celebrating a 43rd birthday on May 14. Severe seafood allergy."
+          rows={3}
+          maxLength={3000}
+          disabled={savingAiNotes}
+          style={{
+            width: "100%",
+            padding: "6px 8px",
+            border: "1px solid #c4b5fd",
+            borderRadius: 6,
+            background: "#fff",
+            fontSize: 12,
+            resize: "vertical",
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => void saveAiNotes()}
+          disabled={savingAiNotes || aiNotesValue.trim() === (profile.notes ?? "")}
+          style={{
+            marginTop: 6,
+            padding: "6px 10px",
+            fontSize: 12,
+            border: "none",
+            background: "#7c3aed",
+            color: "#fff",
+            borderRadius: 6,
+            cursor: savingAiNotes ? "not-allowed" : "pointer",
+          }}
+        >
+          {savingAiNotes ? "Saving…" : "Save AI notes"}
+        </button>
+      </section>
 
       <h4 style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>
         Notes

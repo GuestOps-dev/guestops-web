@@ -134,6 +134,7 @@ export async function PATCH(
       email?: string | null;
       preferred_channel?: string | null;
       language_pref?: string | null;
+      notes?: string | null;
       phone?: string | null;
       conversation_id?: string;
     };
@@ -186,6 +187,9 @@ export async function PATCH(
     if (invalidTextField(body.language_pref, 80)) {
       return NextResponse.json({ error: "Invalid language" }, { status: 400 });
     }
+    if (invalidTextField(body.notes, 3000)) {
+      return NextResponse.json({ error: "AI notes must be 3,000 characters or fewer" }, { status: 400 });
+    }
     if (invalidTextField(body.phone, 30)) {
       return NextResponse.json({ error: "Invalid mobile number" }, { status: 400 });
     }
@@ -227,6 +231,9 @@ export async function PATCH(
               : "Spanish"
             : null
           : null;
+    if (body.notes !== undefined)
+      updatePayload.notes =
+        typeof body.notes === "string" ? body.notes.trim() || null : null;
     if (body.phone !== undefined) {
       updatePayload.phone = normalizedPhone;
       updatePayload.phone_e164 = normalizedPhone;
