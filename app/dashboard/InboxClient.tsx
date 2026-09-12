@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { usePropertyWorkspace } from "./PropertyWorkspaceProvider";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -172,6 +172,18 @@ function isInteractiveElement(el: HTMLElement | null) {
 
 export default function InboxClient() {
   const router = useRouter();
+  const pathname = usePathname();
+  const dashboardNavLinkStyle = (href: string): React.CSSProperties => ({
+    padding: "6px 8px",
+    borderRadius: 7,
+    fontSize: 13,
+    fontWeight: pathname === href ? 650 : 550,
+    color: pathname === href ? "#0f3d75" : "#334155",
+    textDecoration: "none",
+    whiteSpace: "nowrap",
+    background: pathname === href ? "#fff" : "transparent",
+    boxShadow: pathname === href ? "0 1px 2px rgba(15, 23, 42, 0.10)" : "none",
+  });
 
   const {
     selectedPropertyId,
@@ -633,13 +645,13 @@ export default function InboxClient() {
               boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.9)",
             }}
           >
-            <Link href="/dashboard/overview" style={{ padding: "6px 8px", borderRadius: 7, fontSize: 13, fontWeight: 550, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>Overview</Link>
-            <Link href="/dashboard/bookings" style={{ padding: "6px 8px", borderRadius: 7, fontSize: 13, fontWeight: 550, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>New Bookings</Link>
-            <Link href="/dashboard/tasks" style={{ padding: "6px 8px", borderRadius: 7, fontSize: 13, fontWeight: 550, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>Follow-ups</Link>
-            <Link href="/dashboard/vendors" style={{ padding: "6px 8px", borderRadius: 7, fontSize: 13, fontWeight: 550, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>
+            <Link href="/dashboard/overview" style={dashboardNavLinkStyle("/dashboard/overview")}>Overview</Link>
+            <Link href="/dashboard/bookings" style={dashboardNavLinkStyle("/dashboard/bookings")}>New Bookings</Link>
+            <Link href="/dashboard/tasks" style={dashboardNavLinkStyle("/dashboard/tasks")}>Follow-ups</Link>
+            <Link href="/dashboard/vendors" style={dashboardNavLinkStyle("/dashboard/vendors")}>
               Vendors
             </Link>
-            <Link href="/dashboard/properties" style={{ padding: "6px 8px", borderRadius: 7, fontSize: 13, fontWeight: 550, color: "#334155", textDecoration: "none", whiteSpace: "nowrap" }}>
+            <Link href="/dashboard/properties" style={dashboardNavLinkStyle("/dashboard/properties")}>
               Property Guide
             </Link>
           </nav>
