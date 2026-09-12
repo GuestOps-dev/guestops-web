@@ -17,6 +17,7 @@ type Booking = {
   is_new: boolean;
   party_size: number | null;
   guest_phone: string | null;
+  whatsapp_group_prepared?: boolean;
 };
 
 export default function NewBookingsClient() {
@@ -155,6 +156,7 @@ export default function NewBookingsClient() {
             <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
               {booking.booked_at ? `Booked ${new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(booking.booked_at))} · ` : ""}Lodgify #{booking.id}{booking.source ? ` · ${booking.source}` : ""}
             </div>
+            {booking.whatsapp_group_prepared ? <div style={{ display: "inline-flex", marginTop: 8, padding: "4px 7px", borderRadius: 999, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#166534", fontSize: 12 }}>Internal group setup only · no WhatsApp group is created</div> : null}
             <label style={{ display: "grid", gap: 5, marginTop: 12, maxWidth: 270, color: "#475569", fontSize: 12 }}>
               Guest mobile for WhatsApp
               <input
