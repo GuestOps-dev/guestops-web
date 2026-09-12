@@ -15,6 +15,11 @@ function isUniqueViolation(error: unknown): boolean {
   return (error as { code?: string } | null)?.code === "23505";
 }
 
+function twilioAddress(number: string, channel: string | null) {
+  if (channel !== "whatsapp") return number;
+  return number.startsWith("whatsapp:") ? number : `whatsapp:${number}`;
+}
+
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -147,8 +152,8 @@ export async function POST(
 
   try {
     const twilioMessage = await client.messages.create({
-      from: serviceNumber,
-      to: guestNumber,
+      from: twilioAddress(serviceNumber, convo.channel),
+      to: twilioAddress(guestNumber, convo.channel),
       body,
       statusCallback: `${publicBaseUrl}/api/twilio/status`,
     });

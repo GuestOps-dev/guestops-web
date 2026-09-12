@@ -126,7 +126,7 @@ export async function POST(req: Request) {
     if (!guest) {
       const { data, error } = await sb.from("guests").insert({
         property_id: property.id, full_name: fullName, email, phone_e164: phone, phone,
-        preferred_channel: "sms", language_pref: language,
+        preferred_channel: "whatsapp", language_pref: language,
       }).select("id").single();
       if (error || !data) throw new Error("Unable to create the guest profile.");
       guest = data;
@@ -147,7 +147,7 @@ export async function POST(req: Request) {
     const { error: conversationError } = await sb.from("conversations").upsert({
       property_id: property.id, booking_id: booking.id, guest_id: guestId,
       guest_number: phone ?? `lodgify:${bookingId}`, service_number: sender?.e164 ?? null,
-      channel: "sms", provider: "lodgify", status: "awaiting_team", updated_at: now,
+      channel: "whatsapp", provider: "lodgify", status: "awaiting_team", updated_at: now,
     }, { onConflict: "booking_id,channel" });
     if (conversationError) throw new Error("Unable to create the Inbox record.");
 

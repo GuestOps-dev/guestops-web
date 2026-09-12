@@ -129,7 +129,7 @@ export async function POST(req: Request) {
         email,
         phone_e164: phone,
         phone,
-        preferred_channel: "sms",
+        preferred_channel: "whatsapp",
         language_pref: language,
       }).select("id").single();
       if (guestError || !data) throw new Error("Unable to create the guest profile.");
@@ -165,7 +165,7 @@ export async function POST(req: Request) {
       guest_id: guestId,
       guest_number: phone ?? `lodgify:${id}`,
       service_number: sender?.e164 ?? null,
-      channel: "sms",
+      channel: "whatsapp",
       provider: "lodgify",
       status: "awaiting_team",
       updated_at: now,

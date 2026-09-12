@@ -20,11 +20,14 @@ type PropertyGuide = {
   ai_guide: string | null;
   welcome_message_draft: string | null;
   lodgify_property_id: number | null;
+  whatsapp_group_default_enabled: boolean;
+  whatsapp_group_include_scott: boolean;
+  whatsapp_group_include_orlando: boolean;
 };
 
 type GuideForm = {
-  [Field in Exclude<keyof PropertyGuide, "id">]: string;
-};
+  [Field in Exclude<keyof PropertyGuide, "id" | "whatsapp_group_default_enabled" | "whatsapp_group_include_scott" | "whatsapp_group_include_orlando">]: string;
+} & Pick<PropertyGuide, "whatsapp_group_default_enabled" | "whatsapp_group_include_scott" | "whatsapp_group_include_orlando">;
 
 type LodgifyRental = { id: number; name: string };
 
@@ -43,14 +46,22 @@ const emptyGuide: GuideForm = {
   ai_guide: "",
   welcome_message_draft: "",
   lodgify_property_id: "",
+  whatsapp_group_default_enabled: false,
+  whatsapp_group_include_scott: true,
+  whatsapp_group_include_orlando: true,
 };
 
 function formFromGuide(guide: PropertyGuide): GuideForm {
-  return Object.fromEntries(
-    Object.entries(guide)
-      .filter(([key]) => key !== "id")
-      .map(([key, value]) => [key, value == null ? "" : String(value)])
-  ) as GuideForm;
+  return {
+    ...Object.fromEntries(
+      Object.entries(guide)
+        .filter(([key]) => key !== "id" && !key.startsWith("whatsapp_group_"))
+        .map(([key, value]) => [key, value == null ? "" : String(value)])
+    ),
+    whatsapp_group_default_enabled: guide.whatsapp_group_default_enabled ?? false,
+    whatsapp_group_include_scott: guide.whatsapp_group_include_scott ?? true,
+    whatsapp_group_include_orlando: guide.whatsapp_group_include_orlando ?? true,
+  } as GuideForm;
 }
 
 export default function PropertyGuideManager() {
@@ -96,7 +107,7 @@ export default function PropertyGuideManager() {
 
   useEffect(() => { void loadGuide(); }, [loadGuide]);
 
-  function setField(field: keyof GuideForm, value: string) {
+  function setField(field: keyof GuideForm, value: string | boolean) {
     setSaved(false);
     setForm((current) => ({ ...current, [field]: value }));
   }
@@ -204,6 +215,16 @@ export default function PropertyGuideManager() {
           <TextArea label="Draft for this property" value={form.welcome_message_draft} onChange={(value) => setField("welcome_message_draft", value)} placeholder={"Hi [Guest First Name], welcome to [Property Name]! We’re looking forward to hosting you from [Check-in Date] to [Check-out Date].\n\n[Property-specific arrival detail]"} />
         </section>
 
+        <section style={sectionStyle}>
+          <h2 style={headingStyle}>WhatsApp group defaults</h2>
+          <p style={{ margin: 0, color: "#52525b", fontSize: 13, lineHeight: 1.5 }}>Prepare new reservations for the future WhatsApp group workflow. This only records the house preference today—it does not create a group or send a message.</p>
+          <CheckBox label="Prepare a WhatsApp group for new reservations at this house" checked={form.whatsapp_group_default_enabled} onChange={(value) => setField("whatsapp_group_default_enabled", value)} />
+          <div style={{ display: "grid", gap: 8, paddingLeft: 8, opacity: form.whatsapp_group_default_enabled ? 1 : 0.65 }}>
+            <CheckBox label="Include Scott · +1 609-273-5995" checked={form.whatsapp_group_include_scott} onChange={(value) => setField("whatsapp_group_include_scott", value)} disabled={!form.whatsapp_group_default_enabled} />
+            <CheckBox label="Include Orlando · +506 8718 0512" checked={form.whatsapp_group_include_orlando} onChange={(value) => setField("whatsapp_group_include_orlando", value)} disabled={!form.whatsapp_group_default_enabled} />
+          </div>
+        </section>
+
         <div><button type="submit" disabled={saving} style={{ padding: "9px 14px", borderRadius: 8, border: "none", background: "#111", color: "#fff", cursor: saving ? "wait" : "pointer" }}>{saving ? "Saving…" : "Save property guide"}</button></div>
       </form>) : <p style={{ color: "#666" }}>Select a property to view its guide.</p>}
     </div>
@@ -220,4 +241,8 @@ function Field({ label, value, onChange, required, type = "text", placeholder, i
 
 function TextArea({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
   return <label style={{ fontSize: 12, display: "grid", gap: 4 }}>{label}<textarea value={value} onChange={(event) => onChange(event.target.value)} rows={4} placeholder={placeholder} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #ddd", resize: "vertical" }} /></label>;
+}
+
+function CheckBox({ label, checked, onChange, disabled }: { label: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean }) {
+  return <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: disabled ? "not-allowed" : "pointer" }}><input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />{label}</label>;
 }

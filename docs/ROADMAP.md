@@ -351,11 +351,14 @@ identity. The product goal is a shared, auditable concierge conversation:
 - GuestOpsHQ can draft, send permitted operational messages, create follow-ups,
   surface property/stay context, and record a complete activity history.
 
-This must use Meta's supported WhatsApp Business group capability—not an
-unofficial WhatsApp Web automation or a personal-number workaround. Before
-building it, confirm the business account's group eligibility, supported group
-size, invite/consent flow, webhook events, and any restrictions on existing
-groups. The data model must keep a stable provider group ID, member identities,
+This must use Meta's supported WhatsApp Business group capability—or Twilio's
+supported Conversations-based group-messaging solution—not unofficial
+WhatsApp Web automation or a personal-number workaround. Meta's Groups API
+and Twilio's WhatsApp group-messaging option make this a realistic next phase,
+but the exact path still needs an eligibility and product check. Confirm the
+business account's group eligibility, supported group size, invite/consent
+flow, webhook events, and any restrictions on existing groups before building.
+The data model must keep a stable provider group ID, member identities,
 per-message sender identity, group membership events, and a human/automation
 audit trail. It should remain channel-agnostic so the existing SMS thread is a
 safe fallback when a group cannot be used.

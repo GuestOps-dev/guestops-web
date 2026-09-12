@@ -18,6 +18,9 @@ const PROPERTY_FIELDS = [
   "ai_guide",
   "welcome_message_draft",
   "lodgify_property_id",
+  "whatsapp_group_default_enabled",
+  "whatsapp_group_include_scott",
+  "whatsapp_group_include_orlando",
 ] as const;
 
 type PropertyField = (typeof PROPERTY_FIELDS)[number];
@@ -115,9 +118,16 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const updates: Partial<Record<PropertyField, string | number | null>> = {};
-  for (const field of PROPERTY_FIELDS.filter((field) => field !== "lodgify_property_id")) {
+  const updates: Partial<Record<PropertyField, string | number | boolean | null>> = {};
+  const whatsappFields = ["whatsapp_group_default_enabled", "whatsapp_group_include_scott", "whatsapp_group_include_orlando"] as const;
+  for (const field of PROPERTY_FIELDS.filter((field) => field !== "lodgify_property_id" && !whatsappFields.includes(field as any))) {
     if (body[field] !== undefined) updates[field] = optionalText(body[field]);
+  }
+  for (const field of whatsappFields) {
+    if (body[field] !== undefined) {
+      if (typeof body[field] !== "boolean") return NextResponse.json({ error: "WhatsApp group settings must be true or false" }, { status: 400 });
+      updates[field] = body[field];
+    }
   }
   const lodgifyPropertyId = parseLodgifyPropertyId(body.lodgify_property_id);
   if (body.lodgify_property_id !== undefined && lodgifyPropertyId === undefined) {

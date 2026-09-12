@@ -110,6 +110,7 @@ export default function GuestProfilePanel({
   const [nameValue, setNameValue] = useState(profile.full_name ?? "");
   const [savingName, setSavingName] = useState(false);
   const [editingDetails, setEditingDetails] = useState(false);
+  const [phoneValue, setPhoneValue] = useState(profile.phone_e164 ?? profile.phone ?? "");
   const [emailValue, setEmailValue] = useState(profile.email ?? "");
   const [channelValue, setChannelValue] = useState(profile.preferred_channel ?? "");
   const [languageValue, setLanguageValue] = useState(profile.language_pref ?? "");
@@ -178,6 +179,7 @@ export default function GuestProfilePanel({
         return;
       }
       const email = emailValue.trim();
+      const phone = phoneValue.trim();
       const preferredChannel = channelValue.trim();
       const language = languageValue.trim();
       const res = await fetch(`/api/guests/${guest.id}`, {
@@ -188,6 +190,8 @@ export default function GuestProfilePanel({
         },
         body: JSON.stringify({
           property_id: propertyId,
+          conversation_id: conversationId,
+          phone: phone || null,
           email: email || null,
           preferred_channel: preferredChannel || null,
           language_pref: language || null,
@@ -200,6 +204,8 @@ export default function GuestProfilePanel({
       const data = (await res.json()) as Partial<GuestRow>;
       setProfile((p) => ({
         ...p,
+        phone: data.phone ?? null,
+        phone_e164: data.phone_e164 ?? null,
         email: data.email ?? null,
         preferred_channel: data.preferred_channel ?? null,
         language_pref: data.language_pref ?? null,
@@ -697,9 +703,10 @@ export default function GuestProfilePanel({
 
       {editingDetails ? (
         <div style={{ marginBottom: 14, fontSize: 12 }}>
-          <div style={{ color: "#444", marginBottom: 8 }}>
-            Phone: {profile.phone_e164 || profile.phone || "—"}
-          </div>
+          <label style={{ display: "block", marginBottom: 8 }}>
+            <span style={{ display: "block", color: "#555", marginBottom: 3 }}>Mobile number</span>
+            <input type="tel" value={phoneValue} onChange={(e) => setPhoneValue(e.target.value)} disabled={savingDetails} placeholder="+1 609-555-1234" style={{ width: "100%", boxSizing: "border-box", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 6, fontSize: 12 }} />
+          </label>
           <label style={{ display: "block", marginBottom: 8 }}>
             <span style={{ display: "block", color: "#555", marginBottom: 3 }}>Email</span>
             <input
@@ -749,6 +756,7 @@ export default function GuestProfilePanel({
             type="button"
             onClick={() => {
               setEmailValue(profile.email ?? "");
+              setPhoneValue(profile.phone_e164 ?? profile.phone ?? "");
               setChannelValue(profile.preferred_channel ?? "");
               setLanguageValue(profile.language_pref ?? "");
               setEditingDetails(false);
@@ -770,6 +778,7 @@ export default function GuestProfilePanel({
             type="button"
             onClick={() => {
               setEmailValue(profile.email ?? "");
+              setPhoneValue(profile.phone_e164 ?? profile.phone ?? "");
               setChannelValue(profile.preferred_channel ?? "");
               setLanguageValue(profile.language_pref ?? "");
               setEditingDetails(true);

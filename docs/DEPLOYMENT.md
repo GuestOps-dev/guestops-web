@@ -24,7 +24,7 @@ server-only values or expose them in client-side variables.
 | `TWILIO_ACCOUNT_SID` | Server only | Twilio account ID |
 | `TWILIO_AUTH_TOKEN` | Server only | Validates Twilio signatures and sends SMS |
 | `LODGIFY_API_KEY` | Server only | Reads mapped rentals and reservation data from Lodgify |
-| `LODGIFY_WEBHOOK_SECRET` | Server only | Verifies signed Lodgify booking webhooks |
+| `LODGIFY_WEBHOOK_SECRET` | Optional, server only | Manual override for a signed Lodgify webhook; normally stored internally after activation |
 | `DEFAULT_PROPERTY_ID` | Optional | Local development fallback only |
 
 After adding variables, redeploy the production deployment.
@@ -42,14 +42,18 @@ outbound message.
 
 ## 4. Configure Lodgify booking webhooks
 
-Subscribe Lodgify's `booking_new_status_booked` event to:
+As an owner or administrator, open **New Bookings** in GuestOpsHQ and choose
+**Enable automatic updates**. The app subscribes Lodgify's
+`booking_new_status_booked` event to:
 
 `https://YOUR_DOMAIN/api/lodgify/webhook`
 
-Lodgify returns a signing secret once when the subscription is created. Store
-that value as `LODGIFY_WEBHOOK_SECRET` in Vercel before enabling the endpoint.
-GuestOpsHQ verifies the `ms-signature` HMAC on every request and creates only
-the guest, stay, and Inbox record. It never sends a welcome message.
+The signing secret returned by Lodgify is stored only in GuestOpsHQ's
+server-side integration record; it is not exposed to the browser. A
+`LODGIFY_WEBHOOK_SECRET` Vercel variable is only needed when a webhook was
+created manually outside the app. GuestOpsHQ verifies the `ms-signature` HMAC
+on every request and creates only the guest, stay, and Inbox record. It never
+sends a welcome message.
 
 ### A2P campaign review
 

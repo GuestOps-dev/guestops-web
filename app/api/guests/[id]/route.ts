@@ -134,6 +134,8 @@ export async function PATCH(
       email?: string | null;
       preferred_channel?: string | null;
       language_pref?: string | null;
+      phone?: string | null;
+      conversation_id?: string;
     };
     try {
       body = await req.json();
@@ -184,6 +186,14 @@ export async function PATCH(
     if (invalidTextField(body.language_pref, 80)) {
       return NextResponse.json({ error: "Invalid language" }, { status: 400 });
     }
+    if (invalidTextField(body.phone, 30)) {
+      return NextResponse.json({ error: "Invalid mobile number" }, { status: 400 });
+    }
+    const phone = typeof body.phone === "string" ? body.phone.trim().replace(/[\s().-]/g, "") : body.phone;
+    const normalizedPhone = phone ? (phone.startsWith("+") ? phone : `+${phone}`) : null;
+    if (normalizedPhone && !/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
+      return NextResponse.json({ error: "Enter a valid mobile number with country code, for example +1 609-555-1234" }, { status: 400 });
+    }
     if (
       typeof body.language_pref === "string" &&
       !["", "english", "spanish"].includes(
@@ -217,6 +227,10 @@ export async function PATCH(
               : "Spanish"
             : null
           : null;
+    if (body.phone !== undefined) {
+      updatePayload.phone = normalizedPhone;
+      updatePayload.phone_e164 = normalizedPhone;
+    }
 
     if (Object.keys(updatePayload).length === 0) {
       return NextResponse.json(
@@ -249,6 +263,10 @@ export async function PATCH(
         { error: "Guest not found or access denied" },
         { status: 404 }
       );
+    }
+
+    if (body.conversation_id && normalizedPhone) {
+      await sb.from("conversations").update({ guest_number: normalizedPhone }).eq("id", body.conversation_id).eq("guest_id", id).eq("property_id", propertyId);
     }
 
     return NextResponse.json(data, { status: 200 });
