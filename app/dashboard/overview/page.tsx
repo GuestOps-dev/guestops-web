@@ -17,7 +17,9 @@ export default async function OperationsOverviewPage() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) redirect("/login");
   const { data: memberships } = await (sb as any).rpc("my_property_memberships");
-  const properties = (memberships ?? []).map((item: any) => ({ id: item.property_id as string, name: item.property_name as string }));
+  // A global admin can also have a direct property membership. Keep the
+  // overview one row per house even if an older database function returns both.
+  const properties = Array.from(new Map((memberships ?? []).map((item: any) => [item.property_id as string, { id: item.property_id as string, name: item.property_name as string }])).values());
   const propertyIds = properties.map((item: any) => item.id);
   const [conversationsResult, bookingsResult, tasksResult] = await Promise.all([
     (sb as any).from("conversations").select("property_id, status, last_inbound_at, last_outbound_at").in("property_id", propertyIds),
