@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ issue: data, recurring: true }, { status: 200 });
       }
     }
-    const { data, error } = await sb.from("maintenance_issues").insert({ property_id: propertyId, conversation_id: uuid(body?.conversation_id), guest_id: uuid(body?.guest_id), booking_id: uuid(body?.booking_id), source_message_id: uuid(body?.source_message_id), title, description: clean(body?.description, 6000) || null, category, priority, recurrence_key: recurrenceKey, created_by_user_id: auth.user.id }).select(COLUMNS).single();
+    const { data, error } = await sb.from("maintenance_issues").insert({ property_id: propertyId, conversation_id: uuid(body?.conversation_id), guest_id: uuid(body?.guest_id), booking_id: uuid(body?.booking_id), source_message_id: uuid(body?.source_message_id), title, description: clean(body?.description, 6000) || null, category, priority, status: "open", recurrence_key: recurrenceKey, created_by_user_id: auth.user.id }).select(COLUMNS).single();
     if (error) throw error;
     return NextResponse.json({ issue: data, recurring: false }, { status: 201 });
   } catch (error: any) { return NextResponse.json({ error: error?.message ?? "Unable to save maintenance issue" }, { status: error?.status ?? 400 }); }
