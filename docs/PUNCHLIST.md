@@ -12,14 +12,14 @@ Updated September 12, 2026. This is the working list for the next session; it se
 
 - [ ] **Finish each Property Guide.** All three Lodgify rental mappings and default Scott/Orlando group participants are set. Casa Cielo has approved AI guidance and a welcome draft. Add the house-specific AI guidance, welcome draft, sleeping arrangements, and notes for Casa de Vistas Infinitas and El Nido; fill the remaining Casa Cielo access/house details.
 - [ ] **Verify the Lodgify reservation flow end to end.** Create or use a test reservation, confirm it arrives in New Bookings once, check all guest/stay fields, then move it deliberately into the Inbox. New bookings should create a record only; they must not send a welcome message automatically.
-- [ ] **Add the real team setup.** Decide who needs a login and what each person may do (owner, concierge, operations, viewer). Then add property-level access and a safe way to assign conversations and follow-ups to another team member. The current self-assignment behavior is intentionally limited.
+- [ ] **Add the real team setup.** A protected Team page now lists team access and can send an intentional invitation with an organization role and a role at one selected house. Decide who needs a login (starting with Orlando) and what each person may do. The remaining product work is assigning conversations and follow-ups to another team member; current self-assignment behavior is intentionally limited.
 - [ ] **Restore live AI testing once API billing is active.** The OpenAI key is saved, but the last live request reported an exhausted credit balance. After billing is funded, test a reply draft and a conversation summary with real but non-sensitive examples. AI should remain a draft/recommendation tool until explicitly approved for any new action.
 - [ ] **Confirm the supported WhatsApp group path.** Verify with Meta/Twilio whether the connected WhatsApp Business Account supports the exact group workflow needed: create/manage a group, invite members with consent, receive group events/messages, and retain the provider group ID. Do not automate a personal WhatsApp account or WhatsApp Web.
 
 ## Product improvements queued next
 
 - [ ] **Complete the group-chat launch flow.** New Bookings captures or corrects the guest mobile number before intake; each current property now defaults to a prepared WhatsApp group including Scott and Orlando, and the Inbox shows its setup status and participant list. The remaining step is to create the provider-supported group when available. Default channel remains WhatsApp.
-- [ ] **Build the team/role experience.** Add staff management, property assignments, and an operator-to-operator conversation/follow-up assignment control after the real accounts are known.
+- [ ] **Finish the team/role experience.** Team invitations plus organization/property roles are live. Add multi-property assignment, role editing/removal, and operator-to-operator conversation/follow-up assignment after the real accounts are known.
 - [ ] **Make follow-ups even more operational.** Editing, closing/reopening, and due-date filters are live. Add operator-to-operator reassignment after real staff accounts are available; consider an overdue escalation rule after live use.
 - [ ] **Decide the assistant’s chat name and personality.** GuestOpsHQ is the product; the conversational assistant still needs its final, guest-facing name.
 - [ ] **Continue dashboard usability testing.** Test laptop and phone with live conversations; refine density, filters, follow-up visibility, and empty states based on real concierge use.
@@ -54,11 +54,12 @@ Updated September 12, 2026. This is the working list for the next session; it se
 - WhatsApp Business Account and sender work begun; provider-level group capability still needs confirmation.
 - End-of-day safety safeguards: explicit booking-intake confirmation, internal-only group language, and no live group creation/invitation/message path in the app.
 - A consistent primary navigation bar across the operational workspace.
+- Protected Team workspace: intentional email invitations and a single-property role assignment for owner/admin-managed accounts.
 
 ## Best starting point next time
 
 1. Run one intentionally created **test** Lodgify reservation through New Bookings. Do not use a real guest reservation until the flow is familiar.
 2. Add the remaining house-specific Property Guide details for Casa de Vistas Infinitas and El Nido (and Casa Cielo access details).
-3. Confirm the staff accounts and roles to invite: owner, concierge, operations, and/or viewer.
+3. Decide whether to invite Orlando first through **Team** as a Concierge, then confirm which houses he should access.
 4. Check whether OpenAI API billing is funded, then run one controlled draft test.
 5. Get a definitive Meta/Twilio answer on official WhatsApp group support before building the live group-creation step.
