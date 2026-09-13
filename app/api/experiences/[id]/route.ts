@@ -14,7 +14,7 @@ async function getAuth(req: Request) {
   return error || !data.user ? { supabase: null, user: null, error: "Unauthorized" } : { supabase, user: data.user, error: null };
 }
 
-const COLUMNS = "id, property_id, booking_id, experience_type_id, vendor_id, status, start_at, pickup_location, guest_instructions, internal_notes_private, created_at, experience_types(name), vendors(name), vendor_requests(id, status, sent_at, responded_at, response_message)";
+const COLUMNS = "id, property_id, booking_id, experience_type_id, vendor_id, status, start_at, pickup_location, guest_instructions, internal_notes_private, created_at, experience_types(name), vendors(name), vendor_requests(id, status, sent_at, responded_at, response_message), vendor_coordination_groups(id, display_name, draft_message, status)";
 
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;

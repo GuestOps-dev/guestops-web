@@ -19,7 +19,7 @@ function uuid(value: unknown) {
 }
 function optionalText(value: unknown, max = 5000) { return typeof value === "string" ? value.trim().slice(0, max) || null : null; }
 function optionalDate(value: unknown) { return typeof value === "string" && value && !Number.isNaN(Date.parse(value)) ? new Date(value).toISOString() : null; }
-const COLUMNS = "id, property_id, booking_id, experience_type_id, vendor_id, status, start_at, pickup_location, guest_instructions, internal_notes_private, created_at, experience_types(name), vendors(name), vendor_requests(id, status, sent_at, responded_at, response_message)";
+const COLUMNS = "id, property_id, booking_id, experience_type_id, vendor_id, status, start_at, pickup_location, guest_instructions, internal_notes_private, created_at, experience_types(name), vendors(name), vendor_requests(id, status, sent_at, responded_at, response_message), vendor_coordination_groups(id, display_name, draft_message, status)";
 
 export async function GET(req: Request) {
   const auth = await getAuth(req);

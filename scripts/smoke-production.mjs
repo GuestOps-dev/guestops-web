@@ -102,6 +102,27 @@ const checks = [
     expectedStatus: 401,
   },
   {
+    name: "private vendor coordination rejects anonymous requests",
+    path: "/api/experiences/not-an-experience/coordination",
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+    expectedStatus: 401,
+  },
+  {
+    name: "maintenance list rejects anonymous requests",
+    path: "/api/maintenance?property_id=00000000-0000-0000-0000-000000000000",
+    expectedStatus: 401,
+  },
+  {
+    name: "maintenance updates reject anonymous requests",
+    path: "/api/maintenance/not-an-issue",
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+    expectedStatus: 401,
+  },
+  {
     name: "task list rejects anonymous requests",
     path: "/api/tasks?propertyId=not-a-property",
     expectedStatus: 401,
