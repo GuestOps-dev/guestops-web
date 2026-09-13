@@ -2,6 +2,12 @@
 
 Updated September 12, 2026. This is the working list for the next session; it separates product work that is ready to build from items that depend on an outside service or a business decision.
 
+## End-of-day checkpoint
+
+- [x] **Protected testing from live WhatsApp-group actions.** Starting a Lodgify booking now requires a confirmation that it creates only internal GuestOpsHQ guest/stay/Inbox records. Group screens and follow-ups explicitly say that they are internal preparation only: they do not create a WhatsApp group, invite anyone, or send a guest message.
+- [x] **Unified the main workspace navigation.** Inbox, Overview, New Bookings, Experiences, Follow-ups, Vendors, and Property Guide now share a clear navigation bar designed for laptop and phone use.
+- [x] **Ran the live production safety smoke check.** Public pages, dashboard protection, and protected guest-data/API routes all passed on `guestopshq.com`.
+
 ## First priorities
 
 - [ ] **Finish each Property Guide.** All three Lodgify rental mappings and default Scott/Orlando group participants are set. Casa Cielo has approved AI guidance and a welcome draft. Add the house-specific AI guidance, welcome draft, sleeping arrangements, and notes for Casa de Vistas Infinitas and El Nido; fill the remaining Casa Cielo access/house details.
@@ -46,10 +52,13 @@ Updated September 12, 2026. This is the working list for the next session; it se
 - Vendor workflow and Operations overview foundations, including recent messaging insights.
 - Account-wide Experiences library, with per-property availability controls, approved internal reference details for AI, and stay-level planning/follow-ups for enabled experiences.
 - WhatsApp Business Account and sender work begun; provider-level group capability still needs confirmation.
+- End-of-day safety safeguards: explicit booking-intake confirmation, internal-only group language, and no live group creation/invitation/message path in the app.
+- A consistent primary navigation bar across the operational workspace.
 
 ## Best starting point next time
 
-1. Check whether OpenAI API billing is funded, then run one controlled draft test.
-2. Confirm the list of real staff accounts and intended roles.
-3. Run one Lodgify test reservation through New Bookings.
-4. Get a definitive Meta/Twilio answer on official WhatsApp group support before building the live group-creation step.
+1. Run one intentionally created **test** Lodgify reservation through New Bookings. Do not use a real guest reservation until the flow is familiar.
+2. Add the remaining house-specific Property Guide details for Casa de Vistas Infinitas and El Nido (and Casa Cielo access details).
+3. Confirm the staff accounts and roles to invite: owner, concierge, operations, and/or viewer.
+4. Check whether OpenAI API billing is funded, then run one controlled draft test.
+5. Get a definitive Meta/Twilio answer on official WhatsApp group support before building the live group-creation step.
