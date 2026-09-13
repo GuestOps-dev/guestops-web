@@ -11,6 +11,7 @@ const links = [
   { href: "/dashboard/tasks", label: "Follow-ups" },
   { href: "/dashboard/vendors", label: "Vendors" },
   { href: "/dashboard/properties", label: "Property Guide" },
+  { href: "/dashboard/team", label: "Team" },
 ] as const;
 
 /** Keeps the primary workspace sections easy to reach from every dashboard page. */

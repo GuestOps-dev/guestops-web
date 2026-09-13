@@ -115,6 +115,11 @@ const checks = [
     expectedStatus: 401,
   },
   {
+    name: "team access rejects anonymous requests",
+    path: "/api/team?property_id=00000000-0000-0000-0000-000000000000",
+    expectedStatus: 401,
+  },
+  {
     name: "booking stay updates reject anonymous requests",
     path: "/api/bookings/not-a-booking",
     method: "PATCH",
