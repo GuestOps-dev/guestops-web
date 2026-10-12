@@ -11,6 +11,7 @@ export default function WhatsAppSenderManager() {
   const [number, setNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const token = useCallback(async () => {
@@ -61,6 +62,25 @@ export default function WhatsAppSenderManager() {
     }
   }
 
+  async function connectMetaDelivery() {
+    if (!propertyId) return;
+    setConnecting(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/properties/${propertyId}/whatsapp-sender/subscribe`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${await token()}` },
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Unable to connect Meta WhatsApp.");
+      setMessage("Meta WhatsApp delivery is connected for this sender.");
+    } catch (error: any) {
+      setMessage(error?.message ?? "Unable to connect Meta WhatsApp.");
+    } finally {
+      setConnecting(false);
+    }
+  }
+
   if (!propertyId) return null;
   return (
     <section style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, background: "#fafafa", display: "grid", gap: 10 }}>
@@ -69,8 +89,8 @@ export default function WhatsAppSenderManager() {
         <p style={{ margin: "5px 0 0", color: "#52525b", fontSize: 13, lineHeight: 1.5 }}>Assign the business WhatsApp number that should route inbound guest messages to this house. A number can belong to only one property.</p>
       </div>
       <label style={{ fontSize: 12, display: "grid", gap: 4 }}>Business WhatsApp number<input value={number} disabled={loading} onChange={(event) => setNumber(event.target.value)} placeholder="+1 609…" style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1" }} /></label>
-      {message ? <p role="status" style={{ margin: 0, color: message.startsWith("WhatsApp sender saved") ? "#166534" : "#b91c1c", fontSize: 13 }}>{message}</p> : null}
-      <div><button type="button" onClick={() => void save()} disabled={saving || loading || !number.trim()} style={{ padding: "8px 11px", border: "none", borderRadius: 8, background: "#111", color: "#fff", cursor: saving ? "wait" : "pointer" }}>{saving ? "Saving…" : "Save WhatsApp sender"}</button></div>
+      {message ? <p role="status" style={{ margin: 0, color: message.startsWith("WhatsApp sender saved") || message.startsWith("Meta WhatsApp delivery") ? "#166534" : "#b91c1c", fontSize: 13 }}>{message}</p> : null}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}><button type="button" onClick={() => void save()} disabled={saving || loading || !number.trim()} style={{ padding: "8px 11px", border: "none", borderRadius: 8, background: "#111", color: "#fff", cursor: saving ? "wait" : "pointer" }}>{saving ? "Saving…" : "Save WhatsApp sender"}</button><button type="button" onClick={() => void connectMetaDelivery()} disabled={connecting || loading || !number.trim()} style={{ padding: "8px 11px", border: "1px solid #0f766e", borderRadius: 8, background: "#ecfdf5", color: "#0f766e", cursor: connecting ? "wait" : "pointer" }}>{connecting ? "Connecting…" : "Reconnect Meta delivery"}</button></div>
     </section>
   );
 }
