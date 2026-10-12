@@ -5,6 +5,7 @@ import PropertyGuideManager from "./PropertyGuideManager";
 import PropertyGuideReadiness from "./PropertyGuideReadiness";
 import KnownContactsManager from "./KnownContactsManager";
 import SleepingArrangementsManager from "./SleepingArrangementsManager";
+import WhatsAppSenderManager from "./WhatsAppSenderManager";
 import DashboardNavigation from "../DashboardNavigation";
 
 export default async function PropertiesPage() {
@@ -39,6 +40,7 @@ export default async function PropertiesPage() {
         </p>
         <PropertyGuideReadiness properties={guideReadiness ?? []} />
         <PropertyGuideManager />
+        <WhatsAppSenderManager />
         <SleepingArrangementsManager />
         <KnownContactsManager />
       </main>
