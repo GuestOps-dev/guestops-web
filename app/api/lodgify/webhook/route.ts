@@ -107,7 +107,7 @@ export async function POST(req: Request) {
     if (!lodgifyPropertyId) throw new Error("The booking has no Lodgify property.");
 
     const sb = getSupabaseServiceClient() as any;
-    const { data: property } = await sb.from("properties").select("id, whatsapp_group_default_enabled").eq("lodgify_property_id", lodgifyPropertyId).maybeSingle();
+    const { data: property } = await sb.from("properties").select("id, name, whatsapp_group_default_enabled").eq("lodgify_property_id", lodgifyPropertyId).maybeSingle();
     if (!property) return NextResponse.json({ received: true, ignored: true }, { status: 200 });
 
     const fullName = text(imported.guest?.name) ?? text(imported.guest?.guest_name);
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
 
     if (property.whatsapp_group_default_enabled && conversation?.id) {
       try {
-        await prepareGroupForStay({ propertyId: property.id, bookingId: booking.id, conversationId: conversation.id, guestId, guestName: fullName, guestPhone: phone });
+        await prepareGroupForStay({ propertyId: property.id, bookingId: booking.id, conversationId: conversation.id, guestId, guestName: fullName, guestPhone: phone, propertyName: property.name ?? null, checkInDate: date(imported.arrival), checkOutDate: date(imported.departure) });
       } catch (groupError) {
         console.error("Unable to prepare messaging group:", groupError);
       }

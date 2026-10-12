@@ -196,7 +196,7 @@ export async function POST(req: Request) {
 
     if (property.whatsapp_group_default_enabled) {
       try {
-        await prepareGroupForStay({ propertyId: property.property_id, bookingId: booking.id, conversationId: conversation.id, guestId, guestName: fullName, guestPhone: phone });
+        await prepareGroupForStay({ propertyId: property.property_id, bookingId: booking.id, conversationId: conversation.id, guestId, guestName: fullName, guestPhone: phone, propertyName: property.property_name, checkInDate: date(imported.arrival), checkOutDate: date(imported.departure) });
       } catch (groupError) {
         console.error("Unable to prepare messaging group:", groupError);
       }

@@ -7,7 +7,35 @@ type PreparedStay = {
   guestId: string;
   guestName: string | null;
   guestPhone: string | null;
+  propertyName: string | null;
+  checkInDate: string | null;
+  checkOutDate: string | null;
 };
+
+const groupNameByProperty: Record<string, string> = {
+  "Casa de Vistas Infinitas": "Vistas",
+  "Casa Cielo": "Cielo",
+  "El Nido": "El Nido",
+};
+
+function shortPropertyName(name: string | null): string {
+  if (!name) return "Stay";
+  return groupNameByProperty[name] ?? (name.replace(/^Casa de\s+/i, "").replace(/^Casa\s+/i, "").trim() || "Stay");
+}
+
+function shortDate(date: string | null): string | null {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "2-digit", timeZone: "UTC" })
+    .format(new Date(`${date}T12:00:00Z`));
+}
+
+export function groupDisplayName(stay: Pick<PreparedStay, "propertyName" | "checkInDate" | "checkOutDate" | "guestName">): string {
+  const property = shortPropertyName(stay.propertyName);
+  const checkIn = shortDate(stay.checkInDate);
+  const checkOut = shortDate(stay.checkOutDate);
+  if (checkIn && checkOut) return `${property} - ${checkIn} to ${checkOut}`;
+  return `${property} - ${stay.guestName ?? "upcoming stay"}`;
+}
 
 /**
  * Creates an internal, provider-neutral group setup record. It deliberately
@@ -16,7 +44,7 @@ type PreparedStay = {
  */
 export async function prepareGroupForStay(stay: PreparedStay) {
   const supabase = getSupabaseServiceClient() as any;
-  const displayName = `${stay.guestName ?? "Guest"} · upcoming stay`;
+  const displayName = groupDisplayName(stay);
 
   const { data: group, error: groupError } = await supabase
     .from("messaging_groups")
