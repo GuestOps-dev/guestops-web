@@ -106,7 +106,7 @@ export default function WhatsAppSenderManager() {
   }
 
   async function createPrivateTestGroup() {
-    if (!propertyId || !window.confirm("Create the private WhatsApp group ‘Vistas - Nido - Cielo - Test’? No guest or customer will be added. Meta will return an invite link for you and Orlando.")) return;
+    if (!propertyId) return;
     setCreatingGroup(true);
     setMessage(null);
     try {
