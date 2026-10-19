@@ -104,7 +104,10 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ subject: "Vistas - Nido - Cielo - Test" }),
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        subject: "Vistas - Nido - Cielo - Test",
+      }),
       cache: "no-store",
     });
     const result = await response.json().catch(() => null) as (MetaError & { id?: string; group_id?: string; invite_link?: string }) | null;

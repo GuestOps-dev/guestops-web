@@ -95,7 +95,8 @@ export default function WhatsAppSenderManager() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Unable to check Meta Groups API.");
       setGroupsEnabled(result.enabled === true);
-      setMessage(result.enabled ? "Meta Groups API is enabled for this sender. You can create a private test group." : (result.error ?? "Meta Groups API is not enabled for this sender yet."));
+      const activeGroups = Number.isFinite(result.activeGroups) ? result.activeGroups : 0;
+      setMessage(result.enabled ? `Meta Groups API is enabled for this sender (${activeGroups} active ${activeGroups === 1 ? "group" : "groups"}). You can create a private test group.` : (result.error ?? "Meta Groups API is not enabled for this sender yet."));
     } catch (error: any) {
       setGroupsEnabled(false);
       setMessage(error?.message ?? "Unable to check Meta Groups API.");
