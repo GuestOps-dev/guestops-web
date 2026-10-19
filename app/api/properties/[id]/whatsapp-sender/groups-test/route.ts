@@ -22,17 +22,34 @@ async function authorize(req: NextRequest, id: string) {
 
 function metaConfig() {
   const accessToken = process.env.META_WHATSAPP_ACCESS_TOKEN;
-  const phoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
-  if (!accessToken || !phoneNumberId) {
+  const wabaId = process.env.META_WHATSAPP_WABA_ID;
+  if (!accessToken || !wabaId) {
     const configError: any = new Error("Meta Groups testing is not fully configured yet.");
     configError.status = 503;
     throw configError;
   }
-  return { accessToken, phoneNumberId };
+  return { accessToken, wabaId };
 }
 
 function metaUrl(phoneNumberId: string) {
   return `https://graph.facebook.com/${META_API_VERSION}/${encodeURIComponent(phoneNumberId)}/groups`;
+}
+
+/** The current dedicated WABA has one Cloud API phone number. Resolving it
+ * from the WABA avoids storing a second, easily-stale production setting. */
+async function resolvePhoneNumberId(accessToken: string, wabaId: string) {
+  const response = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${encodeURIComponent(wabaId)}/phone_numbers?fields=id`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
+  const result = await response.json().catch(() => null) as { data?: Array<{ id?: string }>; error?: { message?: string } } | null;
+  const ids = (result?.data ?? []).map((item) => item.id).filter((id): id is string => Boolean(id));
+  if (!response.ok || ids.length !== 1) {
+    const configError: any = new Error(result?.error?.message ?? "Unable to identify the connected Meta WhatsApp sender.");
+    configError.status = 502;
+    throw configError;
+  }
+  return ids[0];
 }
 
 function metaFailure(result: MetaError | null) {
@@ -47,7 +64,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   try {
     const { id } = await context.params;
     await authorize(req, id);
-    const { accessToken, phoneNumberId } = metaConfig();
+    const { accessToken, wabaId } = metaConfig();
+    const phoneNumberId = await resolvePhoneNumberId(accessToken, wabaId);
     const response = await fetch(metaUrl(phoneNumberId), {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
@@ -78,7 +96,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "Confirmation required before creating a test group." }, { status: 400 });
     }
 
-    const { accessToken, phoneNumberId } = metaConfig();
+    const { accessToken, wabaId } = metaConfig();
+    const phoneNumberId = await resolvePhoneNumberId(accessToken, wabaId);
     const response = await fetch(metaUrl(phoneNumberId), {
       method: "POST",
       headers: {
