@@ -58,7 +58,8 @@ function metaFailure(result: MetaError | null) {
 
 /**
  * A no-side-effect capability probe. A successful response can be an empty
- * group list; that still proves the sender is eligible to use the endpoint.
+ * group list; it only proves Meta accepts the read endpoint. A group creation
+ * request is still required to verify the sender's eligibility.
  */
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -77,7 +78,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     }
 
     const groups = Array.isArray((result as { data?: unknown[] } | null)?.data) ? (result as { data: unknown[] }).data.length : 0;
-    return NextResponse.json({ enabled: true, activeGroups: groups });
+    return NextResponse.json({ reachable: true, activeGroups: groups });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? "Unable to check Meta Groups API" }, { status: error?.status ?? 500 });
   }

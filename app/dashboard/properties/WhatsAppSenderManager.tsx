@@ -14,7 +14,7 @@ export default function WhatsAppSenderManager() {
   const [connecting, setConnecting] = useState(false);
   const [checkingGroups, setCheckingGroups] = useState(false);
   const [creatingGroup, setCreatingGroup] = useState(false);
-  const [groupsEnabled, setGroupsEnabled] = useState<boolean | null>(null);
+  const [groupsEndpointReachable, setGroupsEndpointReachable] = useState<boolean | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -94,11 +94,11 @@ export default function WhatsAppSenderManager() {
       const response = await fetch(`/api/properties/${propertyId}/whatsapp-sender/groups-test`, { headers: { Authorization: `Bearer ${await token()}` } });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Unable to check Meta Groups API.");
-      setGroupsEnabled(result.enabled === true);
+      setGroupsEndpointReachable(result.reachable === true);
       const activeGroups = Number.isFinite(result.activeGroups) ? result.activeGroups : 0;
-      setMessage(result.enabled ? `Meta Groups API is enabled for this sender (${activeGroups} active ${activeGroups === 1 ? "group" : "groups"}). You can create a private test group.` : (result.error ?? "Meta Groups API is not enabled for this sender yet."));
+      setMessage(result.reachable ? `Meta’s Groups endpoint is reachable (${activeGroups} active ${activeGroups === 1 ? "group" : "groups"}). Create a private test group to verify eligibility.` : (result.error ?? "Meta Groups API is not available for this sender yet."));
     } catch (error: any) {
-      setGroupsEnabled(false);
+      setGroupsEndpointReachable(false);
       setMessage(error?.message ?? "Unable to check Meta Groups API.");
     } finally {
       setCheckingGroups(false);
@@ -134,8 +134,8 @@ export default function WhatsAppSenderManager() {
         <p style={{ margin: "5px 0 0", color: "#52525b", fontSize: 13, lineHeight: 1.5 }}>Assign the business WhatsApp number that should route inbound guest messages to this house. A number can belong to only one property.</p>
       </div>
       <label style={{ fontSize: 12, display: "grid", gap: 4 }}>Business WhatsApp number<input value={number} disabled={loading} onChange={(event) => setNumber(event.target.value)} placeholder="+1 609…" style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1" }} /></label>
-      {message ? <p role="status" style={{ margin: 0, color: message.startsWith("WhatsApp sender saved") || message.startsWith("Meta WhatsApp delivery") || message.startsWith("Meta Groups API is enabled") || message.startsWith("Private test group created") ? "#166534" : "#b91c1c", fontSize: 13 }}>{message}</p> : null}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}><button type="button" onClick={() => void save()} disabled={saving || loading || !number.trim()} style={{ padding: "8px 11px", border: "none", borderRadius: 8, background: "#111", color: "#fff", cursor: saving ? "wait" : "pointer" }}>{saving ? "Saving…" : "Save WhatsApp sender"}</button><button type="button" onClick={() => void connectMetaDelivery()} disabled={connecting || loading || !number.trim()} style={{ padding: "8px 11px", border: "1px solid #0f766e", borderRadius: 8, background: "#ecfdf5", color: "#0f766e", cursor: connecting ? "wait" : "pointer" }}>{connecting ? "Connecting…" : "Reconnect Meta delivery"}</button><button type="button" onClick={() => void checkGroupsApi()} disabled={checkingGroups || loading || !number.trim()} style={{ padding: "8px 11px", border: "1px solid #4338ca", borderRadius: 8, background: "#eef2ff", color: "#3730a3", cursor: checkingGroups ? "wait" : "pointer" }}>{checkingGroups ? "Checking…" : "Check Groups API"}</button>{groupsEnabled ? <button type="button" onClick={() => void createPrivateTestGroup()} disabled={creatingGroup} style={{ padding: "8px 11px", border: "1px solid #7c2d12", borderRadius: 8, background: "#fff7ed", color: "#9a3412", cursor: creatingGroup ? "wait" : "pointer" }}>{creatingGroup ? "Creating…" : "Create private test group"}</button> : null}</div>
+      {message ? <p role="status" style={{ margin: 0, color: message.startsWith("WhatsApp sender saved") || message.startsWith("Meta WhatsApp delivery") || message.startsWith("Meta’s Groups endpoint is reachable") || message.startsWith("Private test group created") ? "#166534" : "#b91c1c", fontSize: 13 }}>{message}</p> : null}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}><button type="button" onClick={() => void save()} disabled={saving || loading || !number.trim()} style={{ padding: "8px 11px", border: "none", borderRadius: 8, background: "#111", color: "#fff", cursor: saving ? "wait" : "pointer" }}>{saving ? "Saving…" : "Save WhatsApp sender"}</button><button type="button" onClick={() => void connectMetaDelivery()} disabled={connecting || loading || !number.trim()} style={{ padding: "8px 11px", border: "1px solid #0f766e", borderRadius: 8, background: "#ecfdf5", color: "#0f766e", cursor: connecting ? "wait" : "pointer" }}>{connecting ? "Connecting…" : "Reconnect Meta delivery"}</button><button type="button" onClick={() => void checkGroupsApi()} disabled={checkingGroups || loading || !number.trim()} style={{ padding: "8px 11px", border: "1px solid #4338ca", borderRadius: 8, background: "#eef2ff", color: "#3730a3", cursor: checkingGroups ? "wait" : "pointer" }}>{checkingGroups ? "Checking…" : "Check Groups API"}</button>{groupsEndpointReachable ? <button type="button" onClick={() => void createPrivateTestGroup()} disabled={creatingGroup} style={{ padding: "8px 11px", border: "1px solid #7c2d12", borderRadius: 8, background: "#fff7ed", color: "#9a3412", cursor: creatingGroup ? "wait" : "pointer" }}>{creatingGroup ? "Creating…" : "Create private test group"}</button> : null}</div>
       {inviteLink ? <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>Invite link: <a href={inviteLink} target="_blank" rel="noreferrer">Open the private WhatsApp test group</a></p> : null}
     </section>
   );
