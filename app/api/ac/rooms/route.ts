@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuth } from "@/lib/api/requireApiAuth";
 import { assertCanAccessProperty, requirePropertyId } from "@/lib/supabaseApiAuth";
+import { getSupabaseServiceClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,10 @@ export async function GET(req: NextRequest) {
   try {
     const propertyId = requirePropertyId(req.nextUrl.searchParams.get("property_id"));
     await assertCanAccessProperty(auth.supabase, propertyId);
-    const sb = auth.supabase as any;
+    // The caller's RLS client above verifies property membership. Use the
+    // trusted server client for the legacy room/control tables so a stale
+    // table-level policy cannot hide rooms from a valid assigned manager.
+    const sb = getSupabaseServiceClient() as any;
     const { data: rooms, error: roomError } = await sb.from("property_rooms").select(ROOM_COLUMNS).eq("property_id", propertyId).order("sort_order").order("name");
     if (roomError) throw roomError;
     const roomIds = (rooms ?? []).map((room: any) => room.id);
@@ -50,7 +54,7 @@ export async function POST(req: NextRequest) {
     const roomId = uuid(body?.room_id);
     if (!roomId) return NextResponse.json({ error: "A valid room_id is required" }, { status: 400 });
     await assertCanAccessProperty(auth.supabase, propertyId);
-    const sb = auth.supabase as any;
+    const sb = getSupabaseServiceClient() as any;
     const { data: room, error: roomError } = await sb.from("property_rooms").select("id, property_id").eq("id", roomId).eq("property_id", propertyId).maybeSingle();
     if (roomError) throw roomError;
     if (!room) return NextResponse.json({ error: "That room is not available for this property" }, { status: 400 });
