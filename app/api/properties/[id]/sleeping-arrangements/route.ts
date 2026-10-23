@@ -27,12 +27,15 @@ async function access(req: NextRequest, rawId: string) {
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params; const { sb, propertyId } = await access(req, id);
-    const { data: rooms, error: roomsError } = await sb.from("property_rooms").select("id, name, room_type, notes, sort_order").eq("property_id", propertyId).order("sort_order").order("created_at");
+    // Older GuestOps projects created property_rooms before room_type existed.
+    // Keep the arrangement tool usable for those homes; legacy rooms are bedrooms
+    // until a schema upgrade can persist more granular room types.
+    const { data: rooms, error: roomsError } = await sb.from("property_rooms").select("id, name, notes, sort_order").eq("property_id", propertyId).order("sort_order").order("created_at");
     if (roomsError) throw roomsError;
     const roomIds = (rooms ?? []).map((room: any) => room.id);
     const { data: beds, error: bedsError } = roomIds.length ? await sb.from("property_beds").select("id, room_id, bed_type, quantity, sleeps, notes").in("room_id", roomIds).order("created_at") : { data: [], error: null };
     if (bedsError) throw bedsError;
-    return NextResponse.json({ rooms: (rooms ?? []).map((room: any) => ({ ...room, beds: (beds ?? []).filter((bed: any) => bed.room_id === room.id) })) });
+    return NextResponse.json({ rooms: (rooms ?? []).map((room: any) => ({ ...room, room_type: "bedroom", beds: (beds ?? []).filter((bed: any) => bed.room_id === room.id) })) });
   } catch (error: any) { return NextResponse.json({ error: error?.message ?? "Unable to load sleeping arrangements" }, { status: error?.status ?? 500 }); }
 }
 
@@ -43,8 +46,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       const name = clean(body.name, 120); const roomType = clean(body.room_type, 30) || "bedroom";
       if (!name || !["bedroom", "loft", "living_area", "other"].includes(roomType)) return NextResponse.json({ error: "Enter a room name and valid room type." }, { status: 400 });
       const { count } = await sb.from("property_rooms").select("id", { count: "exact", head: true }).eq("property_id", propertyId);
-      const { data, error } = await sb.from("property_rooms").insert({ property_id: propertyId, name, room_type: roomType, notes: clean(body.notes, 1000) || null, sort_order: count ?? 0 }).select("id, name, room_type, notes, sort_order").single();
-      if (error) throw error; return NextResponse.json(data, { status: 201 });
+      const { data, error } = await sb.from("property_rooms").insert({ property_id: propertyId, name, notes: clean(body.notes, 1000) || null, sort_order: count ?? 0 }).select("id, name, notes, sort_order").single();
+      if (error) throw error; return NextResponse.json({ ...data, room_type: roomType }, { status: 201 });
     }
     if (body.action === "bed") {
       const roomId = clean(body.room_id, 80); const bedType = clean(body.bed_type, 30); const quantity = positiveInteger(body.quantity, 12); const sleeps = positiveInteger(body.sleeps, 24);

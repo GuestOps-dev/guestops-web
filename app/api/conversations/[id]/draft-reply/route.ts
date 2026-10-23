@@ -57,7 +57,7 @@ export async function POST(
       ? sb.from("bookings").select("check_in_date, check_out_date, party_size").eq("id", conversation.booking_id).eq("property_id", propertyId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     sb.from("known_contacts").select("name, role, ai_context").eq("property_id", propertyId).order("name").limit(30),
-    sb.from("property_rooms").select("name, room_type, notes, property_beds(bed_type, quantity, sleeps, notes)").eq("property_id", propertyId).order("sort_order").order("created_at").limit(30),
+    sb.from("property_rooms").select("name, notes, property_beds(bed_type, quantity, sleeps, notes)").eq("property_id", propertyId).order("sort_order").order("created_at").limit(30),
     sb.from("property_experience_availability").select("experience_library(name, details, active)").eq("property_id", propertyId).eq("enabled", true).limit(80),
     sb.from("inbound_messages").select("body, created_at").eq("conversation_id", conversationId).order("created_at", { ascending: false }).limit(16),
     sb.from("outbound_messages").select("body, created_at").eq("conversation_id", conversationId).order("created_at", { ascending: false }).limit(16),
@@ -89,7 +89,7 @@ export async function POST(
   }));
   const sleepingArrangements = (roomsResult.data ?? []).map((room: any) => ({
     room: tidy(room.name, 120),
-    type: tidy(room.room_type, 40),
+    type: tidy(room.room_type ?? "bedroom", 40),
     note: tidy(room.notes, 500),
     beds: (room.property_beds ?? []).slice(0, 12).map((bed: any) => ({
       type: tidy(bed.bed_type, 40),
