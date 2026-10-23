@@ -5,6 +5,7 @@ import { assertCanAccessProperty, requirePropertyId } from "@/lib/supabaseApiAut
 
 function clean(value: unknown, limit: number) { return typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, limit) : ""; }
 function positiveInteger(value: unknown, max: number) { const n = Number(value); return Number.isInteger(n) && n >= 1 && n <= max ? n : null; }
+function defaultSleeps(bedType: string) { return bedType === "twin" ? 1 : bedType === "bunk" ? 2 : 2; }
 
 async function client(req: NextRequest) {
   const header = req.headers.get("authorization") ?? "";
@@ -33,9 +34,9 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     const { data: rooms, error: roomsError } = await sb.from("property_rooms").select("id, name, notes, sort_order").eq("property_id", propertyId).order("sort_order").order("created_at");
     if (roomsError) throw roomsError;
     const roomIds = (rooms ?? []).map((room: any) => room.id);
-    const { data: beds, error: bedsError } = roomIds.length ? await sb.from("property_beds").select("id, room_id, bed_type, quantity, sleeps, notes").in("room_id", roomIds).order("created_at") : { data: [], error: null };
+    const { data: beds, error: bedsError } = roomIds.length ? await sb.from("property_beds").select("id, room_id, bed_type, quantity, notes").in("room_id", roomIds).order("created_at") : { data: [], error: null };
     if (bedsError) throw bedsError;
-    return NextResponse.json({ rooms: (rooms ?? []).map((room: any) => ({ ...room, room_type: "bedroom", beds: (beds ?? []).filter((bed: any) => bed.room_id === room.id) })) });
+    return NextResponse.json({ rooms: (rooms ?? []).map((room: any) => ({ ...room, room_type: "bedroom", beds: (beds ?? []).filter((bed: any) => bed.room_id === room.id).map((bed: any) => ({ ...bed, sleeps: defaultSleeps(bed.bed_type) })) })) });
   } catch (error: any) { return NextResponse.json({ error: error?.message ?? "Unable to load sleeping arrangements" }, { status: error?.status ?? 500 }); }
 }
 
@@ -54,8 +55,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       if (!roomId || !["king", "queen", "full", "twin", "bunk", "sofa_bed", "other"].includes(bedType) || !quantity || !sleeps) return NextResponse.json({ error: "Enter valid bed details." }, { status: 400 });
       const { data: room } = await sb.from("property_rooms").select("id").eq("id", roomId).eq("property_id", propertyId).maybeSingle();
       if (!room) return NextResponse.json({ error: "Room not found." }, { status: 404 });
-      const { data, error } = await sb.from("property_beds").insert({ room_id: roomId, bed_type: bedType, quantity, sleeps, notes: clean(body.notes, 500) || null }).select("id, room_id, bed_type, quantity, sleeps, notes").single();
-      if (error) throw error; return NextResponse.json(data, { status: 201 });
+      const { data, error } = await sb.from("property_beds").insert({ room_id: roomId, bed_type: bedType, quantity, notes: clean(body.notes, 500) || null }).select("id, room_id, bed_type, quantity, notes").single();
+      if (error) throw error; return NextResponse.json({ ...data, sleeps: defaultSleeps(bedType) }, { status: 201 });
     }
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });
   } catch (error: any) { return NextResponse.json({ error: error?.message ?? "Unable to save sleeping arrangement" }, { status: error?.status ?? 500 }); }
