@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuth } from "@/lib/api/requireApiAuth";
 import { getSupabaseRlsServerClient } from "@/lib/supabase/getSupabaseRlsServerClient";
 import { assertCanAccessProperty, requirePropertyId } from "@/lib/supabaseApiAuth";
+import { getSupabaseServiceClient } from "@/lib/supabaseServer";
 
 function clean(value: unknown, limit: number) { return typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, limit) : ""; }
 function positiveInteger(value: unknown, max: number) { const n = Number(value); return Number.isInteger(n) && n >= 1 && n <= max ? n : null; }
@@ -22,7 +23,11 @@ async function access(req: NextRequest, rawId: string) {
   if (!auth.user) throw Object.assign(new Error("Unauthorized"), { status: 401 });
   const propertyId = requirePropertyId(rawId);
   await assertCanAccessProperty(auth.supabase, propertyId);
-  return { sb: auth.supabase as any, propertyId };
+  // Property access is checked above using the caller's RLS-bound client.
+  // Use the trusted server client for room records because older projects may
+  // have a legacy property_rooms RLS policy that does not match current
+  // property assignments (and would otherwise reject a valid manager insert).
+  return { sb: getSupabaseServiceClient() as any, propertyId };
 }
 
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
