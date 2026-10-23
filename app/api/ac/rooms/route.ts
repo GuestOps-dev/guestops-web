@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 // configured sleeping-arrangement room as eligible rather than breaking the
 // read path while schema history catches up.
 const ROOM_COLUMNS = "id, property_id, name, notes, sort_order";
-const CONTROL_COLUMNS = "room_id, controller_provider, controller_display_name, sensor_provider, sensor_display_name, mapping_status, pre_cool_temperature_c, live_commands_enabled, updated_at";
+const CONTROL_COLUMNS = "room_id, controller_provider, controller_device_id, controller_external_id, controller_display_name, sensor_provider, sensor_device_id, sensor_external_id, sensor_display_name, mapping_status, pre_cool_temperature_c, live_commands_enabled, updated_at";
 
 function uuid(value: unknown) {
   return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) ? value : null;
@@ -60,10 +60,22 @@ export async function POST(req: NextRequest) {
     if (!room) return NextResponse.json({ error: "That room is not available for this property" }, { status: 400 });
     const configuredTemperature = temperature(body?.pre_cool_temperature_c);
     if (configuredTemperature === undefined) return NextResponse.json({ error: "Pre-cool temperature must be between 16°C and 30°C" }, { status: 400 });
-    const mappingStatus = typeof body?.mapping_status === "string" && ["unmapped", "pending_verification", "verified", "disabled"].includes(body.mapping_status) ? body.mapping_status : "unmapped";
-    // Provider IDs are deliberately not accepted here. They must be added through a verified integration flow.
-    const { data, error } = await sb.from("ac_room_controls").upsert({ room_id: roomId, mapping_status: mappingStatus, pre_cool_temperature_c: configuredTemperature, live_commands_enabled: false, updated_at: new Date().toISOString() }, { onConflict: "room_id" }).select(CONTROL_COLUMNS).single();
+    const controllerDeviceId = body?.controller_device_id === null || body?.controller_device_id === "" ? null : uuid(body?.controller_device_id);
+    const sensorDeviceId = body?.sensor_device_id === null || body?.sensor_device_id === "" ? null : uuid(body?.sensor_device_id);
+    if ((body?.controller_device_id && !controllerDeviceId) || (body?.sensor_device_id && !sensorDeviceId)) return NextResponse.json({ error: "Invalid device mapping." }, { status: 400 });
+    const deviceIds = [controllerDeviceId, sensorDeviceId].filter(Boolean) as string[];
+    const { data: mappedDevices, error: deviceError } = deviceIds.length ? await sb.from("ac_devices").select("id, provider, property_id, external_device_id, friendly_name, provider_name").in("id", deviceIds).eq("property_id", propertyId) : { data: [], error: null };
+    if (deviceError) throw deviceError;
+    if ((mappedDevices ?? []).length !== deviceIds.length) return NextResponse.json({ error: "Mapped devices must belong to this house." }, { status: 400 });
+    const controller = (mappedDevices ?? []).find((device: any) => device.id === controllerDeviceId);
+    const sensor = (mappedDevices ?? []).find((device: any) => device.id === sensorDeviceId);
+    if (controller && controller.provider !== "cielo") return NextResponse.json({ error: "The room controller must be a Cielo device." }, { status: 400 });
+    if (sensor && sensor.provider !== "yolink") return NextResponse.json({ error: "The room motion sensor must be a YoLink device." }, { status: 400 });
+    const requestedStatus = typeof body?.mapping_status === "string" && ["unmapped", "pending_verification", "verified", "disabled"].includes(body.mapping_status) ? body.mapping_status : "unmapped";
+    const mappingStatus = requestedStatus === "verified" && (!controller || !sensor) ? "pending_verification" : requestedStatus;
+    const liveCommands = body?.live_commands_enabled === true && mappingStatus === "verified" && Boolean(controller && sensor);
+    const { data, error } = await sb.from("ac_room_controls").upsert({ room_id: roomId, mapping_status: mappingStatus, pre_cool_temperature_c: configuredTemperature, live_commands_enabled: liveCommands, controller_device_id: controller?.id ?? null, controller_external_id: controller?.external_device_id ?? null, controller_display_name: controller ? (controller.friendly_name ?? controller.provider_name) : null, sensor_device_id: sensor?.id ?? null, sensor_external_id: sensor?.external_device_id ?? null, sensor_display_name: sensor ? (sensor.friendly_name ?? sensor.provider_name) : null, updated_at: new Date().toISOString() }, { onConflict: "room_id" }).select(CONTROL_COLUMNS).single();
     if (error) throw error;
-    return NextResponse.json({ control: data, note: "Saved in simulation mode. No physical AC command can be sent from this configuration." });
+    return NextResponse.json({ control: data, note: liveCommands ? "Verified mapping saved. The authenticated automation endpoint may now control this room." : "Mapping saved without enabling automatic commands." });
   } catch (error: any) { return NextResponse.json({ error: error?.message ?? "Unable to save AC room settings" }, { status: error?.status ?? 400 }); }
 }
