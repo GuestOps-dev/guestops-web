@@ -19,10 +19,10 @@ export async function GET(req: NextRequest) {
       .order("provider")
       .order("provider_name");
     const { data, error } = includeUnassigned
-      ? await table.or(`property_id.eq.${propertyId},property_id.is.null`)
+      ? await table
       : await table.eq("property_id", propertyId);
     if (error) throw error;
-    return NextResponse.json({ devices: data ?? [], unassigned: includeUnassigned ? (data ?? []).filter((device: any) => !device.property_id) : [] });
+    return NextResponse.json({ devices: includeUnassigned ? (data ?? []).filter((device: any) => device.property_id === propertyId) : data ?? [], mappings: includeUnassigned ? data ?? [] : [] });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? "Unable to load device health" }, { status: error?.status ?? 400 });
   }
