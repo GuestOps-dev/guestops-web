@@ -11,11 +11,16 @@ function collectDevices(value: unknown, result: Record<string, unknown>[]) {
 }
 
 export async function listCieloDevices(): Promise<CieloDevice[]> {
-  const apiKey = process.env.CIELOWIGLE_API;
+  // Vercel secrets are often pasted with surrounding whitespace or quotes.
+  // Normalize only at the server boundary; the original secret is never logged.
+  const apiKey = process.env.CIELOWIGLE_API?.trim().replace(/^['\"]|['\"]$/g, "");
   if (!apiKey) throw new Error("Cielo API key is not configured");
   const auth = await fetch(`${BASE_URL}/authenticate`, { method: "POST", headers: { "x-api-key": apiKey }, cache: "no-store" });
   const authBody = await auth.json().catch(() => null);
-  if (!auth.ok) throw new Error(`Cielo authentication failed (${auth.status})`);
+  if (!auth.ok) {
+    const reason = [authBody?.message, authBody?.error, authBody?.detail].find((value) => typeof value === "string" && value.trim());
+    throw new Error(`Cielo authentication failed (${auth.status})${reason ? `: ${reason}` : ""}`);
+  }
   const token = authBody?.data?.access_token;
   if (typeof token !== "string" || !token) throw new Error("Cielo returned an invalid authentication response");
   const response = await fetch(`${BASE_URL}/devices/?cached_appliance_ids=[]`, { headers: { "x-api-key": apiKey, Authorization: token }, cache: "no-store" });
