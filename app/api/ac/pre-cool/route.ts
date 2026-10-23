@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     if (!roomIds.length || !["start", "extend", "cancel"].includes(action)) return NextResponse.json({ error: "Choose at least one room and a valid action" }, { status: 400 });
     await assertCanAccessProperty(auth.supabase, propertyId);
     const sb = auth.supabase as any;
-    const { data: rooms, error: roomError } = await sb.from("property_rooms").select("id, name").eq("property_id", propertyId).in("id", roomIds).in("room_type", ["bedroom", "loft"]);
+    const { data: rooms, error: roomError } = await sb.from("property_rooms").select("id, name").eq("property_id", propertyId).in("id", roomIds);
     if (roomError) throw roomError;
     if ((rooms ?? []).length !== roomIds.length) return NextResponse.json({ error: "One or more selected rooms are unavailable" }, { status: 400 });
     const { data: controls, error: controlError } = await sb.from("ac_room_controls").select("room_id, pre_cool_temperature_c, mapping_status, live_commands_enabled").in("room_id", roomIds);

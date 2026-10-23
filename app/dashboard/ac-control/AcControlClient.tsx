@@ -6,7 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 type Property = { id: string; name: string; role: string | null };
 type Override = { id: string; expires_at: string; target_temperature_c: number | null };
 type Control = { mapping_status: "unmapped" | "pending_verification" | "verified" | "disabled"; pre_cool_temperature_c: number | null; controller_display_name: string | null; sensor_display_name: string | null; live_commands_enabled: boolean };
-type Room = { id: string; name: string; room_type: string; control: Control | null; active_override: Override | null };
+type Room = { id: string; name: string; control: Control | null; active_override: Override | null };
 type Result = { room_id: string; room_name: string; result: "accepted" | "skipped"; detail: string; override: Override | null };
 
 const field: React.CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 8, padding: "8px 10px", background: "#fff" };

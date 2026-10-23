@@ -4,7 +4,10 @@ import { assertCanAccessProperty, requirePropertyId } from "@/lib/supabaseApiAut
 
 export const runtime = "nodejs";
 
-const ROOM_COLUMNS = "id, property_id, name, room_type, notes, sort_order";
+// Some established GuestOps databases pre-date the room_type field. Treat every
+// configured sleeping-arrangement room as eligible rather than breaking the
+// read path while schema history catches up.
+const ROOM_COLUMNS = "id, property_id, name, notes, sort_order";
 const CONTROL_COLUMNS = "room_id, controller_provider, controller_display_name, sensor_provider, sensor_display_name, mapping_status, pre_cool_temperature_c, live_commands_enabled, updated_at";
 
 function uuid(value: unknown) {
@@ -24,7 +27,7 @@ export async function GET(req: NextRequest) {
     const propertyId = requirePropertyId(req.nextUrl.searchParams.get("property_id"));
     await assertCanAccessProperty(auth.supabase, propertyId);
     const sb = auth.supabase as any;
-    const { data: rooms, error: roomError } = await sb.from("property_rooms").select(ROOM_COLUMNS).eq("property_id", propertyId).in("room_type", ["bedroom", "loft"]).order("sort_order").order("name");
+    const { data: rooms, error: roomError } = await sb.from("property_rooms").select(ROOM_COLUMNS).eq("property_id", propertyId).order("sort_order").order("name");
     if (roomError) throw roomError;
     const roomIds = (rooms ?? []).map((room: any) => room.id);
     const { data: controls, error: controlError } = roomIds.length ? await sb.from("ac_room_controls").select(CONTROL_COLUMNS).in("room_id", roomIds) : { data: [], error: null };
@@ -48,9 +51,9 @@ export async function POST(req: NextRequest) {
     if (!roomId) return NextResponse.json({ error: "A valid room_id is required" }, { status: 400 });
     await assertCanAccessProperty(auth.supabase, propertyId);
     const sb = auth.supabase as any;
-    const { data: room, error: roomError } = await sb.from("property_rooms").select("id, property_id, room_type").eq("id", roomId).eq("property_id", propertyId).maybeSingle();
+    const { data: room, error: roomError } = await sb.from("property_rooms").select("id, property_id").eq("id", roomId).eq("property_id", propertyId).maybeSingle();
     if (roomError) throw roomError;
-    if (!room || !["bedroom", "loft"].includes(room.room_type)) return NextResponse.json({ error: "That room is not an eligible bedroom" }, { status: 400 });
+    if (!room) return NextResponse.json({ error: "That room is not available for this property" }, { status: 400 });
     const configuredTemperature = temperature(body?.pre_cool_temperature_c);
     if (configuredTemperature === undefined) return NextResponse.json({ error: "Pre-cool temperature must be between 16°C and 30°C" }, { status: 400 });
     const mappingStatus = typeof body?.mapping_status === "string" && ["unmapped", "pending_verification", "verified", "disabled"].includes(body.mapping_status) ? body.mapping_status : "unmapped";
