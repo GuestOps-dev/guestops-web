@@ -14,9 +14,19 @@ export default function ThermostatBoard() {
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
   const [devices, setDevices] = useState<Thermostat[]>([]); const [selected, setSelected] = useState<string[]>([]); const [loading, setLoading] = useState(true); const [busy, setBusy] = useState<string | null>(null); const [error, setError] = useState<string | null>(null); const [setPoint, setSetPoint] = useState("72"); const [feedback, setFeedback] = useState<Feedback | null>(null); const [cardsOnly, setCardsOnly] = useState(false);
   const token = useCallback(async () => { const { data } = await sb.auth.getSession(); if (!data.session?.access_token) throw new Error("Please sign in again."); return data.session.access_token; }, [sb]);
-  const load = useCallback(async () => { setLoading(true); try { const response = await fetch("/api/ac/thermostats", { cache: "no-store", headers: { Authorization: `Bearer ${await token()}` } }); const data = await response.json(); if (!response.ok) throw new Error(data?.error ?? "Unable to load thermostats."); setDevices(data.thermostats ?? []); } catch (caught: any) { setError(caught?.message ?? "Unable to load thermostats."); } finally { setLoading(false); } }, [token]);
+  const load = useCallback(async (): Promise<Thermostat[]> => { setLoading(true); try { const response = await fetch("/api/ac/thermostats", { cache: "no-store", headers: { Authorization: `Bearer ${await token()}` } }); const data = await response.json(); if (!response.ok) throw new Error(data?.error ?? "Unable to load thermostats."); const thermostats = data.thermostats ?? []; setDevices(thermostats); return thermostats; } catch (caught: any) { setError(caught?.message ?? "Unable to load thermostats."); return []; } finally { setLoading(false); } }, [token]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { document.body.classList.toggle("ac-cards-only", cardsOnly); return () => document.body.classList.remove("ac-cards-only"); }, [cardsOnly]);
+
+  const stateMatches = (device: Thermostat | undefined, action: Action) => action === "on" ? device?.power === "on" : action === "off" ? device?.power === "off" : action === "cool" ? device?.power === "on" && device?.mode === "cool" : device?.setPoint === Number(setPoint);
+  async function refreshUntilReported(ids: string[], action: Action) {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      if (attempt) await new Promise((resolve) => setTimeout(resolve, 1500));
+      const fresh = await load();
+      if (ids.every((id) => stateMatches(fresh.find((device) => device.id === id), action))) return true;
+    }
+    return false;
+  }
 
   async function command(ids: string[], action: Action, subject?: string) {
     if (busy) return;
@@ -29,8 +39,9 @@ export default function ThermostatBoard() {
         const response = await fetch("/api/ac/thermostats", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${await token()}` }, body: JSON.stringify({ device_id: id, action, set_point: action === "set_point" ? Number(setPoint) : undefined }) });
         const data = await response.json(); if (!response.ok) throw new Error(data?.error ?? "Thermostat command failed.");
       }
-      await load();
-      setFeedback({ phase: "success", title: `Request accepted for ${target}`, detail: "Cielo accepted the request. The refreshed card state is the latest reported device state; acceptance alone is not a physical-device confirmation." });
+      setFeedback({ phase: "processing", title: `Checking current state for ${target}…`, detail: "Cielo accepted the request. Waiting briefly for its reported state to update." });
+      const verified = await refreshUntilReported(actionable, action);
+      setFeedback(verified ? { phase: "success", title: `State updated for ${target}`, detail: "Cielo now reports the requested state on the card." } : { phase: "success", title: `Request accepted for ${target}`, detail: "Cielo accepted the request, but has not yet reported the updated state. The card will update automatically on its next refresh." });
     } catch (caught: any) { setFeedback({ phase: "error", title: `Could not complete request for ${target}`, detail: caught?.message ?? "Cielo did not accept the request." }); }
     finally { setBusy(null); }
   }
