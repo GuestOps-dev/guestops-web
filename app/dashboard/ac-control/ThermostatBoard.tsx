@@ -14,7 +14,7 @@ export default function ThermostatBoard() {
   const sb = useMemo(() => getSupabaseBrowserClient(), []);
   const [devices, setDevices] = useState<Thermostat[]>([]); const [selected, setSelected] = useState<string[]>([]); const [loading, setLoading] = useState(true); const [busy, setBusy] = useState<string | null>(null); const [error, setError] = useState<string | null>(null); const [setPoint, setSetPoint] = useState("72"); const [feedback, setFeedback] = useState<Feedback | null>(null);
   const token = useCallback(async () => { const { data } = await sb.auth.getSession(); if (!data.session?.access_token) throw new Error("Please sign in again."); return data.session.access_token; }, [sb]);
-  const load = useCallback(async () => { setLoading(true); try { const response = await fetch("/api/ac/thermostats", { headers: { Authorization: `Bearer ${await token()}` } }); const data = await response.json(); if (!response.ok) throw new Error(data?.error ?? "Unable to load thermostats."); setDevices(data.thermostats ?? []); } catch (caught: any) { setError(caught?.message ?? "Unable to load thermostats."); } finally { setLoading(false); } }, [token]);
+  const load = useCallback(async () => { setLoading(true); try { const response = await fetch("/api/ac/thermostats", { cache: "no-store", headers: { Authorization: `Bearer ${await token()}` } }); const data = await response.json(); if (!response.ok) throw new Error(data?.error ?? "Unable to load thermostats."); setDevices(data.thermostats ?? []); } catch (caught: any) { setError(caught?.message ?? "Unable to load thermostats."); } finally { setLoading(false); } }, [token]);
   useEffect(() => { void load(); }, [load]);
 
   async function command(ids: string[], action: Action, subject?: string) {

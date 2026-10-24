@@ -4,6 +4,8 @@ import { getSupabaseServiceClient } from "@/lib/supabaseServer";
 import { listCieloThermostatStates, sendCieloThermostatAction } from "@/lib/ac/cielo";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 async function context(req: NextRequest) {
   const auth = await requireApiAuth(req);
@@ -25,7 +27,7 @@ export async function GET(req: NextRequest) {
     if (!connectedOrgId) throw new Error("Cielo connection is missing its organization reference.");
     const stateById = new Map((await listCieloThermostatStates(connectedOrgId)).map((device) => [device.externalDeviceId, device]));
     const propertyName = new Map(memberships.map((item) => [item.property_id, item.property_name]));
-    return NextResponse.json({ thermostats: (devices ?? []).map((device: any) => ({ ...device, property_name: propertyName.get(device.property_id) ?? "Property", ...(stateById.get(device.external_device_id) ?? { power: "unknown", mode: null, setPoint: null, currentTemperature: null, temperatureUnit: null }) })) });
+    return NextResponse.json({ thermostats: (devices ?? []).map((device: any) => ({ ...device, property_name: propertyName.get(device.property_id) ?? "Property", ...(stateById.get(device.external_device_id) ?? { power: "unknown", mode: null, setPoint: null, currentTemperature: null, temperatureUnit: null }) })) }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error: any) { return NextResponse.json({ error: error?.message ?? "Unable to load thermostats" }, { status: error?.status ?? 400 }); }
 }
 
